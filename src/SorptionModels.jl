@@ -1,5 +1,4 @@
 module SorptionModels
 
-# Write your package code here.
-
+    using MembraneBase, MembraneEOS
 end
