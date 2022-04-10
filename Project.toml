@@ -4,8 +4,10 @@ authors = ["Will <sypheren@gmail.com> and contributors"]
 version = "0.1.0"
 
 [deps]
+Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 MembraneBase = "a9449b16-1c3f-48ab-aa2c-0b9c6d97beee"
 MembraneEOS = "11a4bec2-2c27-4554-8fe6-a2de72ffe064"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
 [compat]
 julia = "1"
