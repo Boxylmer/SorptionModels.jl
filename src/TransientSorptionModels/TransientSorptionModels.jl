@@ -125,7 +125,7 @@ function fit_transient_sorption_model(
         errors = jackknife_uncertainty(fitting_uncertainty_wrapper, dataset(_step_data))
 
     elseif uncertainty_method == :Hessian
-
+        throw(ErrorException("Inverse Hessian error propagation isn't working for this set of models just yet"))
     elseif isnothing(uncertainty_method)
         errors = nothing
     else

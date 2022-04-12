@@ -1,8 +1,8 @@
+using Revise
 using SorptionModels
 using Test
 using Measurements
 using MembraneBase
-using Revise
 
 precision = 5
 
@@ -95,7 +95,7 @@ precision = 5
             density = 1.197850471   #g/cm3    
             bulk_phase_eos = SL([penetrant])
             polymer_phase_eos = SL([polymer, penetrant], kij)
-            nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
+            # nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
         
             temperature = 308.15
             pressures = [1e-13, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
@@ -103,8 +103,8 @@ precision = 5
             expected_concs_cc_cc = [0.003361991, 5.094493596, 8.910071012, 12.66689539, 16.17497812, 19.10613428, 21.05001223]
             expected_co2_polymer_phase_μ = [-51.54243958, -32.12143859, -30.22735524, -28.91840386, -27.96456057, -27.30597109, -26.92427275] * 1000
             expected_co2_bulk_phase_μ = [-57.20578109, -32.1214365, -30.22735377, -28.91840261, -27.96455943, -27.30596998, -26.92427169] * 1000
-            acquired_μ = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in pressures]
-            acquired_conc = Vector{Any}(undef, length(expected_mass_fracs))
+            # acquired_μ = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in pressures]
+            # acquired_conc = Vector{Any}(undef, length(expected_mass_fracs))
             # for idx in eachindex(expected_mass_fracs, pressures)
             #     pressure = pressures[idx]
             #     polymer_mass_fraction = 1 - sum([expected_mass_fracs[idx]])
@@ -141,6 +141,39 @@ precision = 5
             # @show acquired_co2_μ
             # @show abs.(expected_concs_cc_cc .- acquired_concs_cc_cc) ./ expected_concs_cc_cc
             # @show [predict_concentration(nelfmodel, 308.15, p, [1.0]) for p in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]*0.101325]
+    end
+
+    @testset "Transient Sorption Models" begin
+        
+        fickian_model = FickianSorptionModel(1, 0.01)
+        bh_model = BerensHopfenbergSorptionModel(0.7, 0.01, 0.3, 0.001)
+        mbh_model = ModifiedBerensHopfenbergSorptionModel(0.7, 0.01, 0.3, 0.001, 0.05)
+        fickian_prediction = predict_sorption(fickian_model, 10)
+        bh_prediction = predict_sorption(bh_model, 10)
+        mbh_prediction = predict_sorption(mbh_model, 10)
+    
+        # println(fickian_prediction)
+        # println(bh_prediction)
+        # println(mbh_prediction)
+    
+        time_vector = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 50, 70, 90, 100]
+        fick_prediction_vector = predict_sorption(fickian_model, time_vector)
+        bh_prediction_vector = predict_sorption(bh_model, time_vector)
+        mbh_prediction_vector = predict_sorption(mbh_model, time_vector)
+        
+        
+        # testing fitting without errors (no true tests)
+        exp_data = TransientStepData(
+            [1,       2,       3,        4,       5,      6,      7,      8,      9,      10,    15,    20,    25,    30,    40,   50,    70,   90,     100], 
+            [0.00194, 0.00515, 0.009107, 0.01359, 0.0184, 0.0237, 0.0291, 0.0348, 0.0407, 0.046, 0.077, 0.109, 0.141, 0.171, 0.22, 0.278, 0.36, 0.4364, 0.4671]            
+        )
+        fick_model_fit = fit_transient_sorption_model(exp_data, :FickianSorptionModel)
+    
+        bh_model_fit = fit_transient_sorption_model(exp_data, :BerensHopfenbergSorptionModel)
+    
+        mbh_model_fit = fit_transient_sorption_model(exp_data, :ModifiedBerensHopfenbergSorptionModel)
+        
+
     end
 end
 
