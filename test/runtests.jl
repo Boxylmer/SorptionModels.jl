@@ -42,7 +42,7 @@ precision = 5
         
         # test bootstrap method (same values as the first dmfitting) (incomplete, untested)
 
-        # dmfittings_3 = DualMode.fit_model_to_isotherm(isofit; uncertainty_method=:Bootstrap)
+        # dmfittings_3 = fit_dualmode_model(isofit; uncertainty_method=:Bootstrap)
         # @test dmfittings_3.ch.err == 0.756291283433861 &&
         # dmfittings_3.b.err == 1.0368748268249859 && 
         # dmfittings_3.kd.err == 0.3217790802072902
@@ -168,11 +168,20 @@ precision = 5
             [0.00194, 0.00515, 0.009107, 0.01359, 0.0184, 0.0237, 0.0291, 0.0348, 0.0407, 0.046, 0.077, 0.109, 0.141, 0.171, 0.22, 0.278, 0.36, 0.4364, 0.4671]            
         )
         fick_model_fit = fit_transient_sorption_model(exp_data, :FickianSorptionModel)
-    
+        
         bh_model_fit = fit_transient_sorption_model(exp_data, :BerensHopfenbergSorptionModel)
     
         mbh_model_fit = fit_transient_sorption_model(exp_data, :ModifiedBerensHopfenbergSorptionModel)
         
+        semi_thickness_cm = 0.02 ± 0.001
+
+        fick_d = get_diffusivity(fick_model_fit, semi_thickness_cm)
+        @test fick_d.val ≈ 4.779020339107122e-7
+        @test fick_d.err ≈ 4.7790203391071216e-8
+
+        mbh_d = get_diffusivity(mbh_model_fit, semi_thickness_cm)
+        @test mbh_d.val ≈ 2.251436090950463e-15
+        @test mbh_d.err ≈ 2.251436090950463e-16
 
     end
 end
