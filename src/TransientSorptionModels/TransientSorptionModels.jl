@@ -51,9 +51,9 @@ function fit_transient_sorption_model(
     
     # resample data if necessary
     if !isnothing(interpolation_method)
-        _step_data = strip_measurement_to_value(resample(step_data, interpolation_datapoints, interpolation_method))
+        _step_data = MembraneBase.strip_measurement_to_value(resample(step_data, interpolation_datapoints, interpolation_method))
     else 
-        _step_data = strip_measurement_to_value(step_data) 
+        _step_data = MembraneBase.strip_measurement_to_value(step_data) 
     end
     # prepare fitting model and parameters
     if model_symbol == :FickianSorptionModel
