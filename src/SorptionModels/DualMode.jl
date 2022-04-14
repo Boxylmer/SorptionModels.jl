@@ -157,7 +157,7 @@ end
 
 fit_model(::DualMode, isotherm::IsothermData; kwargs...) = fit_dualmode_model(isotherm; kwargs...)
 
-function strip_measurement_to_value(model::DualModeModel)
+function MembraneBase.strip_measurement_to_value(model::DualModeModel)
     return DualModeModel(
         strip_measurement_to_value(model.ch),
         strip_measurement_to_value(model.b),
