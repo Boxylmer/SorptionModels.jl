@@ -5,10 +5,9 @@ module SorptionModels
     using Optim
     using Measurements
 
+    include(joinpath("SorptionModels", "ModelMethods.jl"))
     export predict_concentration
     export fit_model
-
-    include(joinpath("SorptionModels", "SorptionModels.jl"))
 
     include(joinpath("SorptionModels", "DualMode.jl"))
     export fit_dualmode_model
@@ -33,5 +32,8 @@ module SorptionModels
     include(joinpath("TransientSorptionModels", "ModifiedBerensHopfenbergSorption.jl"))
     export ModifiedBerensHopfenbergSorptionModel
 
+
+    # Model specific analysis
+    
 
 end
