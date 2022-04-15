@@ -34,6 +34,7 @@ module SorptionModels
 
 
     # Model specific analysis
-    
+    include(joinpath("ModelAnalyses", "VantHoffDualMode.jl"))
+    export VantHoffDualModeModel
 
 end
