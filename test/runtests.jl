@@ -13,7 +13,8 @@ precision = 5
         # single component isotherm test
         isofit = IsothermData(; partial_pressures_mpa = [0, 0.03, 0.15, 0.6, 0.9, 1.2, 1.5], concentrations_cc = [0, 1, 3, 8, 10, 12.2, 14])
         dmfittings = fit_dualmode_model(isofit)
-        
+        dmfittings = fit_model(DualMode(), isofit)
+
         @test round(dmfittings.ch; digits=precision) == round(6.807641216606124; digits=precision) &&
             round(dmfittings.b; digits=precision) == round(3.376206925261848; digits=precision) && 
             round(dmfittings.kd; digits=precision) == round(5.556359995999332; digits=precision)
@@ -254,8 +255,8 @@ precision = 5
                 pen_mws_g_mol=18.01528
             )
             mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
-            @show mob_fact_analysis.kinetic_factors[3].val ≈ 8.07131661298753e-7
-            @show mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0273999147371586
+            @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.07131661298753e-7
+            @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0273999147371586
         end
 
         # Partial Immobilization Model
