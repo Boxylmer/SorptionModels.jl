@@ -14,10 +14,10 @@ function predict_sorption(sorptionmodel::TransientSorptionModel, time_seconds::A
 end
 
 """
-    rss(sorptionmodel::TransientSorptionModel, step_data::TransientStepData)
+    MembraneBase.rss(sorptionmodel::TransientSorptionModel, step_data::TransientStepData)
 Determine how well a model predicts transient sorption by the sum of squared residuals.
 """
-function rss(sorptionmodel::TransientSorptionModel, step_data::TransientStepData)
+function MembraneBase.rss(sorptionmodel::TransientSorptionModel, step_data::TransientStepData)
     sorption_pred = predict_sorption(sorptionmodel, step_data.time)
     sorption_err = sum((sorption_pred - step_data.dimensionlesssorption).^2)
     return sorption_err
@@ -25,15 +25,15 @@ end
 
 """
     fit_transient_sorption_model(
-        step_data::TransientStepData, model_symbol; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
+        step_data::TransientStepData, model; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
         uncertainty_method=nothing, num_uncertainty_resamples=20, resampling_mode=false)
 
 # Arguments
 - `step_data::TransientStepData`: See [`TransientStepData`](@ref)
-- `model_symbol`: Type of transient sorption model to fit the `step_data` to. Available options are:
-    - `:FickianSorptionModel`
-    - `:BerensHopfenbergSorptionModel`
-    - `:ModifiedBerensHopfenbergSorptionModel`
+- `model`: Type of transient sorption model to fit the `step_data` to. Available options are:
+    - `FickianSorption()`
+    - `BerensHopfenbergSorption()`
+    - `ModifiedBerensHopfenbergSorption()`
 # Optional Arguments
 - `custom_initial_params::Vector`: Vector of initial guesses to start with. Must match the number of parameters in the model.
     - These parameters are *linearized* in their parameter space. Make sure you understand the linearization of the model parameters before you try to specify custom initial guesses. 
@@ -46,7 +46,7 @@ end
     - This will return the linearized parameter fittings in lieu of the normal model objects. 
 """
 function fit_transient_sorption_model(
-    step_data::TransientStepData, model_symbol; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
+    step_data::TransientStepData, model; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
     uncertainty_method=nothing, num_uncertainty_resamples=20, resampling_mode=false)
     
     # resample data if necessary
@@ -56,27 +56,27 @@ function fit_transient_sorption_model(
         _step_data = strip_measurement_to_value(step_data) 
     end
     # prepare fitting model and parameters
-    if model_symbol == :FickianSorptionModel
+    if typeof(model) <: FickianSorption
         ub = [1.1, log(1.)]
         lb = [0., -50.]
         initial_params = [1., log(0.001)]
         model = FickianSorptionModel
-    elseif model_symbol == :BerensHopfenbergSorptionModel
+    elseif typeof(model) <: BerensHopfenbergSorption
         ub = [1.1, log(1.), 1., log(1.)]
         lb = [0., -50., 0., -50.]
         # initial_params = [0.9, -3, 0.1, -10]
         model = BerensHopfenbergSorptionModel
         if isnothing(custom_initial_params)
-            initial_fickan_fit = linearize_model(fit_transient_sorption_model(_step_data, :FickianSorptionModel))
+            initial_fickan_fit = linearize_model(fit_transient_sorption_model(_step_data, FickianSorption()))
             initial_params = [initial_fickan_fit.m_f, initial_fickan_fit.k_f, 0.1, log(0.0001)]
         end
-    elseif model_symbol == :ModifiedBerensHopfenbergSorptionModel
+    elseif typeof(model) <: ModifiedBerensHopfenbergSorption
         ub = [1.1, log(1.), 1., log(1.), log(10)]
         lb = [0., -50., 0., -50., -30.]
         # initial_params = [0.9, -3, 0.1, -10, -5]
         model = ModifiedBerensHopfenbergSorptionModel
         if isnothing(custom_initial_params)
-            initial_bh_fit = linearize_model(fit_transient_sorption_model(_step_data, :BerensHopfenbergSorptionModel))
+            initial_bh_fit = linearize_model(fit_transient_sorption_model(_step_data, BerensHopfenbergSorption()))
             initial_params = [initial_bh_fit.m_f, initial_bh_fit.k_f, initial_bh_fit.m_r, initial_bh_fit.k_r, 1.]
         end
     else
@@ -112,7 +112,7 @@ function fit_transient_sorption_model(
     "Specify a dataset [(time, sorption)...] and get back a vector of parameters."
     function fitting_uncertainty_wrapper(full_dataset)
         transient_step = TransientStepData(full_dataset)
-        return fit_transient_sorption_model(transient_step, model_symbol; custom_initial_params=fitted_params, resampling_mode=true, uncertainty_method=nothing)
+        return fit_transient_sorption_model(transient_step, model; custom_initial_params=fitted_params, resampling_mode=true, uncertainty_method=nothing)
     end
 
     if uncertainty_method == :Bootstrap

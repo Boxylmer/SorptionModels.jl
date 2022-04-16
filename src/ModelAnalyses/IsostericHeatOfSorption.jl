@@ -11,16 +11,16 @@ struct IsostericHeatAnalysis
 end
 
 """
-    isosteric_heat_of_sorption(isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25) 
+    (isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25) 
 
 Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
 """
-function isosteric_heat_of_sorption(isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25, use_vant_hoff_constraints=false)
+function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25, use_vant_hoff_constraints=false)
     # first fit some models to each isotherm so that we can accurately interpolate
     if use_vant_hoff_constraints
         sorption_models = Vector(
             strip_measurement_to_value(
-                temperature_dependent_dual_mode_fitting(isotherms; use_fugacity=false).final_models
+                VantHoffDualModeAnalysis(isotherms; use_fugacity=false).final_models
             )
         )
 
@@ -45,7 +45,7 @@ function isosteric_heat_of_sorption(isotherms::AbstractVector{<:IsothermData}; m
     isosteric_heat_at_conc = []
     for ln_pressure_curve in ln_pressure_curves
         slope, _ =  fit_linear_data(inverse_temps, ln_pressure_curve)
-        push!(isosteric_heat_at_conc, slope * R_J_MOL_K)
+        push!(isosteric_heat_at_conc, slope * MembraneBase.R_J_MOL_K)
     end
 
     return IsostericHeatAnalysis(

@@ -89,7 +89,7 @@ function predict_pressure(dm::DualModeModel, concentrations_cc_cc::Number)
     return p
 end
 
-function rss(dm::DualModeModel, isotherm::IsothermData; use_fugacity=false)
+function MembraneBase.rss(dm::DualModeModel, isotherm::IsothermData; use_fugacity=false)
     if isotherm.num_components == 1
         if use_fugacity
             predictions = predict_concentration(dm, fugacities(isotherm; component=1))  

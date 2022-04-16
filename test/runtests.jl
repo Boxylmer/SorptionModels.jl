@@ -167,11 +167,11 @@ precision = 5
             [1,       2,       3,        4,       5,      6,      7,      8,      9,      10,    15,    20,    25,    30,    40,   50,    70,   90,     100], 
             [0.00194, 0.00515, 0.009107, 0.01359, 0.0184, 0.0237, 0.0291, 0.0348, 0.0407, 0.046, 0.077, 0.109, 0.141, 0.171, 0.22, 0.278, 0.36, 0.4364, 0.4671]            
         )
-        fick_model_fit = fit_transient_sorption_model(exp_data, :FickianSorptionModel)
+        fick_model_fit = fit_transient_sorption_model(exp_data, FickianSorption())
         
-        bh_model_fit = fit_transient_sorption_model(exp_data, :BerensHopfenbergSorptionModel)
+        bh_model_fit = fit_transient_sorption_model(exp_data, BerensHopfenbergSorption())
     
-        mbh_model_fit = fit_transient_sorption_model(exp_data, :ModifiedBerensHopfenbergSorptionModel)
+        mbh_model_fit = fit_transient_sorption_model(exp_data, ModifiedBerensHopfenbergSorption())
         
         semi_thickness_cm = 0.02 ± 0.001
 
@@ -187,41 +187,89 @@ precision = 5
 
 
     @testset "Analysis Functions" begin
+        isotherm_1 = IsothermData(;  # CH4 in TPBO-0.50 at 20C
+            partial_pressures_mpa = [0.259163083, 0.680732225, 1.153210606, 1.681231582, 2.230997679, 2.726364496, 3.143840263],
+            concentrations_cc = [20.06902712, 34.42914464, 44.07950458, 51.56463956, 57.01452812, 61.02024241, 63.74277795],
+            temperature_k = 293.15,
+            fugacities_mpa = [0.257596406, 0.670008659, 1.122709817, 1.617057535, 2.119186153, 2.560995079, 2.925750142]
+        )
+        isotherm_2 = IsothermData(; 
+            partial_pressures_mpa = [0.262492618, 0.683659348, 1.155742537, 1.686317619, 2.20405451, 2.706619691, 3.136376749],
+            concentrations_cc = [17.57118063, 31.09445449, 39.7469948, 46.41292601, 51.16825653, 54.8539774, 56.54801589],
+            temperature_k = 300.15,
+            fugacities_mpa = [0.261005294, 0.67364989, 1.127391615, 1.626570478, 2.103003269, 2.555717054, 2.935454538]
+        )
+        isotherm_3 = IsothermData(; 
+            partial_pressures_mpa = [0.266511453, 0.686673842, 1.157709902, 1.687453932, 2.2030762, 2.842052813, 3.197348035],
+            concentrations_cc = [15.05920737, 26.87379577, 34.86510363, 40.73884457, 45.15400583, 49.76327481, 51.51256356],
+            temperature_k = 308.15,
+            fugacities_mpa =[0.265107381, 0.677426321, 1.131657671, 1.632663035, 2.110610706, 2.690078663, 3.006342365]
+        )
+        isotherm_4 = IsothermData(; 
+            partial_pressures_mpa = [0.274645736, 0.692967011, 1.177848036, 1.698686751, 2.207084424, 2.71751992, 3.142763943],
+            concentrations_cc = [11.78645049, 22.51120434, 30.36900358, 36.63755063, 40.37998354, 44.29098419, 46.8613559],
+            temperature_k = 323.15,
+            fugacities_mpa =[0.27337983, 0.684971536, 1.154961289, 1.651558222, 2.128304942, 2.599274758, 2.985937811]
+        )
+        isotherms = [isotherm_1, isotherm_2, isotherm_3, isotherm_4]
+        
         # VHDM analysis
-        @testset "Van't Hoff Dual Mode Fitting" begin
-            isotherm_1 = IsothermData(;  # CH4 in TPBO-0.50 at 20C
-                partial_pressures_mpa = [0.259163083, 0.680732225, 1.153210606, 1.681231582, 2.230997679, 2.726364496, 3.143840263],
-                concentrations_cc = [20.06902712, 34.42914464, 44.07950458, 51.56463956, 57.01452812, 61.02024241, 63.74277795],
-                temperature_k = 293.15,
-                fugacities_mpa = [0.257596406, 0.670008659, 1.122709817, 1.617057535, 2.119186153, 2.560995079, 2.925750142]
-            )
-            isotherm_2 = IsothermData(; 
-                partial_pressures_mpa = [0.262492618, 0.683659348, 1.155742537, 1.686317619, 2.20405451, 2.706619691, 3.136376749],
-                concentrations_cc = [17.57118063, 31.09445449, 39.7469948, 46.41292601, 51.16825653, 54.8539774, 56.54801589],
-                temperature_k = 300.15,
-                fugacities_mpa = [0.261005294, 0.67364989, 1.127391615, 1.626570478, 2.103003269, 2.555717054, 2.935454538]
-            )
-            isotherm_3 = IsothermData(; 
-                partial_pressures_mpa = [0.266511453, 0.686673842, 1.157709902, 1.687453932, 2.2030762, 2.842052813, 3.197348035],
-                concentrations_cc = [15.05920737, 26.87379577, 34.86510363, 40.73884457, 45.15400583, 49.76327481, 51.51256356],
-                temperature_k = 308.15,
-                fugacities_mpa =[0.265107381, 0.677426321, 1.131657671, 1.632663035, 2.110610706, 2.690078663, 3.006342365]
-            )
-            isotherm_4 = IsothermData(; 
-                partial_pressures_mpa = [0.274645736, 0.692967011, 1.177848036, 1.698686751, 2.207084424, 2.71751992, 3.142763943],
-                concentrations_cc = [11.78645049, 22.51120434, 30.36900358, 36.63755063, 40.37998354, 44.29098419, 46.8613559],
-                temperature_k = 323.15,
-                fugacities_mpa =[0.27337983, 0.684971536, 1.154961289, 1.651558222, 2.128304942, 2.599274758, 2.985937811]
-            )
-            isotherms = [isotherm_1, isotherm_2, isotherm_3, isotherm_4]
-            
-            vhdm_analysis = VantHoffDualModeModel(isotherms)
-            vhdm_analysis_but_with_fugacity = VantHoffDualModeModel(isotherms; use_fugacity=true)
+        @testset "Van't Hoff Dual Mode Fitting" begin    
+            vhdm_analysis = VantHoffDualModeAnalysis(isotherms)
+            vhdm_analysis_but_with_fugacity = VantHoffDualModeAnalysis(isotherms; use_fugacity=true)
             @test vhdm_analysis_but_with_fugacity.final_models[1].use_fugacity == true
+            @test vhdm_analysis_but_with_fugacity.final_models[2].ch.val ≈ 57.13799466676326
+            @test vhdm_analysis_but_with_fugacity.final_models[2].ch.err ≈ 29.838724853992588
+            @test vhdm_analysis.final_models[2].ch.val ≈ 56.37550904605368
+        end
+
+        # Isosteric Heat
+        @testset "Isosteric Heat Analysis" begin    
+            ish_analysis = IsostericHeatAnalysis(isotherms)
+            ish_analysis_but_with_vhdm = IsostericHeatAnalysis(isotherms; use_vant_hoff_constraints=true)
+
+            conc_no_constraint = ish_analysis.sampled_concentrations[4]
+            conc_with_constraint = ish_analysis_but_with_vhdm.sampled_concentrations[4]
+            @test conc_no_constraint == conc_with_constraint
+            @test ish_analysis.isosteric_heat_at_conc[4].val ≈ -18998.600511017383
+            @test ish_analysis_but_with_vhdm.isosteric_heat_at_conc[4].val ≈ -18118.53623433742
+        end
+
+        # Mobility Factor
+        @testset "Mobility Factor" begin
+            # water diffusion in TPBO-0.25 at 25C, taken from Box et al., in BH model 
+            act = [0.067952153, 0.128795589, 0.184686884, 0.226021282, 0.261604807, 0.317356324, 0.416858405, 0.547610888, 0.640042101]
+            dif = [9.54865E-07, 9.14651E-07, 8.29247E-07, 1.36793E-06, 8.94442E-07, 8.86731E-07, 8.78362E-07, 6.20711E-06, 5.29102E-06]
+
+            con = [4.553301251, 7.360868935, 9.972461154, 12.76467679, 14.32852228, 17.19540216, 22.19415472, 28.84150735, 33.56667178]
+            err = [0.04247127, 0.072640132, 0.104512929, 0.134097291, 0.161762819, 0.199449306, 0.257028442, 0.333787113, 0.403308077]
+            con = [con[i] ± err[i] for i in eachindex(con, err)]
+
+            iso = IsothermData(; 
+                # partial_pressures_mpa=nothing, 
+                concentrations_cc=con, 
+                activities=act, 
+                # temperature_k=nothing, 
+                rho_pol_g_cm3=1.393 ± 0.002, 
+                pen_mws_g_mol=18.01528
+            )
+            mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
+            @show mob_fact_analysis.kinetic_factors[3].val ≈ 8.07131661298753e-7
+            @show mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0273999147371586
+        end
+
+        # Partial Immobilization Model
+        @testset "Partial Immobilization Model" begin
+            model = DualModeModel(56.8, 7.4, 26.1; use_fugacity=true)
+            permeabilities = [1221, 1091, 1038]
+            pressures_mpa = [0.298, 0.637, 0.974]
+            result = PartialImmobilizationModel(model, pressures_mpa, permeabilities)
+            @test result.henry_mode_diffusivity.val ≈ 2.649330314735546e-6
+            @test result.langmuir_mode_diffusivity.val ≈ 1.7126341427211583e-7
         end
     end
 end
-
+nothing
 
 
 

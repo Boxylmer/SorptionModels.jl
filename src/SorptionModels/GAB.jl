@@ -43,7 +43,7 @@ function predict_concentration(gm::GABModel, activities::AbstractVector)
     return predictions
 end
 
-function rss(gm::GABModel, activities::AbstractVector, concentrations::AbstractVector)
+function MembraneBase.rss(gm::GABModel, activities::AbstractVector, concentrations::AbstractVector)
     if length(activities) == length(concentrations)
         predictions = predict_concentration(gm, activities)
         return MembraneBase.rss(concentrations, predictions)        

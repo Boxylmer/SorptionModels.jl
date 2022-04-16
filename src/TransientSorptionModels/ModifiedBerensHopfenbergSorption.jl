@@ -1,3 +1,5 @@
+struct ModifiedBerensHopfenbergSorption end
+
 struct ModifiedBerensHopfenbergSorptionModel{MFT, KFT, MRT, KRT, BT} <: TransientSorptionModel
     m_f::MFT
     k_f::KFT

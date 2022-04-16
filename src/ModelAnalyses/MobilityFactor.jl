@@ -1,4 +1,4 @@
-struct DiffusivityDeconvolution
+struct MobilityFactorAnalysis
     # will use this to hold resulting parameters from the deconvolution
     lna
     lnw
@@ -8,7 +8,7 @@ struct DiffusivityDeconvolution
 end
 
 """
-    deconvolute_diffusivity(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
+    MobilityFactorAnalysis(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
 
 Deconvolute a vector of fitted transient sorption models, the corresponding equilibrium isotherm, and the semi-thickness of the polymer sample into a DiffusivityDeconvolution object.
 
@@ -17,13 +17,13 @@ Deconvolute a vector of fitted transient sorption models, the corresponding equi
 * `transient_sorption_models::AbstractVector{<:TransientSorptionModel}`: Vector of TransientSorptionModel objects. Each fitted model needs to correspond to each step in the isotherm.
 * `semi_thickness_cm::Number`: Half (semi) thickness of the polymer sample used in the sorption experiment in ``cm``.  
 """
-function deconvolute_diffusivity(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
+function MobilityFactorAnalysis(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
     diffusivity_vector = get_diffusivity.(transient_sorption_models, semi_thickness_cm)
-    return deconvolute_diffusivity(isotherm, diffusivity_vector)
+    return MobilityFactorAnalysis(isotherm, diffusivity_vector)
 end
 
 """
-    deconvolute_diffusivity(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
+    (isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
 
 Deconvolute an isotherm and already-known diffusivity values into their kinetic and thermodynamic components.
 
@@ -31,7 +31,7 @@ Deconvolute an isotherm and already-known diffusivity values into their kinetic 
 - `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be deconvoluted.
 * `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
 """
-function deconvolute_diffusivity(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
+function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
     if num_components(isotherm) > 1
         throw(ErrorException("Deconvoluting diffusivity isn't implemented for multicomponent isotherms yet"))
     end
@@ -41,9 +41,9 @@ function deconvolute_diffusivity(isotherm::IsothermData, diffusivities::Abstract
     if isnothing(activities(isotherm))
         throw(MissingException("Isotherm did not have any activities"))
     end
-    if isnothing(molecular_weights(isotherm))
-        throw(MissingException("Isotherm does not contain molecular weights"))
-    end
+    # if isnothing(molecular_weights(isotherm))
+    #     throw(MissingException("Isotherm does not contain molecular weights"))
+    # end
 
     # single component
     penetrant_mass_fracs = penetrant_mass_fractions(isotherm; component=1)  # component 1 
@@ -55,5 +55,5 @@ function deconvolute_diffusivity(isotherm::IsothermData, diffusivities::Abstract
     kinetic_factors = slopes[1:length(diffusivities)].*diffusivities 
     thermo_factors = 1 ./ slopes
     
-    return DiffusivityDeconvolution(lna, lnw, slopes, kinetic_factors, thermo_factors)
+    return MobilityFactorAnalysis(lna, lnw, slopes, kinetic_factors, thermo_factors)
 end

@@ -23,7 +23,7 @@ function PartialImmobilizationModel(model::DualModeModel, pressures_mpa::Abstrac
     end
 
     regression_x_values = model.ch .* model.b ./ (1 .+ model.b .* pressures_mpa) # cc/cc / MPa
-    regression_y_values = permeabilities_barrer .* CC_CC_MPA_CM2_S_PER_BARRER # barrer -> ((CC/CC)/MPa) * (cm^2/s) 
+    regression_y_values = permeabilities_barrer .* MembraneBase.CC_CC_MPA_CM2_S_PER_BARRER # barrer -> ((CC/CC)/MPa) * (cm^2/s) 
     
     slope, intercept = fit_linear_data(regression_x_values, regression_y_values) 
     # units: intercept: (CC/CC)/MPa * (cm^2/s); slope: cm^2/s

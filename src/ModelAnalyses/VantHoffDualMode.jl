@@ -1,4 +1,4 @@
-struct VantHoffDualModeModel  # todo parameterization, this is really just a container that's called once (when optimized)
+struct VantHoffDualModeAnalysis  # todo parameterization, this is really just a container that's called once (when optimized)
     ch0_final
     b0_final
     kd0_final
@@ -24,8 +24,10 @@ struct VantHoffDualModeModel  # todo parameterization, this is really just a con
 end
 
 module VHDMFHelper 
-    using MembraneBase: R_J_MOL_K, rss, strip_measurement_to_value, fit_linear_data, IsothermData, jackknife_uncertainty
-    using MembraneBase: rss_covariance_matrix, rss_minimizer_standard_errors, approximate_hessian, inverse_hessian
+    using SorptionModels 
+    using MembraneBase
+    using MembraneBase: R_J_MOL_K
+    # using MembraneBase: rss_covariance_matrix, rss_minimizer_standard_errors, approximate_hessian, inverse_hessian, rss, strip_measurement_to_value, fit_linear_data, IsothermData, jackknife_uncertainty
     using StaticArrays
     using Measurements
     using Optim
@@ -133,7 +135,7 @@ module VHDMFHelper
 end
 
 """
-    temperature_dependent_dual_mode_fitting(isotherms::AbstractVector{<:IsothermData}; use_fugacity=false)
+    VantHoffDualModeAnalysis(isotherms::AbstractVector{<:IsothermData}; use_fugacity=false)
 
 Fit a set of isotherms (using the same gas and polymer) at varying temperatures to the Dual Mode model. 
 If `use_fugacity` is true, the solver will fit to fugacities within the isotherms rather than pressures.
@@ -150,7 +152,7 @@ Notable variables within it are:
 - `final_models`: Vector of Dual Mode models corresponding to the original order of the isotherms given.
 - `covariance_matrix`: Matrix of covariances between individual parameters above (indexed in the original order they were listed)
 """
-function VantHoffDualModeModel(isotherms::AbstractVector{<:IsothermData}; use_fugacity=false) 
+function VantHoffDualModeAnalysis(isotherms::AbstractVector{<:IsothermData}; use_fugacity=false) 
     # generate the extra data for the analysis object
     linearized_initial_param_vec = VHDMFHelper.initialize_linearized_parameter_vector(isotherms; use_fugacity)
     initial_param_vec = VHDMFHelper.unlinearize_input_vector(linearized_initial_param_vec)
@@ -166,7 +168,7 @@ function VantHoffDualModeModel(isotherms::AbstractVector{<:IsothermData}; use_fu
     if use_fugacity
         given_pressures_vectors = [fugacities(isotherm; component=1) for isotherm in isotherms]
     else
-        given_pressures_vectors = [pressures(isotherm; component=1) for isotherm in isotherms]
+        given_pressures_vectors = [partial_pressures(isotherm; component=1) for isotherm in isotherms]
     end
 
     # todo include standlone predictions
@@ -200,7 +202,7 @@ function VantHoffDualModeModel(isotherms::AbstractVector{<:IsothermData}; use_fu
     initial_rss = VHDMFHelper.total_rss(initial_param_vec, isotherms, use_fugacity)
     final_rss = VHDMFHelper.total_rss(final_param_vec, isotherms, use_fugacity)
 
-    analysis = VantHoffDualModeModel(
+    analysis = VantHoffDualModeAnalysis(
         final_param_vec..., initial_param_vec..., isotherms, 
         final_predicted_isotherms, initial_predicted_isotherms, 
         final_rss, initial_rss, final_models, initial_models, standalone_models,

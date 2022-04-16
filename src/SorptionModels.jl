@@ -11,11 +11,14 @@ module SorptionModels
 
     include(joinpath("SorptionModels", "DualMode.jl"))
     export fit_dualmode_model
+    export DualMode, DualModeModel
     
     include(joinpath("SorptionModels", "GAB.jl"))
     export fit_gab_model
+    export GAB, GABModel
 
     include(joinpath("SorptionModels", "NELF.jl"))
+    export NELF
     export NELFModel
     export calculate_polymer_phase_density
     export calculate_swelled_polymer_density
@@ -26,15 +29,23 @@ module SorptionModels
     export predict_sorption
 
     include(joinpath("TransientSorptionModels", "FickianSorption.jl"))
-    export FickianSorptionModel
+    export FickianSorption, FickianSorptionModel
     include(joinpath("TransientSorptionModels", "BerensHopfenbergSorption.jl"))
-    export BerensHopfenbergSorptionModel
+    export BerensHopfenbergSorption, BerensHopfenbergSorptionModel
     include(joinpath("TransientSorptionModels", "ModifiedBerensHopfenbergSorption.jl"))
-    export ModifiedBerensHopfenbergSorptionModel
+    export ModifiedBerensHopfenbergSorption, ModifiedBerensHopfenbergSorptionModel
 
 
     # Model specific analysis
     include(joinpath("ModelAnalyses", "VantHoffDualMode.jl"))
-    export VantHoffDualModeModel
+    export VantHoffDualModeAnalysis
 
+    include(joinpath("ModelAnalyses", "IsostericHeatOfSorption.jl"))
+    export IsostericHeatAnalysis
+
+    include(joinpath("ModelAnalyses", "MobilityFactor.jl"))
+    export MobilityFactorAnalysis
+
+    include(joinpath("ModelAnalyses", "PartialImmobilization.jl"))
+    export PartialImmobilizationModel
 end

@@ -1,3 +1,5 @@
+struct FickianSorption end
+
 struct FickianSorptionModel{MFT, KFT} <: TransientSorptionModel
     m_f::MFT
     k_f::KFT
