@@ -112,7 +112,7 @@ function fit_transient_sorption_model(
     "Specify a dataset [(time, sorption)...] and get back a vector of parameters."
     function fitting_uncertainty_wrapper(full_dataset)
         transient_step = TransientStepData(full_dataset)
-        return fit_transient_sorption_model(transient_step, model; custom_initial_params=fitted_params, resampling_mode=true, uncertainty_method=nothing)
+        return fit_transient_sorption_model(transient_step, model_choice; custom_initial_params=fitted_params, resampling_mode=true, uncertainty_method=nothing)
     end
 
     if uncertainty_method == :Bootstrap

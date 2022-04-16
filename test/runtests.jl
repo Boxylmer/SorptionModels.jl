@@ -186,6 +186,12 @@ precision = 5
         @test mbh_d.val ≈ 2.251436090950463e-15
         @test mbh_d.err ≈ 2.251436090950463e-16
 
+        # boostrap and uncertainty
+        fick_model_fit_with_err = fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
+        fick_d_with_err = get_diffusivity(fick_model_fit_with_err, semi_thickness_cm)
+        @test fick_d_with_err.val ≈ fick_d.val
+        @test fick_d_with_err.err ≈ 7.950417186869458e-8
+        
     end
 
 
