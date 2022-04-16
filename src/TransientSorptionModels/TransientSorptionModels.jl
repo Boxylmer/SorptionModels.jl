@@ -46,7 +46,7 @@ end
     - This will return the linearized parameter fittings in lieu of the normal model objects. 
 """
 function fit_transient_sorption_model(
-    step_data::TransientStepData, model; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
+    step_data::TransientStepData, model_choice; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
     uncertainty_method=nothing, num_uncertainty_resamples=20, resampling_mode=false)
     
     # resample data if necessary
@@ -56,12 +56,12 @@ function fit_transient_sorption_model(
         _step_data = strip_measurement_to_value(step_data) 
     end
     # prepare fitting model and parameters
-    if typeof(model) <: FickianSorption
+    if typeof(model_choice) <: FickianSorption
         ub = [1.1, log(1.)]
         lb = [0., -50.]
         initial_params = [1., log(0.001)]
         model = FickianSorptionModel
-    elseif typeof(model) <: BerensHopfenbergSorption
+    elseif typeof(model_choice) <: BerensHopfenbergSorption
         ub = [1.1, log(1.), 1., log(1.)]
         lb = [0., -50., 0., -50.]
         # initial_params = [0.9, -3, 0.1, -10]
@@ -70,7 +70,7 @@ function fit_transient_sorption_model(
             initial_fickan_fit = linearize_model(fit_transient_sorption_model(_step_data, FickianSorption()))
             initial_params = [initial_fickan_fit.m_f, initial_fickan_fit.k_f, 0.1, log(0.0001)]
         end
-    elseif typeof(model) <: ModifiedBerensHopfenbergSorption
+    elseif typeof(model_choice) <: ModifiedBerensHopfenbergSorption
         ub = [1.1, log(1.), 1., log(1.), log(10)]
         lb = [0., -50., 0., -50., -30.]
         # initial_params = [0.9, -3, 0.1, -10, -5]
