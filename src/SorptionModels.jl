@@ -5,6 +5,9 @@ module SorptionModels
     using Optim
     using Measurements
 
+    using XLSX
+    using DelimitedFiles
+
     include(joinpath("SorptionModels", "ModelMethods.jl"))
     export predict_concentration
     export fit_model
@@ -48,4 +51,12 @@ module SorptionModels
 
     include(joinpath("ModelAnalyses", "PartialImmobilization.jl"))
     export PartialImmobilizationModel
+
+    # model writers
+    include(joinpath("Writers", "WriteVantHoffDualMode.jl"))
+    include(joinpath("Writers", "WriteIsostericHeat.jl"))
+    # mobility factor not implemented yet
+    include(joinpath("Writers", "WritePartialImmobilization.jl"))
+    export write_analysis
+
 end
