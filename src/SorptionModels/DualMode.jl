@@ -69,6 +69,7 @@ e.g.,
 """
 function predict_concentration(dm::AbstractVector{<:DualModeModel}, partial_pressures_mpa::AbstractVector{<:Number})
     # todo
+    throw(ErrorException("Not implemented yet, you should definitely complain to the devs about this."))
 end
 
 
@@ -111,36 +112,44 @@ Fit the dual mode model to the pressures and concentrations present in the isoth
 For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
 
 """
-function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, use_fugacity=false)
+function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, use_fugacity=false, apply_weights=false)
     # see if isotherm is only a single component
     if isotherm.num_components != 1
         throw(ErrorException("The isotherm given has more than one component, this function only works for pure isotherms"))
     end
+
+    if !apply_weights
+        used_isotherm = strip_measurement_to_value(isotherm)
+    else
+        used_isotherm = isotherm
+    end
+
     target = function(ch_b_kd)
         dmm = DualModeModel(ch_b_kd...; use_fugacity)
-        err = rss(dmm, isotherm; use_fugacity=use_fugacity)
+        err = rss(dmm, used_isotherm; use_fugacity=use_fugacity)
         if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
         return err
     end
     lower = [0., 0., 0.]
     upper = [Inf, Inf, Inf]
     res = Optim.optimize(target, lower, upper, [0.5, 0.5, 0.5], Fminbox(BFGS()))
-
+    
+    if use_fugacity
+        pressure_function = fugacities
+        resampled_fitting_function = DualModeHelperFunctions.resampled_set_fitting_wrapper_fugacity
+    else 
+        pressure_function = partial_pressures
+        resampled_fitting_function = DualModeHelperFunctions.resampled_set_fitting_wrapper_pressure
+    end
+    
     if !isnothing(uncertainty_method)
-        if use_fugacity 
-            data = isotherm_dataset(fugacities(isotherm), concentration(isotherm), 1)
-            resampled_fitting_function = DualModeHelperFunctions.resampled_set_fitting_wrapper_fugacity
-        else 
-            data = isotherm_dataset(partial_pressures(isotherm), concentration(isotherm), 1) 
-            resampled_fitting_function = DualModeHelperFunctions.resampled_set_fitting_wrapper_pressure
-        end
+        data = isotherm_dataset(pressure_function(used_isotherm), concentration(used_isotherm), 1)
     end
 
     if uncertainty_method == :JackKnife
         corresponding_uncertainties = jackknife_uncertainty(resampled_fitting_function, data)
         uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
         optimized_model = DualModeModel(uncertain_parameters...; use_fugacity)
-
     elseif uncertainty_method == :Bootstrap
         corresponding_uncertainties = bootstrap_uncertainty(resampled_fitting_function, data)  
         uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]

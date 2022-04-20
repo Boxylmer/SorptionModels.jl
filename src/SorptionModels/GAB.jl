@@ -59,13 +59,22 @@ Fit a set of activities and corresponding concentrations (**CC/CC**) to the GAB 
 
 For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
 """
-function fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; uncertainty_method=nothing)
+function fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; uncertainty_method=nothing, apply_weights=false)
     if length(activities) != length(concentrations)
         throw(DimensionMismatch("The concentrations and activities given don't match in length, this function only works for equivalent length vectors of numbers"))
     end
+
+    if !apply_weights
+        applied_activities = strip_measurement_to_value(activities)
+        applied_concs = strip_measurement_to_value(concentrations)
+    else
+        applied_activities = activities
+        applied_concs = concentrations
+    end
+
     target = function(cp_k_a)
         gm = GABModel(cp_k_a...)
-        err = rss(gm, activities, concentrations)
+        err = rss(gm, applied_activities, applied_concs)
         if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
         return err
     end
@@ -74,12 +83,12 @@ function fit_gab_model(activities::AbstractVector, concentrations::AbstractVecto
     
     # todo this can be made much more readable by moving corresponding_uncertainties and uncertain_parameters out of the ifs and introducing dummy values in the else case.
     if uncertainty_method == :JackKnife
-        data = collect(zip(activities, concentrations))
+        data = collect(zip(applied_activities, applied_concs))
         corresponding_uncertainties = jackknife_uncertainty(GABHelperFunctions.resampled_set_fitting_wrapper, data)
         uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
         optimized_model = GABModel(uncertain_parameters...)
     elseif uncertainty_method == :Bootstrap
-        data = collect(zip(activities, concentrations))  # Isotherm.dataset(isotherm)
+        data = collect(zip(applied_activities, applied_concs))  # Isotherm.dataset(isotherm)
         corresponding_uncertainties = bootstrap_uncertainty(GABHelperFunctions.resampled_set_fitting_wrapper, data)  
         uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
         optimized_model = GABModel(uncertain_parameters...)  

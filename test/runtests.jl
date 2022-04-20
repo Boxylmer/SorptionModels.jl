@@ -13,9 +13,12 @@ precision = 5
     # dual mode
         
         # single component isotherm test
-        isofit = IsothermData(; partial_pressures_mpa = [0, 0.03, 0.15, 0.6, 0.9, 1.2, 1.5], concentrations_cc = [0, 1, 3, 8, 10, 12.2, 14])
+        isofit = IsothermData(; partial_pressures_mpa = [0, 0.03, 0.15, 0.6, 0.9, 1.2, 1.5], concentrations_cc = [0, 1, 3, 8, 10, 12.2, 14], fugacities_mpa = [0, 0.01, 0.1, 0.6, 0.5, 1.1, 1.3])
         dmfittings = fit_dualmode_model(isofit)
         dmfittings = fit_model(DualMode(), isofit)
+        dmfittings_fugacity = fit_dualmode_model(isofit, use_fugacity=true)
+        
+        @test dmfittings_fugacity.b != dmfittings.b
 
         @test round(dmfittings.ch; digits=precision) == round(6.807641216606124; digits=precision) &&
             round(dmfittings.b; digits=precision) == round(3.376206925261848; digits=precision) && 
@@ -57,6 +60,22 @@ precision = 5
         recalculated_pressure = SorptionModels.predict_pressure(model, concentration)
         @test pressure == round(recalculated_pressure; digits=precision)
 
+        # test cases
+        # pentane in poly(PFMMD-co-CTFE) at 25C
+        partial_pressures = [0.000536313 ± 1.34078E-06, 0.005384973 ± 1.34624E-05, 0.011818656 ± 2.95466E-05, 0.01855287 ± 4.63822E-05, 0.025361536 ± 6.34038E-05, 0.03215868 ± 8.03967E-05]
+        concentrations = [0.025431809 ± 0.013099647, 1.080866801 ± 0.14091057, 2.167767053 ± 0.316078227, 3.050610392 ± 0.521260816, 3.942765687 ± 0.754846261, 4.861759146 ± 1.013138368]
+        iso_case_1 = IsothermData(
+            partial_pressures_mpa = partial_pressures,
+            concentrations_cc = concentrations
+        )
+        model = fit_dualmode_model(iso_case_1)
+        model_same = fit_dualmode_model(strip_measurement_to_value(iso_case_1))
+        @test model.ch ≈ 1.7078301291320859
+        @test model.ch == model_same.ch
+
+        model_different = fit_dualmode_model(iso_case_1; apply_weights=true)
+        @test model.ch != model_different.ch
+
     # GAB
         acts =  [0, 0.023, 0.083, 0.161, 0.202,  0.263, 0.327 ]  # this is real 1-propanol sorption in TPBO-0.25 at 25C
         concs = [0, 2.253, 3.925, 6.126, 8.091, 12.363, 20.261]
@@ -76,16 +95,15 @@ precision = 5
         concs_2 = [0 ± 0.5, 2.253 ± 0.5, 3.925 ± 0.5, 6.126 ± 0.5, 8.091 ± 0.5, 12.363 ± 0.5, 20.261 ± 0.5]
         
         gmfitting_2 = fit_gab_model(acts_2, concs_2)
-        @test gmfitting_2.cp == 4.75152770782204 && 
-            gmfitting_2.k ==  2.365375206030592 && 
-            gmfitting_2.a == 9.807283609034045
-
+        @test round(gmfitting_2.cp; digits = 5) == round(4.7515508907549435; digits = 5) && 
+            round(gmfitting_2.k; digits = 5) ==  round(2.36537162847239; digits = 5) && 
+            round(gmfitting_2.a; digits = 5) == round(9.807108219804844; digits = 5)
+        
         # test fitting with JackKnife uncertainty_method
         gmfitting_3 = fit_gab_model(acts_2, concs_2; uncertainty_method=:JackKnife)
-        @test gmfitting_3.cp.err == 0.4973699474088062 && 
-            gmfitting_3.k.err ==  0.12367885393402438 && 
-            gmfitting_3.a.err == 4.090851660381514
-        
+        @test gmfitting_3.cp.err ≈ 0.49739433319622156 && 
+            gmfitting_3.k.err ≈ 0.1236803472661029 && 
+            gmfitting_3.a.err ≈ 4.09125368150671
     end
 
     @testset "Fundamental Sorption Models" begin
@@ -154,11 +172,7 @@ precision = 5
         fickian_prediction = predict_sorption(fickian_model, 10)
         bh_prediction = predict_sorption(bh_model, 10)
         mbh_prediction = predict_sorption(mbh_model, 10)
-    
-        # println(fickian_prediction)
-        # println(bh_prediction)
-        # println(mbh_prediction)
-    
+
         time_vector = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 50, 70, 90, 100]
         fick_prediction_vector = predict_sorption(fickian_model, time_vector)
         bh_prediction_vector = predict_sorption(bh_model, time_vector)
@@ -298,7 +312,7 @@ precision = 5
         model = DualModeModel(56.8, 7.4, 26.1; use_fugacity=true)
         permeabilities = [1221, 1091, 1038]
         pressures_mpa = [0.298, 0.637, 0.974]
-        @show result = PartialImmobilizationModel(model, pressures_mpa, permeabilities)
+        result = PartialImmobilizationModel(model, pressures_mpa, permeabilities)
         write_analysis(result, path)
 
     end
