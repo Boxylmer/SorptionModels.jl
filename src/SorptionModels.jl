@@ -21,8 +21,7 @@ module SorptionModels
     export GAB, GABModel
 
     include(joinpath("SorptionModels", "NELF.jl"))
-    export NELF
-    export NELFModel
+    export NELF, NELFModel
     export calculate_polymer_phase_density
     export calculate_swelled_polymer_density
 
