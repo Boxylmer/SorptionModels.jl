@@ -16,6 +16,9 @@ Apply the method discussed in:
 `P. Li, T.S. Chung, D.R. Paul, Gas sorption and permeation in PIM-1, Journal of Membrane Science. 432 (2013) 50–57. https://doi.org/10.1016/j.memsci.2013.01.009.`
 
 to separate permeabilities into langmuir and henry mode diffusivities given a Dual Mode sorption model.
+
+
+
 """
 function PartialImmobilizationModel(model::DualModeModel, pressures_mpa::AbstractVector{<:Number}, permeabilities_barrer::AbstractVector{<:Number}; temperature_k = nothing)
     if model.use_fugacity == false
