@@ -116,7 +116,7 @@ precision = 5
             density = 1.197850471   #g/cm3    
             bulk_phase_eos = SL([penetrant])
             polymer_phase_eos = SL([polymer, penetrant], kij)
-            # nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
+            nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
         
             temperature = 308.15
             pressures = [1e-13, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
@@ -124,7 +124,7 @@ precision = 5
             expected_concs_cc_cc = [0.003361991, 5.094493596, 8.910071012, 12.66689539, 16.17497812, 19.10613428, 21.05001223]
             expected_co2_polymer_phase_μ = [-51.54243958, -32.12143859, -30.22735524, -28.91840386, -27.96456057, -27.30597109, -26.92427275] * 1000
             expected_co2_bulk_phase_μ = [-57.20578109, -32.1214365, -30.22735377, -28.91840261, -27.96455943, -27.30596998, -26.92427169] * 1000
-            # acquired_μ = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in pressures]
+            acquired_μ = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in pressures]
             # acquired_conc = Vector{Any}(undef, length(expected_mass_fracs))
             # for idx in eachindex(expected_mass_fracs, pressures)
             #     pressure = pressures[idx]
