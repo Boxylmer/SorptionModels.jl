@@ -25,6 +25,9 @@ module SorptionModels
     export calculate_polymer_phase_density
     export calculate_swelled_polymer_density
 
+    include(joinpath("SorptionModels", "DGRPT.jl"))
+    export DGRPT, DGRPTModel
+
     include(joinpath("TransientSorptionModels", "TransientSorptionModels.jl"))
     export fit_transient_sorption_model
     export get_diffusivity

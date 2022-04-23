@@ -14,7 +14,7 @@ struct DGRPTModel{BMT, POLYMT, PDT} <: SorptionModel
 end
 
 function predict_concentration(
-        model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions, penetrant_molecular_weights=nothing; 
+        model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions; 
         taylor_series_order=default_dgrpt_taylor_expansion_order, units=:cc)
     penetrant_mass_fraction_initial_guesses = ones(length(bulk_penetrant_mole_fractions)) * 1e-5
    
@@ -43,16 +43,13 @@ function predict_concentration(
         concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
         return concs_g_g
     elseif units==:cc
-        if isnothing(penetrant_molecular_weights)
-            throw(ArgumentError("Need to specify penetrant molecular weights (g/mol) to get concentration in units of cc/cc!"))
-        end
-        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, penetrant_molecular_weights)
+        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
         return concs_cc_cc
     end
 end
 
-function polymer_density(model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions, penetrant_molecular_weights; taylor_series_order=default_dgrpt_taylor_expansion_order)
-    polymer_phase_mass_fractions = predict_concentration(model, temperature, pressure, bulk_penetrant_mole_fractions, penetrant_molecular_weights; taylor_series_order, units=:frac)
+function polymer_density(model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order=default_dgrpt_taylor_expansion_order)
+    polymer_phase_mass_fractions = predict_concentration(model, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order, units=:frac)
     polymer_density = solve_polymer_density(model, temperature, polymer_phase_mass_fractions; taylor_series_order)
     return polymer_density
 end
@@ -170,6 +167,8 @@ function solve_polymer_density(
         return solved_density
     end
 end
+
+# todo wrap solve_polymer_density under calculate_swelled_polymer_density (it isn't the phase density, just the swelled polymer)
 
 function expected_polymer_chemical_potential(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions; expansion_order=default_dgrpt_taylor_expansion_order)
     # component_chemical_potential_expansions = Vector(zeros(length(model.penetrants)))  # can't use staticvectors with forwarddiff :(

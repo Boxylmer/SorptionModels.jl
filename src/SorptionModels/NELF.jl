@@ -24,17 +24,9 @@ function bulk_phase_activity(model::NELFModel, temperature, pressure, bulk_phase
 end
 
 function predict_concentration(model::NELFModel, temperature, pressure, bulk_phase_mole_fractions; units=:cc)
-    if pressure < eps()
-        pressure = eps()
-    end
-    if any(i -> i < eps(), bulk_phase_mole_fractions)
-        bulk_phase_mole_fractions = copy(bulk_phase_mole_fractions)
-        for i in eachindex(bulk_phase_mole_fractions)
-            if bulk_phase_mole_fractions[i] < eps()
-                bulk_phase_mole_fractions[i] = eps()
-            end
-        end
-    end
+    pressure = pressure < eps() ? eps() : pressure    
+    bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
+
     target_activities = bulk_phase_activity(model, temperature, pressure, bulk_phase_mole_fractions)
     penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * 1e-3
     
@@ -77,9 +69,6 @@ function predict_concentration(model::NELFModel, temperature, pressure, bulk_pha
         concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
         return concs_g_g
     elseif units==:cc
-        # if isnothing(penetrant_molecular_weights)
-        #     throw(ArgumentError("Need to specify penetrant molecular weights (g/mol) to get concentration in units of cc/cc!"))
-        # end
         concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
         return concs_cc_cc
     end

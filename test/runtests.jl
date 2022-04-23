@@ -108,61 +108,42 @@ precision = 5
 
     @testset "Fundamental Sorption Models" begin
         using MembraneEOS
-        # NELF
-            polymer = "PC"
-            penetrant = "CO2"
-            kij = [0 -0.007; -0.007 0]
-            ksw = 0.0102            # 1/MPa
-            density = 1.197850471   #g/cm3    
-            bulk_phase_eos = SL([penetrant])
-            polymer_phase_eos = SL([polymer, penetrant], kij)
-            nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
+        polymer = "PC"
+        penetrant = "CO2"
+        kij = [0 -0.007; -0.007 0]
+        bulk_phase_eos = SL([penetrant])
+        polymer_phase_eos = SL([polymer, penetrant], kij)
+        density = 1.197850471   #g/cm3    
+        temperature = 308.15
+        pressures = [0, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
+        expected_mass_fracs = [5.51E-06, 0.008294923, 0.014447025, 0.020467468, 0.026066798, 0.030734723, 0.033827052]
+        expected_concs_cc_cc = [0, 5.094493596, 8.910071012, 12.66689539, 16.17497812, 19.10613428, 21.05001223]
         
-            temperature = 308.15
-            pressures = [0, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
-            expected_mass_fracs = [5.51E-06, 0.008294923, 0.014447025, 0.020467468, 0.026066798, 0.030734723, 0.033827052]
-            expected_concs_cc_cc = [0, 5.094493596, 8.910071012, 12.66689539, 16.17497812, 19.10613428, 21.05001223]
-            # expected_co2_polymer_phase_μ = [-51.54243958, -32.12143859, -30.22735524, -28.91840386, -27.96456057, -27.30597109, -26.92427275] * 1000
-            # expected_co2_bulk_phase_μ = [-57.20578109, -32.1214365, -30.22735377, -28.91840261, -27.96455943, -27.30596998, -26.92427169] * 1000
-            
-            acquired_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in pressures]
-            
-            @show acquired_concs_pure_co2
+        # NELF    
+            ksw = 0.0102            # 1/MPa
+            nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
+            nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in pressures]
         
             # @show [PolymerMembranes.bulk_phase_chemical_potential(nelfmodel, temperature, p, [1])[1] for p in pressures]
         
             penetrants = ["CO2", "O2"]
-            kij = [0      -0.007 0.0 ; 
-                   -0.007 0      0.0 ; 
-                   0      0.0    0.0 ]
-            ksw = [0.0102, 0.0]            # 1/MPa
-            # density = 1.2   #g/cm3
-            bulk_phase_eos = SL(penetrants)
-            polymer_phase_eos = SL([polymer, penetrants...], kij)
-            nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density, ksw)
-            acquired_concs_co2_mix = [predict_concentration(nelfmodel, temperature, p, [0.5, 0.5])[1] for p in pressures]
-            @test acquired_concs_co2_mix[3] != acquired_concs_pure_co2[3]
+            kij_ternary = [0      -0.007 0.0 ; 
+                           -0.007 0      0.0 ; 
+                           0      0.0    0.0 ]
+            ksw_ternary = [0.0102, 0.0]            # 1/MPa
+            bulk_phase_eos_ternary = SL(penetrants)
+            polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)
+            nelfmodel_ternary = NELFModel(bulk_phase_eos_ternary, polymer_phase_eos_ternary, density, ksw_ternary)
+            nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5])[1] for p in pressures]
+            @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
             
-            acquired_concs_co2_psuedo = [predict_concentration(nelfmodel, temperature, p, [1.0, 0])[1] for p in pressures]
-            @test acquired_concs_co2_psuedo[3] ≈ acquired_concs_pure_co2[3]
+            nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0])[1] for p in pressures]
+            @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
+        # DGRPT
 
-            @show acquired_concs_co2_mix
-            @show acquired_concs_co2_psuedo
-            @show acquired_concs_pure_co2
+            dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
+            @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in pressures]
 
-            # pressures = [1.00E-05, 0.086206897, 0.172413793, 0.25862069, 0.344827586, 0.431034483, 0.517241379, 0.603448276, 0.689655172, 0.775862069, 0.862068966]
-            # expected_o2_μ = [-51.40654702, -28.19935774, -26.43327277, -25.40425664, -24.67700853, -24.11510845, -23.65778994, -23.27263698, -22.94029887, -22.64829267, -22.38809381] * 1000
-            # expected_co2_μ = [-57.20648535, -34.01571204, -32.26627046, -31.25413255, -30.54400748, -29.99948591, -29.55981291, -29.19258481, -28.87846425, -28.60498276, -28.36363139] * 1000
-            # results = [PolymerMembranes.bulk_phase_chemical_potential(nelfmodel, temperature, p * 2, [0.5, 0.5]) for p in pressures]
-            # acquired_o2_μ = [r[2] for r in results]
-            # acquired_co2_μ = [r[1] for r in results]
-            # @show expected_o2_μ
-            # @show acquired_o2_μ
-        
-            # @show expected_co2_μ
-            # @show acquired_co2_μ
-            # @show abs.(expected_concs_cc_cc .- acquired_concs_cc_cc) ./ expected_concs_cc_cc
-            # @show [predict_concentration(nelfmodel, 308.15, p, [1.0]) for p in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]*0.101325]
     end
 
     @testset "Transient Sorption Models" begin
