@@ -74,6 +74,7 @@ end
 
 function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
+    
     μ = ρTω_chemical_potential(
         model.polymer_model, 
         polymer_phase_density, 
@@ -100,7 +101,6 @@ function solve_polymer_density(
 
     if isnothing(initial_density)
         initial_density = model.polymer_dry_density * polymer_phase_mass_fractions[1]
-
         # sometimes the dry density is more dense than the theoretical maximum density of the polymer at that composition (e.g.,, in most liquids and swelling vapors)
         if initial_density >= max_polymer_density  
             initial_density = (max_polymer_density * 0.999)
@@ -110,47 +110,15 @@ function solve_polymer_density(
     if method==:roots
         # roots solution 1
         roots_polymer_density_target = make_roots_polymer_density_target(model, temperature, polymer_phase_mass_fractions; taylor_series_order)
-        
-        # if typeof(max_polymer_density) <: ForwardDiff.Dual
-        #     @show max_polymer_density.value
-        #     @show isnan(max_polymer_density)
-        # else
-        #     @show max_polymer_density
-        # end
-        # if eltype(polymer_phase_mass_fractions) <: ForwardDiff.Dual
-        #     @show [polymer_phase_mass_fraction.value for polymer_phase_mass_fraction in polymer_phase_mass_fractions]
-        # else
-        #     @show max_polymer_density
-        # end
-        
         solved_density = find_zeros(roots_polymer_density_target, eps()*10, max_polymer_density - eps(); no_pts=12, naive=false)
         if length(solved_density) > 1
-            # @warn string(length(solved_density)) * " densities found! Choosing the maximum of the two." # todo deal with this later
-            # if eltype(solved_density) <: ForwardDiff.Dual
-            #     @show [s.value for s in solved_density], [root.value for root in roots_polymer_density_target.(solved_density)] 
-            # else
-            #     @show solved_density
-            # end
-
-            # if eltype(polymer_phase_mass_fractions) <: ForwardDiff.Dual
-            #     @show [s.value for s in polymer_phase_mass_fractions]
-            # else
-            #     @show polymer_phase_mass_fractions
-            # end
             return maximum(solved_density)
-        
         elseif length(solved_density) == 0
-            # @warn "No densities found! Defaulting to the Optim method"
-            # if eltype(polymer_phase_mass_fractions) <: ForwardDiff.Dual
-            #     @show [s.value for s in polymer_phase_mass_fractions]
-            # else
-            #     @show polymer_phase_mass_fractions
-            # end
             return solve_polymer_density(model, temperature, polymer_phase_mass_fractions; taylor_series_order, method=:optim)
-
         else
             return solved_density[1]
         end
+
     elseif method==:optim
         #optim solution 1
         optim_polymer_density_target = make_optim_polymer_density_target(model, temperature, polymer_phase_mass_fractions; taylor_series_order)
@@ -231,17 +199,6 @@ function make_penetrant_mass_fraction_target(
         polymer_phase_activities = calculate_polymer_phase_activities(model, temperature, polymer_density, polymer_phase_mass_fractions)
         residual_squared = rss(target_penetrant_activities .* activity_scaling_factors, polymer_phase_activities[2:end] .* activity_scaling_factors)    
         
-        # if eltype(penetrant_mass_fractions) <: ForwardDiff.Dual
-        #     @show [frac.value for frac in penetrant_mass_fractions]
-        # else
-        #     @show penetrant_mass_fractions
-        # end
-        # if typeof(residual_squared) <: ForwardDiff.Dual
-        #     @show residual_squared.value
-        # else
-        #     @show residual_squared
-        # end
-        
         return residual_squared 
     end
 
@@ -258,7 +215,7 @@ function make_roots_polymer_density_target(model::DGRPTModel, temperature::Numbe
         target_polymer_chemical_potential = expected_polymer_chemical_potential(
             model, temperature, density, polymer_phase_mass_fractions; expansion_order=taylor_series_order)
 
-        polymer_chemical_potential = PolymerMembranes.calculate_polymer_phase_chemical_potentials(
+        polymer_chemical_potential = calculate_polymer_phase_chemical_potentials(
             model, temperature, density, polymer_phase_mass_fractions)[1]
         return (target_polymer_chemical_potential - polymer_chemical_potential) * scaling_factor
     end
@@ -275,7 +232,7 @@ function make_optim_polymer_density_target(model::DGRPTModel, temperature::Numbe
         target_polymer_chemical_potential = expected_polymer_chemical_potential(
             model, temperature, density[1], polymer_phase_mass_fractions; expansion_order=taylor_series_order)
 
-        polymer_chemical_potential = PolymerMembranes.calculate_polymer_phase_chemical_potentials(
+        polymer_chemical_potential = calculate_polymer_phase_chemical_potentials(
             model, temperature, density[1], polymer_phase_mass_fractions)[1]
         return ((target_polymer_chemical_potential - polymer_chemical_potential) * scaling_factor)^2
     end
