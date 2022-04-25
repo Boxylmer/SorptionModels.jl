@@ -91,3 +91,28 @@ function calculate_polymer_phase_density(model::NELFModel, pressure::Number, bul
     polymer_density_after_swelling = calculate_swelled_polymer_density(model, pressure, bulk_phase_mole_fractions)
     return calculate_polymer_phase_density(polymer_density_after_swelling, polymer_phase_mass_fractions)
 end
+
+
+# functions for fit data to NELF parameters
+"""
+    fit_model(::NELF, model_choice, isotherms, bulk_phase_characteristic_params, [polymer_molecular_weight])
+Find the EOS parameters of a polymer from a vector of `IsothermData`s using the NELF model. 
+# Arguments
+- `model_choice`: MembraneEOS model to use
+- `isotherms`: `Vector` of `IsothermData` structs using the polymer in question. Temperature, pressure, and concentration must be provided.
+- `bulk_phase_characteristic_params`: Vector of pure characteristic parameter vectors following the same order as the isotherms. 
+  - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
+"""
+fit_model(::NELF, ::SL, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
+    polymer_molecular_weight=100000)
+    
+    # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
+    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+    
+    function error_function(char_param_vec)
+        polymer_phase_models = [SL(zip(char_param_vec, params)...) for params in bulk_phase_characteristic_params]
+        nelf_models = [NELFModel(bulk_phase_models[i], polymer_phase_models[i])]
+    end
+    # work in progress
+
+end

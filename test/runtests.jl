@@ -141,8 +141,8 @@ precision = 5
             @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
         # DGRPT
 
-            dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
-            @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in pressures]
+            # dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
+            # @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in pressures]
 
     end
 
