@@ -107,11 +107,18 @@ fit_model(::NELF, ::SL, isotherms::AbstractVector{<:IsothermData}, bulk_phase_ch
     polymer_molecular_weight=100000)
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
+    
+    dualmode_models = fit_model.(DualMode(), isotherms)
+    
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+    default_ksw_vec = [0]
+    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
+    infinite_dilution_pressure = eps() # ???
     
     function error_function(char_param_vec)
         polymer_phase_models = [SL(zip(char_param_vec, params)...) for params in bulk_phase_characteristic_params]
-        nelf_models = [NELFModel(bulk_phase_models[i], polymer_phase_models[i])]
+        nelf_models = [NELFModel(bulk_phase_models[i], polymer_phase_models[i], densities[i], default_ksw_vec)]
+        predict_concentration(nelf_models, )
     end
     # work in progress
 
