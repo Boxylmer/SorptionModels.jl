@@ -30,6 +30,10 @@ precision = 5
             partial_pressures_mpa = [0 ± 0.1, 0.03 ± 0.2, 0.15 ± 0.1, 0.6 ± 0.1, 0.9 ± 0.1, 1.2 ± 0.1, 1.5 ± 0.1], 
             concentrations_cc = [0 ± 0.3, 1 ± 0.3, 3 ± 0.3, 8 ± 0.3, 10 ± 0.3, 12.2 ± 0.3, 14 ± 0.3]
         )
+        isofit_fugacity = IsothermData(
+            fugacities_mpa = [0 ± 0.1, 0.03 ± 0.2, 0.15 ± 0.1, 0.6 ± 0.1, 0.9 ± 0.1, 1.2 ± 0.1, 1.5 ± 0.1], 
+            concentrations_cc = [0 ± 0.3, 1 ± 0.3, 3 ± 0.3, 8 ± 0.3, 10 ± 0.3, 12.2 ± 0.3, 14 ± 0.3]
+        )
         dmfittings = fit_dualmode_model(isofit)
         
         @test round(dmfittings.ch; digits=precision) == round(6.807641216606124; digits=precision) &&
@@ -39,6 +43,8 @@ precision = 5
 
         # test jackknife method (same values as the first dmfittings)
         dmfittings_3 = fit_dualmode_model(isofit; uncertainty_method=:JackKnife)
+        dmfittings_4 = fit_dualmode_model(isofit_fugacity; uncertainty_method=:JackKnife, use_fugacity=true)
+        
         # print(dmfittings_3.ch.err, dmfittings_3.b.err, dmfittings_3.kd.err) (when you need to see the actual values for debugging)
 
         @test round(dmfittings_3.ch.err; digits=precision) == round(0.7561917289285796; digits=precision) &&

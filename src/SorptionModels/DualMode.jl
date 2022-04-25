@@ -23,8 +23,8 @@ module DualModeHelperFunctions
 
     function resampled_set_fitting_wrapper_fugacity(dataset)
         fugs, concs = collect(zip(dataset...))
-        isotherm = PolymerMembranes.IsothermData(; fugacities_mpa = fugs, concentrations_cc = concs)
-        dmfitting = PolymerMembranes.fit_dualmode_model(isotherm; use_fugacity = true)
+        isotherm = IsothermData(; fugacities_mpa = fugs, concentrations_cc = concs)
+        dmfitting = fit_dualmode_model(isotherm; use_fugacity = true)
         return [dmfitting.ch, dmfitting.b, dmfitting.kd]
     end
 
