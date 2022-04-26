@@ -13,7 +13,7 @@ struct NELFModel{BMT, POLYMT, PDT, KSWT} <: SorptionModel
     polymer_dry_density::PDT        # number
     ksw_values::KSWT                # vector of values
 end
-
+# todo, add =[1] to bulk_phase_mole_fractions as a default constructor where applicable
 function bulk_phase_activity(model::NELFModel, temperature, pressure, bulk_phase_mole_fractions)
     μ = activity(
         model.bulk_model, 
@@ -103,23 +103,50 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
 - `bulk_phase_characteristic_params`: Vector of pure characteristic parameter vectors following the same order as the isotherms. 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
-# fit_model(::NELF, ::SL, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-#     polymer_molecular_weight=100000)
+function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
+    polymer_molecular_weight=100000, eos=MembraneEOS.SanchezLacombe())
     
-#     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
+    # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
     
-#     dualmode_models = fit_model.(DualMode(), isotherms)
+    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     
-#     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
-#     default_ksw_vec = [0]
-#     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
-#     infinite_dilution_pressure = eps() # ???
-    
-#     function error_function(char_param_vec)
-#         polymer_phase_models = [SL(zip(char_param_vec, params)...) for params in bulk_phase_characteristic_params]
-#         nelf_models = [NELFModel(bulk_phase_models[i], polymer_phase_models[i], densities[i], default_ksw_vec)]
-#         predict_concentration(nelf_models, )
-#     end
-#     # work in progress
+    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+    default_ksw_vec = [0]
+    densities = [polymer_density(isotherm) for isotherm in isotherms] # get each isotherm's density in case the user accounted for polymers from different batches
+    temperatures = temperature.(isotherms)
+    infinite_dilution_pressure = 0.00001 # ???
 
-# end
+    function error_function(char_param_vec)
+        given_sol = zeros(length(isotherms))
+        pred_sol = zeros(length(isotherms))
+
+        for i in eachindex(isotherms)
+            char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
+            char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]
+            char_densities = [char_param_vec[3], bulk_phase_characteristic_params[i][3]]
+            molecular_weights = [polymer_molecular_weight, bulk_phase_characteristic_params[i][4]]
+
+            polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
+            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i], default_ksw_vec)
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1])[1] / infinite_dilution_pressure
+            given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number) / infinite_dilution_pressure
+        end
+        @show err = rss(given_sol, pred_sol)
+        return err
+    end
+    lower = [0., 0., 0.1]
+    upper = [3000, 3000, 3.]
+    # res = Optim.optimize(error_function, lower, upper, [0.5, 0.5, 0.5], Fminbox(BFGS()))
+    res = Optim.optimize(error_function, lower, upper, [500, 500, 2.], SAMIN(), Optim.Options(iterations=10^6))
+
+    @show Optim.minimizer(res)
+    # @show error_function(condition_guess([474, 900, 1.6624])) # correct
+    @show error_function([474, 900, 1.6624])
+    # @show error_function([474, 910, 1.6624])
+    # @show error_function([474, 915, 1.6624])
+    # @show error_function([474, 920, 1.6624])
+
+    return Optim.minimizer(res)
+    # work in progress
+
+end

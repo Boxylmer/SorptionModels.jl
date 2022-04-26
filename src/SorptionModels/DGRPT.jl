@@ -48,7 +48,7 @@ function predict_concentration(
     end
 end
 
-function polymer_density(model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order=default_dgrpt_taylor_expansion_order)
+function MembraneBase.polymer_density(model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order=default_dgrpt_taylor_expansion_order)
     polymer_phase_mass_fractions = predict_concentration(model, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order, units=:frac)
     polymer_density = solve_polymer_density(model, temperature, polymer_phase_mass_fractions; taylor_series_order)
     return polymer_density
