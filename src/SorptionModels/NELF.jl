@@ -104,7 +104,7 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
 function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-    polymer_molecular_weight=100000, eos=MembraneEOS.SanchezLacombe())
+    polymer_molecular_weight=10000, eos=MembraneEOS.SanchezLacombe())
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
     
@@ -114,7 +114,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     default_ksw_vec = [0]
     densities = [polymer_density(isotherm) for isotherm in isotherms] # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
-    infinite_dilution_pressure = 0.00001 # ???
+    infinite_dilution_pressure = 1e-4 # ???
 
     function error_function(char_param_vec)
         given_sol = zeros(length(isotherms))
@@ -128,8 +128,8 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
 
             polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
             nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i], default_ksw_vec)
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1])[1] / infinite_dilution_pressure
-            given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number) / infinite_dilution_pressure
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1])[1]
+            given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
         end
         @show err = rss(given_sol, pred_sol)
         return err
@@ -137,7 +137,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     lower = [0., 0., 0.1]
     upper = [3000, 3000, 3.]
     # res = Optim.optimize(error_function, lower, upper, [0.5, 0.5, 0.5], Fminbox(BFGS()))
-    res = Optim.optimize(error_function, lower, upper, [500, 500, 2.], SAMIN(), Optim.Options(iterations=10^6))
+    res = Optim.optimize(error_function, lower, upper, [500, 500, 2.], SAMIN(; rt = 0.8), Optim.Options(iterations=10^6))
 
     @show Optim.minimizer(res)
     # @show error_function(condition_guess([474, 900, 1.6624])) # correct

@@ -184,21 +184,21 @@ precision = 5
             char_n2 = [160, 145, 0.943, 28.01]
             isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_20c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             @show model_vec = fit_model(NELF(), isotherms, [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2])
-            polymer_phase = SL([model_vec[1], 630], [model_vec[2], 300], [model_vec[3], 1.515], [100000, 44])
+            polymer_phase = SL([model_vec[1], 630], [model_vec[2], 300], [model_vec[3], 1.515], [10000, 44])
             bulk_phase = SL(char_co2...)
             nelf_model = NELFModel(bulk_phase, polymer_phase, 1.393, [0.])
             fit_pred = [predict_concentration(nelf_model, 323.15, p, [1]) for p in [0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131]]
 
-            polymer_phase = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44])
+            polymer_phase = SL([474, 630], [900, 300], [1.6624, 1.515], [10000, 44])
             nelf_model = NELFModel(bulk_phase, polymer_phase, 1.393, [0.])
             given_pred = [predict_concentration(nelf_model, 323.15, p, [1]) for p in [0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131]]
 
-            given = [7.37368523, 12.0433614, 17.76552202, 23.28373709, 27.50367509, 31.07457011]
+            given = [5.93630284, 11.36554572, 15.98552528, 23.62447856, 33.06426088, 42.47173453]
 
             @show given
             @show given_pred
             @show fit_pred
-            
+
         # DGRPT
 
             # dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
