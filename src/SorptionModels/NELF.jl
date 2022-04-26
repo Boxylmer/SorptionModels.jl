@@ -134,10 +134,15 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
         @show err = rss(given_sol, pred_sol)
         return err
     end
-    lower = [0., 0., 0.1]
-    upper = [3000, 3000, 3.]
-    # res = Optim.optimize(error_function, lower, upper, [0.5, 0.5, 0.5], Fminbox(BFGS()))
-    res = Optim.optimize(error_function, lower, upper, [500, 500, 2.], SAMIN(; rt = 0.8), Optim.Options(iterations=10^6))
+    density_lower_bound = maximum(densities)
+    lower = [0., 0., density_lower_bound]
+    upper = [3000, 3000, 5.]
+    res = Optim.optimize(
+        error_function, lower, upper, 
+        [500, 500, density_lower_bound * 1.2], 
+        Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
+        Optim.Options(; allow_f_increases = false))
+    # res = Optim.optimize(error_function, lower, upper, [500, 500, density_lower_bound * 1.2], SAMIN(; rt = 0.1), Optim.Options(iterations=10^6))
 
     @show Optim.minimizer(res)
     # @show error_function(condition_guess([474, 900, 1.6624])) # correct
