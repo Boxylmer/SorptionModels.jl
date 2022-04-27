@@ -229,6 +229,13 @@ precision = 5
             @show round.(fit_pred_with_kij_co2_20c)
             @show round.(fit_pred_with_kij_and_ksw_co2_20c)
 
+
+            ch4_sl = SL("CH4")
+            tpbo25_valerio = SL(["TPBO-0.25", "CH4"])
+            ch4_tpbo25_nelf = NELFModel(ch4_sl, tpbo25_valerio, 1.393)
+            @show predict_concentration(ch4_tpbo25_nelf, 293.15, 0.24, [1])[1]
+    
+
         # DGRPT
 
             # dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
