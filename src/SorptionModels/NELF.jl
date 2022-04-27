@@ -5,11 +5,11 @@ struct NELF end
     Requires that in the kijmatrix, the polymer is the first index. The remaining indexes must match `penetrants`.
 """
 
-struct NELFModel{BMT, POLYMT, PDT, KSWT} <: SorptionModel
+struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     bulk_model::BMT                 # EOS
     polymer_model::POLYMT           # EOS
     polymer_dry_density::PDT        # number
-    ksw_values::KSWT                # vector of values
+    # ksw_values::KSWT                # vector of values
 end
 # todo, add =[1] to bulk_phase_mole_fractions as a default constructor where applicable
 function bulk_phase_activity(model::NELFModel, temperature, pressure, bulk_phase_mole_fractions)
@@ -21,7 +21,11 @@ function bulk_phase_activity(model::NELFModel, temperature, pressure, bulk_phase
     return μ
 end
 
-function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; units=:cc)
+function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, units=:cc)
+    if isnothing(ksw)
+        ksw = zeros(length(bulk_phase_mole_fractions))
+    end
+
     pressure = pressure < eps() ? eps() : pressure    
     bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
@@ -36,7 +40,7 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
             return 1e100
         end
         polymer_phase_mass_fractions = vcat(polymer_mass_fraction, penetrant_mass_fractions)
-        polymer_phase_density_after_swelling = calculate_polymer_phase_density(model, pressure, bulk_phase_mole_fractions, polymer_phase_mass_fractions)
+        polymer_phase_density_after_swelling = calculate_polymer_phase_density(model, pressure, bulk_phase_mole_fractions, polymer_phase_mass_fractions, ksw)
         polymer_phase_density_upper_bound = density_upper_bound(model.polymer_model, polymer_phase_mass_fractions)
         if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound 
             return 1e100
@@ -73,21 +77,21 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
 end
 predict_concentration(model::NELFModel, temperature::Number, pressure::Number; kwargs...) = predict_concentration(model, temperature, pressure, [1]; kwargs...)
 
-function calculate_swelled_polymer_density(model::NELFModel, penetrant_partial_pressures)
-    return model.polymer_dry_density * (1 - sum(model.ksw_values .* penetrant_partial_pressures))
+function calculate_swelled_polymer_density(model::NELFModel, penetrant_partial_pressures::AbstractVector{<:Number}, ksw_values::AbstractVector{<:Number})
+    return model.polymer_dry_density * (1 - sum(ksw_values .* penetrant_partial_pressures))
 end
 
-function calculate_swelled_polymer_density(model::NELFModel, pressure, penetrant_mole_fractions)
+function calculate_swelled_polymer_density(model::NELFModel, pressure::Number, penetrant_mole_fractions::AbstractVector{<:Number}, ksw_values::AbstractVector{<:Number})
     partial_pressures = penetrant_mole_fractions .* pressure
-    return calculate_swelled_polymer_density(model, partial_pressures)
+    return calculate_swelled_polymer_density(model, partial_pressures, ksw_values)
 end
 
 function calculate_polymer_phase_density(swelled_density::Number, polymer_phase_mass_fractions::AbstractVector{<:Number})
     return swelled_density / polymer_phase_mass_fractions[1]
 end
 
-function calculate_polymer_phase_density(model::NELFModel, pressure::Number, bulk_phase_mole_fractions::AbstractVector{<:Number}, polymer_phase_mass_fractions::AbstractVector{<:Number})
-    polymer_density_after_swelling = calculate_swelled_polymer_density(model, pressure, bulk_phase_mole_fractions)
+function calculate_polymer_phase_density(model::NELFModel, pressure::Number, bulk_phase_mole_fractions::AbstractVector{<:Number}, polymer_phase_mass_fractions::AbstractVector{<:Number}, ksw_values::AbstractVector{<:Number})
+    polymer_density_after_swelling = calculate_swelled_polymer_density(model, pressure, bulk_phase_mole_fractions, ksw_values)
     return calculate_polymer_phase_density(polymer_density_after_swelling, polymer_phase_mass_fractions)
 end
 
@@ -126,8 +130,8 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
             molecular_weights = [polymer_molecular_weight, bulk_phase_characteristic_params[i][4]]
 
             polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
-            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i], default_ksw_vec)
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1])[1]
+            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=default_ksw_vec)[1]
             given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
         end
         err = rss(given_sol, pred_sol)
@@ -168,8 +172,8 @@ function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_paramet
         kij_mat = [0 kij[1]; kij[1] 0]
         ksw_vec = [0]
         polymer_model = SL(polymer_phase_parameters..., kij_mat)
-        nelf_models = [NELFModel(bulk_model, polymer_model, densities[i], ksw_vec) for i in eachindex(isotherms)]
-        pred_concs = [predict_concentration(nelf_models[i], temperatures[i], kij_fit_p_mpa, [1])[1] for i in eachindex(isotherms)]
+        nelf_models = [NELFModel(bulk_model, polymer_model, densities[i]) for i in eachindex(isotherms)]
+        pred_concs = [predict_concentration(nelf_models[i], temperatures[i], kij_fit_p_mpa, [1]; ksw=ksw_vec)[1] for i in eachindex(isotherms)]
         exp_concs = predict_concentration.(interpolation_models, kij_fit_p_mpa)
         return rss(exp_concs, pred_concs)
     end
@@ -185,9 +189,9 @@ function fit_ksw(::NELF, isotherm::IsothermData, bulk_model, polymer_model)
     temp = temperature(isotherm)
     pressures_mpa = partial_pressures(isotherm; component=1)
     concentrations_cc = concentration(isotherm; component=1)
+    nelf_model = NELFModel(bulk_model, polymer_model, density)
     function error_function(ksw)
-        nelf_model = NELFModel(bulk_model, polymer_model, density, ksw)
-        pred_concs = [predict_concentration(nelf_model, temp, p, [1])[1] for p in pressures_mpa]
+        pred_concs = [predict_concentration(nelf_model, temp, p, [1]; ksw=ksw)[1] for p in pressures_mpa]
         return rss(concentrations_cc, pred_concs)
     end
     return Optim.minimizer(Optim.optimize(error_function, [0.], BFGS()))
