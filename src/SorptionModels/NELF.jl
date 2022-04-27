@@ -2,9 +2,7 @@ struct NELF end
 
 
 """
-
     Requires that in the kijmatrix, the polymer is the first index. The remaining indexes must match `penetrants`.
-
 """
 
 struct NELFModel{BMT, POLYMT, PDT, KSWT} <: SorptionModel
@@ -23,7 +21,7 @@ function bulk_phase_activity(model::NELFModel, temperature, pressure, bulk_phase
     return μ
 end
 
-function predict_concentration(model::NELFModel, temperature, pressure, bulk_phase_mole_fractions; units=:cc)
+function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; units=:cc)
     pressure = pressure < eps() ? eps() : pressure    
     bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
@@ -73,6 +71,7 @@ function predict_concentration(model::NELFModel, temperature, pressure, bulk_pha
         return concs_cc_cc
     end
 end
+predict_concentration(model::NELFModel, temperature::Number, pressure::Number; kwargs...) = predict_concentration(model, temperature, pressure, [1]; kwargs...)
 
 function calculate_swelled_polymer_density(model::NELFModel, penetrant_partial_pressures)
     return model.polymer_dry_density * (1 - sum(model.ksw_values .* penetrant_partial_pressures))
@@ -99,7 +98,7 @@ end
 Find the EOS parameters of a polymer from a vector of `IsothermData`s using the NELF model. 
 # Arguments
 - `model_choice`: MembraneEOS model to use
-- `isotherms`: `Vector` of `IsothermData` structs using the polymer in question. Temperature, pressure, and concentration must be provided.
+- `isotherms`: `Vector` of `IsothermData` structs using the polymer in question. Temperature, pressure, density, and concentration must be provided.
 - `bulk_phase_characteristic_params`: Vector of pure characteristic parameter vectors following the same order as the isotherms. 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
@@ -112,7 +111,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     default_ksw_vec = [0]
-    densities = [polymer_density(isotherm) for isotherm in isotherms] # get each isotherm's density in case the user accounted for polymers from different batches
+    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
     infinite_dilution_pressure = 1e-4 # ???
 
@@ -144,10 +143,52 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
         Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(error_function, lower, upper, [500, 500, density_lower_bound * 1.2], SAMIN(; rt = 0.1), Optim.Options(iterations=10^6))
 
-    return Optim.minimizer(res)
+    return [Optim.minimizer(res)..., polymer_molecular_weight]
     # work in progress
 
 end
 
-function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, p★_mpa, t★_k, ρ★_g_cm3)
+"""
+    fit_kij(NELF(), isotherms, bulk_parameters, polymer_parameters; [interpolation_model]=DualMode(), [kij_fit_p_mpa]=1e-4)
+Find the best kij and ksw parameters for the NELF model according to the Sanchez Lacombe EOS. 
+# Arguments
+- `isotherms`: `Vector` of `IsothermData` structs using the polymer in question with **only one kind of gas**. Temperature, pressure, density, and concentration must be provided.
+- `bulk_parameters`: vector of the gas or vapor's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3]`.
+- `polymer_parameters`: vector of the polymer's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3]`.
+"""
+function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_parameters::AbstractVector{<:Number}, polymer_parameters::AbstractVector{<:Number}; 
+    interpolation_model=DualMode(), kij_fit_p_mpa=1e-4)
+    
+    interpolation_models = [fit_model(interpolation_model, isotherm) for isotherm in isotherms]
+    bulk_model = SL(bulk_parameters...)
+    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
+    temperatures = temperature.(isotherms)
+    polymer_phase_parameters = [[j for j in i] for i in zip(polymer_parameters, bulk_parameters)]  # hacky way to make it a vector. This is slow and dumb.
+    function kij_error_function(kij)
+        kij_mat = [0 kij[1]; kij[1] 0]
+        ksw_vec = [0]
+        polymer_model = SL(polymer_phase_parameters..., kij_mat)
+        nelf_models = [NELFModel(bulk_model, polymer_model, densities[i], ksw_vec) for i in eachindex(isotherms)]
+        pred_concs = [predict_concentration(nelf_models[i], temperatures[i], kij_fit_p_mpa, [1])[1] for i in eachindex(isotherms)]
+        exp_concs = predict_concentration.(interpolation_models, kij_fit_p_mpa)
+        return rss(exp_concs, pred_concs)
+    end
+    return Optim.minimizer(Optim.optimize(kij_error_function, [0.], BFGS()))
+end
+
+
+function fit_ksw(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_parameters::AbstractVector{<:Number}, polymer_parameters::AbstractVector{<:Number})
+end
+
+function fit_ksw(::NELF, isotherm::IsothermData, bulk_model, polymer_model)
+    density = polymer_density(isotherm)
+    temp = temperature(isotherm)
+    pressures_mpa = partial_pressures(isotherm; component=1)
+    concentrations_cc = concentration(isotherm; component=1)
+    function error_function(ksw)
+        nelf_model = NELFModel(bulk_model, polymer_model, density, ksw)
+        pred_concs = [predict_concentration(nelf_model, temp, p, [1])[1] for p in pressures_mpa]
+        return rss(concentrations_cc, pred_concs)
+    end
+    return Optim.minimizer(Optim.optimize(error_function, [0.], BFGS()))
 end

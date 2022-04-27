@@ -183,22 +183,51 @@ precision = 5
             char_ch4 = [250, 215, 0.500, 16.04]
             char_n2 = [160, 145, 0.943, 28.01]
             isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_20c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
-            @show model_vec = fit_model(NELF(), isotherms, [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2])
-            bulk_phase = SL(char_co2...)
-            
-            polymer_phase = SL([model_vec[1], 630], [model_vec[2], 300], [model_vec[3], 1.515], [10000, 44], [0 -0.03; -0.03 0])
-            nelf_model_fit = NELFModel(bulk_phase, polymer_phase, 1.393, [0.])
-            fit_pred = [predict_concentration(nelf_model_fit, 323.15, p, [1])[1] for p in [0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131]]
-            
-            polymer_phase = SL([474, 630], [900, 300], [1.6624, 1.515], [10000, 44], [0 -0.03; -0.03 0])
-            nelf_model_given = NELFModel(bulk_phase, polymer_phase, 1.393, [0.])
-            given_pred = [predict_concentration(nelf_model_given, 323.15, p, [1])[1] for p in [0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131]]
-            
-            given = [5.93630284, 11.36554572, 15.98552528, 23.62447856, 33.06426088, 42.47173453]
+            char_tpbo25 = fit_model(NELF(), isotherms, [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2])
+             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
+            #   pick CO2
+            co2_bulk_phase = SL(char_co2...)
+            kij_co2_tpbo25 = fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo25)
 
-            @show round.(given)
-            @show round.(given_pred)
-            @show round.(fit_pred)
+            polymer_phase_fit_no_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0; 0 0])
+            polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [10000, 44], [0 -0.03; -0.03 0])
+            polymer_phase_fit_with_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 kij_co2_tpbo25; kij_co2_tpbo25 0])
+            
+            # fit ksw
+            ksw_co2_tpbo_20c = fit_ksw(NELF(), tpbo_co2_20c, co2_bulk_phase, polymer_phase_fit_with_kij)
+            
+            
+            # make predictions
+            nelf_model_fit = NELFModel(co2_bulk_phase, polymer_phase_fit_no_kij, 1.393, [0.])
+            nelf_model_valerio = NELFModel(co2_bulk_phase, polymer_phase_valerio, 1.393, [0.])
+            nelf_model_fit_with_kij = NELFModel(co2_bulk_phase, polymer_phase_fit_with_kij, 1.393, [0.])
+            nelf_model_fit_with_kij = NELFModel(co2_bulk_phase, polymer_phase_fit_with_kij, 1.393, [0.])
+
+            fit_pred_no_kij_co2_50c = [predict_concentration(nelf_model_fit, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            given_valerio_co2_50c = [predict_concentration(nelf_model_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            fit_pred_with_kij_co2_50c = [predict_concentration(nelf_model_fit_with_kij, 323.15, p, [1])[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            
+            fit_pred_no_kij_co2_20c = [predict_concentration(nelf_model_fit, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            given_valerio_co2_20c = [predict_concentration(nelf_model_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            fit_pred_with_kij_co2_20c = [predict_concentration(nelf_model_fit_with_kij, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+
+            given_co2_50c = concentration(tpbo_co2_50c; component=1)
+            given_co2_20c = concentration(tpbo_co2_20c; component=1)
+
+            @show char_tpbo25
+            @show kij_co2_tpbo25
+            @show ksw_co2_tpbo_20c
+            @show round.(given_co2_50c)
+            @show round.(given_valerio_co2_50c)
+            @show round.(fit_pred_no_kij_co2_50c)
+            @show round.(fit_pred_with_kij_co2_50c)
+            @show ""
+            @show round.(given_co2_20c)
+            @show round.(given_valerio_co2_20c)
+            @show round.(fit_pred_no_kij_co2_20c)
+            @show round.(fit_pred_with_kij_co2_20c)
+            
+
         # DGRPT
 
             # dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
