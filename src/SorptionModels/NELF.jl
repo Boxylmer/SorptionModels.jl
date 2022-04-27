@@ -131,7 +131,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
             pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1])[1]
             given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
         end
-        @show err = rss(given_sol, pred_sol)
+        err = rss(given_sol, pred_sol)
         return err
     end
     density_lower_bound = maximum(densities)
@@ -144,14 +144,10 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
         Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(error_function, lower, upper, [500, 500, density_lower_bound * 1.2], SAMIN(; rt = 0.1), Optim.Options(iterations=10^6))
 
-    @show Optim.minimizer(res)
-    # @show error_function(condition_guess([474, 900, 1.6624])) # correct
-    @show error_function([474, 900, 1.6624])
-    # @show error_function([474, 910, 1.6624])
-    # @show error_function([474, 915, 1.6624])
-    # @show error_function([474, 920, 1.6624])
-
     return Optim.minimizer(res)
     # work in progress
 
+end
+
+function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, p★_mpa, t★_k, ρ★_g_cm3)
 end
