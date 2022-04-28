@@ -230,10 +230,10 @@ precision = 5
             @show round.(fit_pred_with_kij_and_ksw_co2_20c)
 
 
-            ch4_sl = SL("CH4")
-            tpbo25_valerio = SL(["TPBO-0.25", "CH4"])
-            ch4_tpbo25_nelf = NELFModel(ch4_sl, tpbo25_valerio, 1.393)
-            @show predict_concentration(ch4_tpbo25_nelf, 293.15, 0.24, [1])[1]
+            co2_sl = SL("CO2")
+            pc_sl = SL(["PC", "CO2"])
+            co2_pc_nelf = NELFModel(co2_sl, pc_sl, 1.197850471)
+            @show predict_concentration(co2_pc_nelf, 308.15, 0.38, [1])[1]   # should be 8.91 to 8.92
     
 
         # DGRPT
