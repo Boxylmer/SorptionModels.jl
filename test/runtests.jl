@@ -148,86 +148,86 @@ precision = 5
             @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
 
 
-            # test the polymer fitter with TPBO-0.25
-            tpbo_ch4_5c = IsothermData(; 
-                partial_pressures_mpa = [0.051022404, 0.097858902, 0.172285293, 0.272711361, 0.371012386, 0.475068139], 
-                concentrations_cc = [7.37368523, 12.0433614, 17.76552202, 23.28373709, 27.50367509, 31.07457011],
-                temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
-                )
-            tpbo_ch4_35c = IsothermData(; 
-                partial_pressures_mpa = [0.05676287, 0.103720596, 0.177868877, 0.268361442, 0.371119351, 0.478013248], 
-                concentrations_cc = [3.741224553, 6.311976164, 9.748565324, 13.23714075, 16.47955269, 19.49981169],
-                temperature_k = 308.15, rho_pol_g_cm3 = 1.3937
-                )
-            tpbo_co2_20c = IsothermData(; 
-                partial_pressures_mpa = [0.018051448, 0.043568055, 0.07237145, 0.134854673, 0.239969739, 0.386544681], 
-                concentrations_cc = [11.64079279, 22.18344653, 30.5524273, 43.09494749, 56.42684262, 67.28267947],
-                temperature_k = 293.15, rho_pol_g_cm3 = 1.3937
-                )
-            tpbo_co2_50c = IsothermData(; 
-                partial_pressures_mpa = [0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131], 
-                concentrations_cc = [5.93630284, 11.36554572, 15.98552528, 23.62447856, 33.06426088, 42.47173453],
-                temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
-                )
-            tpbo_n2_5c = IsothermData(; 
-                partial_pressures_mpa = [0.068906986, 0.181377336, 0.424951374, 0.731306858, 1.064696014, 1.413103086], 
-                concentrations_cc = [2.252715738, 5.601581157, 11.31054253, 16.87930294, 21.39238669, 25.17075548],
-                temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
-                )
-            tpbo_n2_50c = IsothermData(; 
-                partial_pressures_mpa = [0.269930265, 0.705742173, 1.060688385, 1.42192415, 1.813024602, 2.228349107], 
-                concentrations_cc = [2.435212223, 5.677614879, 8.139676474, 10.6450967, 12.90356804, 14.82380991],
-                temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
-                )
-            char_co2 = [630, 300, 1.515, 44]
-            char_ch4 = [250, 215, 0.500, 16.04]
-            char_n2 = [160, 145, 0.943, 28.01]
-            isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_20c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
-            char_tpbo25 = fit_model(NELF(), isotherms, [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2])
-             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
-            #   pick CO2
-            co2_bulk_phase = SL(char_co2...)
-            kij_co2_tpbo25 = fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo25)
+            # # test the polymer fitter with TPBO-0.25
+            # tpbo_ch4_5c = IsothermData(; 
+            #     partial_pressures_mpa = [0.051022404, 0.097858902, 0.172285293, 0.272711361, 0.371012386, 0.475068139], 
+            #     concentrations_cc = [7.37368523, 12.0433614, 17.76552202, 23.28373709, 27.50367509, 31.07457011],
+            #     temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
+            #     )
+            # tpbo_ch4_35c = IsothermData(; 
+            #     partial_pressures_mpa = [0.05676287, 0.103720596, 0.177868877, 0.268361442, 0.371119351, 0.478013248], 
+            #     concentrations_cc = [3.741224553, 6.311976164, 9.748565324, 13.23714075, 16.47955269, 19.49981169],
+            #     temperature_k = 308.15, rho_pol_g_cm3 = 1.3937
+            #     )
+            # tpbo_co2_20c = IsothermData(; 
+            #     partial_pressures_mpa = [0.018051448, 0.043568055, 0.07237145, 0.134854673, 0.239969739, 0.386544681], 
+            #     concentrations_cc = [11.64079279, 22.18344653, 30.5524273, 43.09494749, 56.42684262, 67.28267947],
+            #     temperature_k = 293.15, rho_pol_g_cm3 = 1.3937
+            #     )
+            # tpbo_co2_50c = IsothermData(; 
+            #     partial_pressures_mpa = [0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131], 
+            #     concentrations_cc = [5.93630284, 11.36554572, 15.98552528, 23.62447856, 33.06426088, 42.47173453],
+            #     temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
+            #     )
+            # tpbo_n2_5c = IsothermData(; 
+            #     partial_pressures_mpa = [0.068906986, 0.181377336, 0.424951374, 0.731306858, 1.064696014, 1.413103086], 
+            #     concentrations_cc = [2.252715738, 5.601581157, 11.31054253, 16.87930294, 21.39238669, 25.17075548],
+            #     temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
+            #     )
+            # tpbo_n2_50c = IsothermData(; 
+            #     partial_pressures_mpa = [0.269930265, 0.705742173, 1.060688385, 1.42192415, 1.813024602, 2.228349107], 
+            #     concentrations_cc = [2.435212223, 5.677614879, 8.139676474, 10.6450967, 12.90356804, 14.82380991],
+            #     temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
+            #     )
+            # char_co2 = [630, 300, 1.515, 44]
+            # char_ch4 = [250, 215, 0.500, 16.04]
+            # char_n2 = [160, 145, 0.943, 28.01]
+            # isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_20c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+            # char_tpbo25 = fit_model(NELF(), isotherms, [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2])
+            #  # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
+            # #   pick CO2
+            # co2_bulk_phase = SL(char_co2...)
+            # kij_co2_tpbo25 = fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo25)
 
-            polymer_phase_fit_no_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0; 0 0])
-            polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 -0.03; -0.03 0])
-            polymer_phase_fit_with_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 kij_co2_tpbo25; kij_co2_tpbo25 0])
+            # polymer_phase_fit_no_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0; 0 0])
+            # polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 -0.03; -0.03 0])
+            # polymer_phase_fit_with_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 kij_co2_tpbo25; kij_co2_tpbo25 0])
             
-            # fit ksw
-            ksw_co2_tpbo_20c = fit_ksw(NELF(), tpbo_co2_20c, co2_bulk_phase, polymer_phase_fit_with_kij)
+            # # fit ksw
+            # ksw_co2_tpbo_20c = fit_ksw(NELF(), tpbo_co2_20c, co2_bulk_phase, polymer_phase_fit_with_kij)
             
             
-            # make predictions
-            nelf_model_fit = NELFModel(co2_bulk_phase, polymer_phase_fit_no_kij, 1.393)
-            nelf_model_valerio = NELFModel(co2_bulk_phase, polymer_phase_valerio, 1.393)
-            nelf_model_fit_with_kij = NELFModel(co2_bulk_phase, polymer_phase_fit_with_kij, 1.393)
-            nelf_model_fit_with_kij = NELFModel(co2_bulk_phase, polymer_phase_fit_with_kij, 1.393)
+            # # make predictions
+            # nelf_model_fit = NELFModel(co2_bulk_phase, polymer_phase_fit_no_kij, 1.393)
+            # nelf_model_valerio = NELFModel(co2_bulk_phase, polymer_phase_valerio, 1.393)
+            # nelf_model_fit_with_kij = NELFModel(co2_bulk_phase, polymer_phase_fit_with_kij, 1.393)
+            # nelf_model_fit_with_kij = NELFModel(co2_bulk_phase, polymer_phase_fit_with_kij, 1.393)
 
-            fit_pred_no_kij_co2_50c = [predict_concentration(nelf_model_fit, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
-            given_valerio_co2_50c = [predict_concentration(nelf_model_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
-            fit_pred_with_kij_co2_50c = [predict_concentration(nelf_model_fit_with_kij, 323.15, p, [1])[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            # fit_pred_no_kij_co2_50c = [predict_concentration(nelf_model_fit, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            # given_valerio_co2_50c = [predict_concentration(nelf_model_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            # fit_pred_with_kij_co2_50c = [predict_concentration(nelf_model_fit_with_kij, 323.15, p, [1])[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
             
-            fit_pred_no_kij_co2_20c = [predict_concentration(nelf_model_fit, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
-            given_valerio_co2_20c = [predict_concentration(nelf_model_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
-            fit_pred_with_kij_co2_20c = [predict_concentration(nelf_model_fit_with_kij, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
-            fit_pred_with_kij_and_ksw_co2_20c = [predict_concentration(nelf_model_fit_with_kij, 293.15, p; ksw=ksw_co2_tpbo_20c)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            # fit_pred_no_kij_co2_20c = [predict_concentration(nelf_model_fit, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            # given_valerio_co2_20c = [predict_concentration(nelf_model_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            # fit_pred_with_kij_co2_20c = [predict_concentration(nelf_model_fit_with_kij, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            # fit_pred_with_kij_and_ksw_co2_20c = [predict_concentration(nelf_model_fit_with_kij, 293.15, p; ksw=ksw_co2_tpbo_20c)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
 
-            given_co2_50c = concentration(tpbo_co2_50c; component=1)
-            given_co2_20c = concentration(tpbo_co2_20c; component=1)
+            # given_co2_50c = concentration(tpbo_co2_50c; component=1)
+            # given_co2_20c = concentration(tpbo_co2_20c; component=1)
 
-            @show char_tpbo25
-            @show kij_co2_tpbo25
-            @show ksw_co2_tpbo_20c
-            @show round.(given_co2_50c)
-            @show round.(given_valerio_co2_50c)
-            @show round.(fit_pred_no_kij_co2_50c)
-            @show round.(fit_pred_with_kij_co2_50c)
-            @show ""
-            @show round.(given_co2_20c)
-            @show round.(given_valerio_co2_20c)
-            @show round.(fit_pred_no_kij_co2_20c)
-            @show round.(fit_pred_with_kij_co2_20c)
-            @show round.(fit_pred_with_kij_and_ksw_co2_20c)
+            # @show char_tpbo25
+            # @show kij_co2_tpbo25
+            # @show ksw_co2_tpbo_20c
+            # @show round.(given_co2_50c)
+            # @show round.(given_valerio_co2_50c)
+            # @show round.(fit_pred_no_kij_co2_50c)
+            # @show round.(fit_pred_with_kij_co2_50c)
+            # @show ""
+            # @show round.(given_co2_20c)
+            # @show round.(given_valerio_co2_20c)
+            # @show round.(fit_pred_no_kij_co2_20c)
+            # @show round.(fit_pred_with_kij_co2_20c)
+            # @show round.(fit_pred_with_kij_and_ksw_co2_20c)
 
 
             co2_sl = SL("CO2")
