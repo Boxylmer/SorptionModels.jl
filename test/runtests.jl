@@ -190,7 +190,7 @@ precision = 5
             kij_co2_tpbo25 = fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo25)
 
             polymer_phase_fit_no_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0; 0 0])
-            polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [10000, 44], [0 -0.03; -0.03 0])
+            polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 -0.03; -0.03 0])
             polymer_phase_fit_with_kij = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 kij_co2_tpbo25; kij_co2_tpbo25 0])
             
             # fit ksw
@@ -233,9 +233,12 @@ precision = 5
             co2_sl = SL("CO2")
             pc_sl = SL(["PC", "CO2"])
             co2_pc_nelf = NELFModel(co2_sl, pc_sl, 1.197850471)
-            @show predict_concentration(co2_pc_nelf, 308.15, 0.38, [1])[1]   # should be 8.91 to 8.92
-    
-
+            @show predict_concentration(co2_pc_nelf, 308.15, 0.38, [1]; ksw = [0.0102])[1]   # should be 8.91 to 8.92
+            ps = [1.00E-05, 0.157894737, 0.315789474, 0.473684211, 0.631578947, 0.789473684, 0.947368421, 1.105263158, 1.263157895, 1.421052632, 1.578947368, 1.736842105, 1.894736842, 2.052631579, 2.210526316, 2.368421053, 2.526315789, 2.684210526, 2.842105263, 3, ]
+            @show expected_res = [0.003361992, 4.365419237, 7.136022736, 9.144646417, 10.70671881, 11.97602153, 13.03904388, 13.94920076, 14.74174998, 15.44115597, 16.06506788, 16.62662242, 17.13585174, 17.60058337, 18.02703695, 18.42023244, 18.78427702, 19.12257132, 19.43796081, 19.73284857, ]
+            @show res = [predict_concentration(co2_pc_nelf, 308.15, p, [1]; ksw = [0.0])[1] for p in ps]  # no swelling or kij
+            
+        
         # DGRPT
 
             # dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
