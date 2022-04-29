@@ -141,11 +141,11 @@ precision = 5
             bulk_phase_eos_ternary = SL(penetrants)
             polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)
             nelfmodel_ternary = NELFModel(bulk_phase_eos_ternary, polymer_phase_eos_ternary, density)
-            nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5]; ksw=ksw_ternary)[1] for p in pressures]
-            @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
+            # nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5]; ksw=ksw_ternary)[1] for p in pressures]
+            # @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
             
-            nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
-            @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
+            # nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
+            # @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
 
 
             # # test the polymer fitter with TPBO-0.25

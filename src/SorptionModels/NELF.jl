@@ -11,15 +11,6 @@ struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     polymer_dry_density::PDT        # number
     # ksw_values::KSWT                # vector of values
 end
-# todo, add =[1] to bulk_phase_mole_fractions as a default constructor where applicable
-function bulk_phase_activity(model::NELFModel, temperature, pressure, bulk_phase_mole_fractions)
-    μ = activity(
-        model.bulk_model, 
-        pressure, 
-        temperature, 
-        bulk_phase_mole_fractions)
-    return μ
-end
 
 function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, units=:cc)
     if isnothing(ksw)
@@ -29,7 +20,7 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
     pressure = pressure < eps() ? eps() : pressure    
     bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
-    target_activities = bulk_phase_activity(model, temperature, pressure, bulk_phase_mole_fractions)
+    target_activities = activity(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
     penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * 1e-3
     
     function activity_error(penetrant_mass_fractions)
@@ -56,7 +47,11 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
     end
     lower = ones(length(penetrant_mass_fraction_initial_guesses))*eps()
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
-    res = Optim.optimize(activity_error, lower, upper, penetrant_mass_fraction_initial_guesses, Fminbox(LBFGS()), Optim.Options(
+    res = Optim.optimize(
+        activity_error, lower, upper, penetrant_mass_fraction_initial_guesses, 
+        Fminbox(LBFGS()), 
+        # SAMIN(),
+        Optim.Options(
         allow_f_increases = false,
         x_tol = 1e-5,
         g_tol = 1e-7
