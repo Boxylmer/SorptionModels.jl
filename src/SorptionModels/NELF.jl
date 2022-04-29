@@ -20,7 +20,7 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
     pressure = pressure < eps() ? eps() : pressure    
     bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
-    target_activities = activity(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
+    target_activities = chemical_potential(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
     penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * 1e-3
     
     function activity_error(penetrant_mass_fractions)
@@ -37,7 +37,7 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
             return 1e100
         end
 
-        polymer_phase_activities = ρTω_activity(
+        polymer_phase_activities = ρTω_chemical_potential(
             model.polymer_model, 
             polymer_phase_density_after_swelling, 
             temperature, 
