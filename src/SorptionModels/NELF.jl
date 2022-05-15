@@ -112,7 +112,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     default_ksw_vec = [0]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
-    infinite_dilution_pressure = 1e-4 # ???
+    infinite_dilution_pressure = 1e-5 # ???
 
     function error_function(char_param_vec)
         given_sol = zeros(length(isotherms))
@@ -129,18 +129,22 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
             pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=default_ksw_vec)[1]
             given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
         end
-        err = rss(given_sol, pred_sol)
+        @show err = rss(given_sol, pred_sol)
         return err
     end
     density_lower_bound = maximum(densities)
     lower = [0., 0., density_lower_bound]
-    upper = [3000, 3000, 5.]
+    upper = [3000, 3000, 3.]
     res = Optim.optimize(
         error_function, lower, upper, 
         [500, 500, density_lower_bound * 1.2], 
         Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
         Optim.Options(; allow_f_increases = false))
-    # res = Optim.optimize(error_function, lower, upper, [500, 500, density_lower_bound * 1.2], SAMIN(; rt = 0.1), Optim.Options(iterations=10^6))
+    # res = Optim.optimize(
+    #     error_function, lower, upper, 
+    #     [500, 500, density_lower_bound * 1.2], 
+    #     SAMIN(; rt = 0.1), 
+    #     Optim.Options(iterations=10^6))
 
     return [Optim.minimizer(res)..., polymer_molecular_weight]
     # work in progress
