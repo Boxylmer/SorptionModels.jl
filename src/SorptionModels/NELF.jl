@@ -129,7 +129,8 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
             pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=default_ksw_vec)[1]
             given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
         end
-        @show err = rss(given_sol, pred_sol)
+        err = rss(given_sol, pred_sol)
+        @show char_param_vec
         return err
     end
     density_lower_bound = maximum(densities)
@@ -143,7 +144,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     # res = Optim.optimize(
     #     error_function, lower, upper, 
     #     [500, 500, density_lower_bound * 1.2], 
-    #     SAMIN(; rt = 0.1), 
+    #     SAMIN(; rt = 0.08), 
     #     Optim.Options(iterations=10^6))
 
     return [Optim.minimizer(res)..., polymer_molecular_weight]
@@ -191,7 +192,13 @@ function fit_ksw(::NELF, isotherm::IsothermData, bulk_model, polymer_model)
     nelf_model = NELFModel(bulk_model, polymer_model, density)
     function error_function(ksw)
         pred_concs = [predict_concentration(nelf_model, temp, p, [1]; ksw=ksw)[1] for p in pressures_mpa]
+        @show ksw
         return rss(concentrations_cc, pred_concs)
     end
-    return Optim.minimizer(Optim.optimize(error_function, [0.], BFGS()))
+    # lower = [0.]
+    # upper = [Inf]
+    init = [0.0]
+    @show res = Optim.optimize(error_function, init, BFGS())
+    @show minimizer = Optim.minimizer(res)
+    return min(0.0, minimizer)
 end
