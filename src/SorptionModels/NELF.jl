@@ -102,7 +102,7 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
 function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-    polymer_molecular_weight=10000, eos=MembraneEOS.SanchezLacombe())
+    polymer_molecular_weight=100000, eos=MembraneEOS.SanchezLacombe())
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
     
@@ -136,16 +136,16 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     density_lower_bound = maximum(densities)
     lower = [0., 0., density_lower_bound]
     upper = [3000, 3000, 3.]
-    res = Optim.optimize(
-        error_function, lower, upper, 
-        [500, 500, density_lower_bound * 1.2], 
-        Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
-        Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(
     #     error_function, lower, upper, 
-    #     [500, 500, density_lower_bound * 1.2], 
-    #     SAMIN(; rt = 0.08), 
-    #     Optim.Options(iterations=10^6))
+    #     [100, 100, density_lower_bound * 1.2], 
+    #     Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
+    #     Optim.Options(; allow_f_increases = false))
+    res = Optim.optimize(
+        error_function, lower, upper, 
+        [100, 100, density_lower_bound * 1.2], 
+        SAMIN(; rt = 0.1), 
+        Optim.Options(iterations=10^6))
 
     return [Optim.minimizer(res)..., polymer_molecular_weight]
     # work in progress
