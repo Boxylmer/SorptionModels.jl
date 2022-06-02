@@ -21,9 +21,9 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
     bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
     target_activities = chemical_potential(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
-    penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * 1e-3
+    penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * 100 * eps()
     
-    function activity_error(penetrant_mass_fractions)
+    function error_target(penetrant_mass_fractions)
         polymer_mass_fraction = 1 - sum(penetrant_mass_fractions)
         if polymer_mass_fraction <= 0 || polymer_mass_fraction >= 1
             @warn "Polymer mass fraction was not valid, returning very large error value."
@@ -48,13 +48,13 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
     lower = ones(length(penetrant_mass_fraction_initial_guesses))*eps()
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
     res = Optim.optimize(
-        activity_error, lower, upper, penetrant_mass_fraction_initial_guesses, 
+        error_target, lower, upper, penetrant_mass_fraction_initial_guesses, 
         Fminbox(LBFGS()), 
         # SAMIN(),
         Optim.Options(
         allow_f_increases = false,
-        x_tol = 1e-5,
-        g_tol = 1e-7
+        # x_tol = 1e-5,
+        # g_tol = 1e-7
     ); autodiff=:forward)
 
     penetrant_mass_fractions = Optim.minimizer(res)
@@ -105,19 +105,39 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     polymer_molecular_weight=100000, eos=MembraneEOS.SanchezLacombe())
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
-    
-    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
-    
-    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
-    default_ksw_vec = [0]
-    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
-    temperatures = temperature.(isotherms)
+
     infinite_dilution_pressure = 1e-5 # ???
 
-    function error_function(char_param_vec)
-        given_sol = zeros(length(isotherms))
-        pred_sol = zeros(length(isotherms))
+    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
+    
+    densities = polymer_density.(isotherms)
+    density_lower_bound = maximum(densities)
+    
+    lower = [0., 0., density_lower_bound]
+    upper = [3000, 3000, 3.]
+    res = Optim.optimize(
+        error_function, lower, upper, 
+        [500, 500, density_lower_bound * 1.2], 
+        Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
+        Optim.Options(; allow_f_increases = false))
+    # res = Optim.optimize(
+    #     error_function, lower, upper, 
+    #     [100, 100, density_lower_bound * 1.2], 
+    #     SAMIN(; rt = 0.04), 
+    #     Optim.Options(iterations=10^6))
 
+    return [Optim.minimizer(res)..., polymer_molecular_weight]
+    # work in progress
+end
+function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight=100000)
+    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
+    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
+    temperatures = temperature.(isotherms)
+
+    function error_function(char_param_vec)
+        given_sol = zeros(length(isotherms))  # reused
+        pred_sol = zeros(length(isotherms))   # reused
         for i in eachindex(isotherms)
             char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
             char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]
@@ -126,31 +146,17 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
 
             polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
             nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=default_ksw_vec)[1]
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0])[1]
             given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
         end
-        err = rss(given_sol, pred_sol)
-        @show char_param_vec
+        err = log(rss(given_sol, pred_sol))
+        # @show char_param_vec, err
         return err
     end
-    density_lower_bound = maximum(densities)
-    lower = [0., 0., density_lower_bound]
-    upper = [3000, 3000, 3.]
-    # res = Optim.optimize(
-    #     error_function, lower, upper, 
-    #     [100, 100, density_lower_bound * 1.2], 
-    #     Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
-    #     Optim.Options(; allow_f_increases = false))
-    res = Optim.optimize(
-        error_function, lower, upper, 
-        [100, 100, density_lower_bound * 1.2], 
-        SAMIN(; rt = 0.1), 
-        Optim.Options(iterations=10^6))
-
-    return [Optim.minimizer(res)..., polymer_molecular_weight]
-    # work in progress
-
+    return error_function
 end
+
+
 
 """
     fit_kij(NELF(), isotherms, bulk_parameters, polymer_parameters; [interpolation_model]=DualMode(), [kij_fit_p_mpa]=1e-4)
