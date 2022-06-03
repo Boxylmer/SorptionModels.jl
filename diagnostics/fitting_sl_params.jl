@@ -53,56 +53,70 @@ co2_tpbo25_nelf_valerio = NELFModel(co2_bulk_phase, co2_tpbo25_phase_valerio, tp
 tpbo_co2_50c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
 
 
-#fit char params
-char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
-@show char_tpbo25
-co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0.0; 0.0 0])
-co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
-tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+# #fit char params
+# char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
+# @show char_tpbo25
+# co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0.0; 0.0 0])
+# co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
+# tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
 
-@show round.(tpbo_co2_50c_valerio; digits=2)
-@show round.(tpbo_co2_50c_fitted; digits=2)
-@show round.(tpbo_co2_50c_exp; digits=2)
+# @show round.(tpbo_co2_50c_valerio; digits=2)
+# @show round.(tpbo_co2_50c_fitted; digits=2)
+# @show round.(tpbo_co2_50c_exp; digits=2)
 
-tpbo_co2_50c_plot = plot(partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_valerio, label="valerio 50C", legend=:topleft)
-plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_fitted, label="fitted 50C")
-plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_exp, label="exp 50C")
-savefig(tpbo_co2_50c_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
+# tpbo_co2_50c_plot = plot(partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_valerio, label="valerio 50C", legend=:topleft)
+# plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_fitted, label="fitted 50C")
+# plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_exp, label="exp 50C")
+# savefig(tpbo_co2_50c_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
 
 
 error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, 1e-5)
-@show error_target(char_tpbo25)
-@show error_target(char_tpbo_valerio)
+# @show error_target(char_tpbo25)
+# @show error_target(char_tpbo_valerio)
 
-pstars = 400:25:1300
-tstars = 400:25:1300
-rhostars = 1.4:0.1:2.5
-# rhostars = [char_tpbo25[3]]
 mw = 1e6
 
-needed_iters = length(pstars) * length(tstars) * length(rhostars)
-
-
-errs = Array{Float64, 3}(undef, length(pstars), length(tstars), length(rhostars))
-for p_i in eachindex(pstars)
-    pstar = pstars[p_i]
-    work_done = string(round(length(tstars) * length(rhostars) * p_i / needed_iters * 100))*"% complete."
+# high res, one image
+pstars_highres = 400:50:1000
+tstars_highres = 400:50:1000
+# rhostars_highres = [char_tpbo25[3]]
+rhostars_highres = [1.9]
+needed_iters_highres = length(pstars_highres) * length(tstars_highres) * length(rhostars_highres)
+errs_2D = Array{Float64, 2}(undef, length(pstars_highres), length(tstars_highres))
+err_2d_heatmap = heatmap(tstars_highres, pstars_highres, errs_2D[:, :, 1], title="rho="*string(rhostars_highres[1])*"g/cm3",clim=(minimum(errs_2D),maximum(errs_2D)), xlabel = "T* (K)", ylabel = "P* (MPa)")
+for p_i in eachindex(pstars_highres)
+    pstar = pstars_highres[p_i]
+    work_done = "Single image " * string(round(length(tstars_highres) * length(rhostars_highres) * p_i / needed_iters_highres * 100))*"% complete."
     println(work_done)
-    Threads.@threads for t_i in eachindex(tstars)
-        tstar = tstars[t_i]
-        for r_i in eachindex(rhostars)
-            rhostar = rhostars[r_i]
-            errs[p_i, t_i, r_i] = error_target([pstar, tstar, rhostar, mw])
-        end
+    for t_i in eachindex(tstars_highres)
+        tstar = tstars_highres[t_i]
+        rhostar = rhostars_highres[1]
+        errs_2D[p_i, t_i] = error_target([pstar, tstar, rhostar, mw])
     end
 end
+savefig(err_2d_heatmap, joinpath(@__DIR__, "2D error heatmap (high res).png"))
 
-heatmap(tstars, pstars, errs[:, :, 1], title="rho="*string(rhostars[1])*"g/cm3",clim=(minimum(errs),maximum(errs)), xlabel = "T* (K)", ylabel = "P* (MPa)")
-@show maximum(errs)
-@show minimum(errs)
-anim = @animate for i ∈ 1:size(errs)[3]
-    heatmap(tstars, pstars, errs[:, :, i], title="rho="*string(rhostars[i])*"g/cm3",clim=(minimum(errs),maximum(errs)), xlabel = "T* (K)", ylabel = "P* (MPa)")
-end
 
-gif(anim, joinpath(@__DIR__, "anim_fps15.gif"), fps = 5)
+# # low res, animation
+# pstars_lowres = 400:25:1300
+# tstars_lowres = 400:25:1300 
+# rhostars_lowres = 1.4:0.1:2.5
+# needed_iters_lowres = length(pstars_lowres) * length(tstars_lowres) * length(rhostars_lowres)
+# errs_3D = Array{Float64, 3}(undef, length(pstars_lowres), length(tstars_lowres), length(rhostars_lowres))
+# for p_i in eachindex(pstars_lowres)
+#     pstar = pstars_lowres[p_i]
+#     work_done = string(round(length(tstars_lowres) * length(rhostars_lowres) * p_i / needed_iters_lowres * 100))*"% complete."
+#     println(work_done)
+#     Threads.@threads for t_i in eachindex(tstars_lowres)
+#         tstar = tstars_lowres[t_i]
+#         for r_i in eachindex(rhostars_lowres)
+#             rhostar = rhostars_lowres[r_i]
+#             errs_3D[p_i, t_i, r_i] = error_target([pstar, tstar, rhostar, mw])
+#         end
+#     end
+# end
+# anim = @animate for i ∈ 1:size(errs_3D)[3]
+#     heatmap(tstars_lowres, pstars_lowres, errs_3D[:, :, i], title="rho="*string(rhostars_lowres[i])*"g/cm3",clim=(minimum(errs_3D),maximum(errs_3D)), xlabel = "T* (K)", ylabel = "P* (MPa)")
+# end
+# gif(anim, joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 5)
