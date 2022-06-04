@@ -108,7 +108,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
 
     infinite_dilution_pressure = 1e-5 # ???
 
-    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
+    error_function = _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
@@ -146,8 +146,8 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
 
             polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
             nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0])[1]
-            given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure::Number)
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0])[1] / infinite_dilution_pressure
+            given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
         end
         err = log(rss(given_sol, pred_sol))
         # @show char_param_vec, err
@@ -155,7 +155,44 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
     end
     return error_function
 end
+function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight=100000)
+    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
+    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
+    temperatures = temperature.(isotherms)
 
+    function error_function(char_param_vec)
+        given_sol_inf = zeros(length(isotherms))  # reused
+        pred_sol_inf = zeros(length(isotherms))   # reused
+
+        pred_errs = 0
+
+        for i in eachindex(isotherms)
+            char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
+            char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]
+            char_densities = [char_param_vec[3], bulk_phase_characteristic_params[i][3]]
+            molecular_weights = [polymer_molecular_weight, bulk_phase_characteristic_params[i][4]]
+
+            polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
+            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
+
+            pressures = partial_pressures(isotherms[i]; component=1)
+            if pressures[1] == 0; pressures = partial_pressures(isotherms[i]; component=1)[2:end]; end
+
+            pred_sols = [predict_concentration(nelf_model, temperatures[i], p, [1]; ksw=[0])[1] / p for p in pressures]
+            given_sols = [predict_concentration(dualmode_models[i]::DualModeModel, p) / p for p in pressures]
+            pred_errs += log(rss(given_sols, pred_sols))
+
+            pred_sol_inf[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0])[1] / infinite_dilution_pressure
+            given_sol_inf[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
+        end
+        err_inf = log(rss(given_sol_inf, pred_sol_inf))
+        
+        # @show char_param_vec, err
+        return err_inf + pred_errs
+    end
+    return error_function
+end
 
 
 """

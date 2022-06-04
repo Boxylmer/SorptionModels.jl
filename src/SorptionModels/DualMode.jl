@@ -41,6 +41,13 @@ end
 henry_mode_concentration(dm::DualModeModel, pressures_mpa::AbstractVector{<:Number}) = [henry_mode_concentration(dm, p) for p in pressures_mpa]
 
 """
+    infinite_dilution_solubility(dm::DualModeModel)
+Get the infinite dilution solubility coefficient in (**(CC/CC) / MPa**))
+"""
+infinite_dilution_solubility(dm::DualModeModel) = dm.kd + dm.ch*dm.b
+
+
+"""
     predict_concentration(::DualModeModel, pressure_mpa::Number)
 Predict the concentration of a penetrant given a dual mode model and pressure (**MPa**).
 """
