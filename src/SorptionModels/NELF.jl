@@ -13,15 +13,46 @@ struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
 end
 
 function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, units=:cc)
+    
+    error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw)
+
+    penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * eps()
+    lower = zeros(length(penetrant_mass_fraction_initial_guesses))
+    upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
+    res = Optim.optimize(
+        error_target, lower, upper, penetrant_mass_fraction_initial_guesses, 
+        Fminbox(LBFGS()), 
+        # SAMIN(),
+        Optim.Options(
+        allow_f_increases = false,
+        # x_tol = 1e-9,
+        # g_tol = 1e-7
+    ); autodiff=:forward)
+
+    penetrant_mass_fractions = Optim.minimizer(res)
+    polymer_phase_mass_fractions = vcat(1 - sum(penetrant_mass_fractions), penetrant_mass_fractions)
+
+    if units==:frac
+        return polymer_phase_mass_fractions
+    elseif units==:g
+        concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
+        return concs_g_g
+    elseif units==:cc
+        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
+        return concs_cc_cc
+    end
+end
+predict_concentration(model::NELFModel, temperature::Number, pressure::Number; kwargs...) = predict_concentration(model, temperature, pressure, [1]; kwargs...)
+
+function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, minimum_val=100*eps())
     if isnothing(ksw)
         ksw = zeros(length(bulk_phase_mole_fractions))
     end
 
-    pressure = pressure < eps() ? eps() : pressure    
-    bulk_phase_mole_fractions = ((i) -> (i < eps() ? eps() : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
+    pressure = pressure < minimum_val ? minimum_val : pressure    
+    bulk_phase_mole_fractions = ((i) -> (i < minimum_val ? minimum_val : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
     target_activities = chemical_potential(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
-    penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * 100 * eps()
     
     function error_target(penetrant_mass_fractions)
         polymer_mass_fraction = 1 - sum(penetrant_mass_fractions)
@@ -42,35 +73,12 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
             polymer_phase_density_after_swelling, 
             temperature, 
             polymer_phase_mass_fractions)
-        residual_squared = rss(target_activities, polymer_phase_activities[2:end]) 
+        residual_squared = rss(target_activities, polymer_phase_activities[2:end])
         return residual_squared
     end
-    lower = ones(length(penetrant_mass_fraction_initial_guesses))*eps()
-    upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
-    res = Optim.optimize(
-        error_target, lower, upper, penetrant_mass_fraction_initial_guesses, 
-        Fminbox(LBFGS()), 
-        # SAMIN(),
-        Optim.Options(
-        allow_f_increases = false,
-        # x_tol = 1e-5,
-        # g_tol = 1e-7
-    ); autodiff=:forward)
-
-    penetrant_mass_fractions = Optim.minimizer(res)
-    polymer_phase_mass_fractions = vcat(1 - sum(penetrant_mass_fractions), penetrant_mass_fractions)
-
-    if units==:frac
-        return polymer_phase_mass_fractions
-    elseif units==:g
-        concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
-        return concs_g_g
-    elseif units==:cc
-        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
-        return concs_cc_cc
-    end
+    return error_target
 end
-predict_concentration(model::NELFModel, temperature::Number, pressure::Number; kwargs...) = predict_concentration(model, temperature, pressure, [1]; kwargs...)
+
 
 function calculate_swelled_polymer_density(model::NELFModel, penetrant_partial_pressures::AbstractVector{<:Number}, ksw_values::AbstractVector{<:Number})
     return model.polymer_dry_density * (1 - sum(ksw_values .* penetrant_partial_pressures))
@@ -88,6 +96,20 @@ end
 function calculate_polymer_phase_density(model::NELFModel, pressure::Number, bulk_phase_mole_fractions::AbstractVector{<:Number}, polymer_phase_mass_fractions::AbstractVector{<:Number}, ksw_values::AbstractVector{<:Number})
     polymer_density_after_swelling = calculate_swelled_polymer_density(model, pressure, bulk_phase_mole_fractions, ksw_values)
     return calculate_polymer_phase_density(polymer_density_after_swelling, polymer_phase_mass_fractions)
+end
+
+"""
+    infinite_dilution_solubility(model::NELFModel, temperature::Number)
+Currenlty only supported for Sanchez Lacombe
+"""
+function infinite_dilution_solubility(model::NELFModel, temperature::Number)
+    if model.polymer_model <: MembraneEOS.SanchezLacombeModel
+
+    else
+        throw(ErrorException("Only NELF models using Sanchez Lacombe support infinite dilution at this time"))
+    end
+
+
 end
 
 

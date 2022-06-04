@@ -131,21 +131,20 @@ precision = 5
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0]; ksw=[ksw])[1] for p in pressures]
         
-            # @show [PolymerMembranes.bulk_phase_chemical_potential(nelfmodel, temperature, p, [1])[1] for p in pressures]
         
-            # penetrants = ["CO2", "CO2"]
-            # kij_ternary = [0      -0.007 0.0 ; 
-            #                -0.007 0      0.0 ; 
-            #                0      0.0    0.0 ]
-            # ksw_ternary = [0.0102, 0.0]            # 1/MPa
-            # bulk_phase_eos_ternary = SL(penetrants)
-            # polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)
-            # nelfmodel_ternary = NELFModel(bulk_phase_eos_ternary, polymer_phase_eos_ternary, density)
-            # nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5]; ksw=ksw_ternary)[1] for p in pressures]
-            # @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
-            
-            # nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
-            # @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
+            penetrants = ["CO2", "CO2"]
+            kij_ternary = [0      -0.007 -0.007 ; 
+                           -0.007 0      0.0    ; 
+                           -0.007 0.0    0.0    ]
+            ksw_ternary = [0.0102, 0.0]            # 1/MPa
+            bulk_phase_eos_ternary = SL(penetrants)
+            polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)
+            nelfmodel_ternary = NELFModel(bulk_phase_eos_ternary, polymer_phase_eos_ternary, density)
+            nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5]; ksw=ksw_ternary)[1] for p in pressures]
+            @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
+        
+            nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
+            @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
 
 
             # test the polymer fitter with TPBO-0.25
@@ -197,8 +196,8 @@ precision = 5
             nelf_model_valerio = NELFModel(co2_bulk_phase, polymer_phase_valerio, 1.393)
             given_valerio_co2_50c = [predict_concentration(nelf_model_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
             given_valerio_co2_20c = [predict_concentration(nelf_model_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
-            @show fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo_valerio)
-            @show fit_ksw(NELF(), tpbo_co2_20c, co2_bulk_phase, polymer_phase_valerio)
+            # @show fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo_valerio)
+            # @show fit_ksw(NELF(), tpbo_co2_20c, co2_bulk_phase, polymer_phase_valerio)
             # fit char params to exp data
             # char_tpbo25 = fit_model(NELF(), isotherms, [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2])
             # kij_co2_tpbo25 = fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo25)
@@ -225,13 +224,13 @@ precision = 5
             # @show char_tpbo25
             # @show kij_co2_tpbo25
             # @show ksw_co2_tpbo_20c
-            @show round.(given_co2_50c)
-            @show round.(given_valerio_co2_50c)
+            # @show round.(given_co2_50c)
+            # @show round.(given_valerio_co2_50c)
             # @show round.(fit_pred_no_kij_co2_50c)
             # @show round.(fit_pred_with_kij_co2_50c)
-            @show ""
-            @show round.(given_co2_20c)
-            @show round.(given_valerio_co2_20c)
+            # @show ""
+            # @show round.(given_co2_20c)
+            # @show round.(given_valerio_co2_20c)
             # @show round.(fit_pred_no_kij_co2_20c)
             # @show round.(fit_pred_with_kij_co2_20c)
             # @show round.(fit_pred_with_kij_and_ksw_co2_20c)
