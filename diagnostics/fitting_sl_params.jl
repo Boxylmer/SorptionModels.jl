@@ -15,10 +15,20 @@ tpbo_ch4_35c = IsothermData(;
     concentrations_cc = [0, 3.741224553, 6.311976164, 9.748565324, 13.23714075, 16.47955269, 19.49981169],
     temperature_k = 308.15, rho_pol_g_cm3 = 1.3937
     )
+tpbo_co2_5c = IsothermData(; 
+    partial_pressures_mpa = [0.012474405, 0.043391439, 0.11294484, 0.260641173, 0.563818055, 1.023901167, 1.633212939, 2.105369806, 2.615898101], 
+    concentrations_cc = [15.19436518, 33.5283133, 54.43691918, 76.32730082, 99.6986546, 121.6846495, 142.8977897, 157.6456881, 174.186204],
+    temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
+    )
 tpbo_co2_20c = IsothermData(; 
     partial_pressures_mpa = [0, 0.018051448, 0.043568055, 0.07237145, 0.134854673, 0.239969739, 0.386544681], 
     concentrations_cc = [0, 11.64079279, 22.18344653, 30.5524273, 43.09494749, 56.42684262, 67.28267947],
     temperature_k = 293.15, rho_pol_g_cm3 = 1.3937
+    )
+tpbo_co2_35c = IsothermData(; 
+    partial_pressures_mpa = [0, 0.031852099, 0.066294896, 0.104825903, 0.142384952, 0.18000105, 0.217614795, 0.29451087, 0.380689171, 0.478277095, 0.582389897, 0.708074015, 0.842686162, 0.983102955, 1.124774806, 1.268343506, 1.449592484, 1.6496816, 1.857129922, 2.148232167, 2.474818337, 2.819902357, 3.22614195], 
+    concentrations_cc = [0, 11.7485186, 19.85668992, 26.48815715, 31.5333868, 36.0129803, 39.61060375, 45.73820821, 51.29191881, 56.59820409, 61.05145161, 65.66904217, 70.43887202, 74.25489977, 78.20606771, 81.07429981, 84.98775174, 88.39074242, 92.59248611, 96.98527872, 102.146028, 106.7905318, 112.0985474],
+    temperature_k = 308.15, rho_pol_g_cm3 = 1.3937
     )
 tpbo_co2_50c = IsothermData(; 
     partial_pressures_mpa = [0, 0.023513454, 0.050773712, 0.080001807, 0.144376557, 0.249710838, 0.396483131], 
@@ -35,7 +45,7 @@ tpbo_n2_50c = IsothermData(;
     concentrations_cc = [0, 2.435212223, 5.677614879, 8.139676474, 10.6450967, 12.90356804, 14.82380991],
     temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
     )
-isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_20c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
 
 char_co2 = [630, 300, 1.515, 44]
 char_ch4 = [250, 215, 0.500, 16.04]
@@ -44,15 +54,20 @@ char_n2 = [160, 145, 0.943, 28.01]
 tpbo_25_density = 1.393  # g/cm3
 
 tpbo_co2_50c_exp = concentration(tpbo_co2_50c; component=1)
+tpbo_co2_35c_exp = concentration(tpbo_co2_35c; component=1)
 tpbo_co2_20c_exp = concentration(tpbo_co2_20c; component=1)
+tpbo_co2_5c_exp = concentration(tpbo_co2_5c; component=1)
+
 co2_bulk_phase = SL(char_co2...)
-bulk_phase_char_params = [char_ch4, char_ch4, char_co2, char_co2, char_n2, char_n2]
+bulk_phase_char_params = [char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
 
 char_tpbo_valerio = [474, 900, 1.6624, 100000]
 co2_tpbo25_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 0; 0 0])
 co2_tpbo25_nelf_valerio = NELFModel(co2_bulk_phase, co2_tpbo25_phase_valerio, tpbo_25_density)
 tpbo_co2_50c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+tpbo_co2_35c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 308.15, p)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
 tpbo_co2_20c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+tpbo_co2_5c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 278.15, p)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
 
 #fit char params
 char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
@@ -60,16 +75,23 @@ char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
 co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0.0; 0.0 0])
 co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
 tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+tpbo_co2_35c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
 tpbo_co2_20c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+tpbo_co2_5c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 278.15, p)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
 
 tpbo_co2_50c_plot = plot(partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_valerio, label="valerio 50C", legend=:topleft)
 plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_fitted, label="fitted 50C")
 plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_exp, label="exp 50C")
+tpbo_co2_35c_plot = plot(partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_valerio, label="valerio 35C", legend=:topleft)
+plot!(tpbo_co2_35c_plot, partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_fitted, label="fitted 35C")
+plot!(tpbo_co2_35c_plot, partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_exp, label="exp 35C")
 tpbo_co2_20c_plot = plot(partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_valerio, label="valerio 20C", legend=:topleft)
 plot!(tpbo_co2_20c_plot, partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_fitted, label="fitted 20C")
 plot!(tpbo_co2_20c_plot, partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_exp, label="exp 20C")
-
-tpbo_co2_plot = plot(tpbo_co2_50c_plot, tpbo_co2_20c_plot, layout=(2, 1))
+tpbo_co2_5c_plot = plot(partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_valerio, label="valerio 5C", legend=:topleft)
+plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_fitted, label="fitted 5C")
+plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_exp, label="exp 5C")
+tpbo_co2_plot = plot(tpbo_co2_50c_plot, tpbo_co2_35c_plot, tpbo_co2_20c_plot, tpbo_co2_5c_plot, layout=(2, 2))
 
 savefig(tpbo_co2_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
@@ -77,16 +99,16 @@ savefig(tpbo_co2_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
 error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, 1e-5)
 error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, 1e-5)
+error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, 1e-5)
 # @show error_target(char_tpbo25)
 # @show error_target(char_tpbo_valerio)
-return 3
 mw = 1e6
 
 # high res, one image
-pstars_highres = 400:10:1300
-tstars_highres = 400:10:1300
-# rhostars_highres = [char_tpbo25[3]]
-rhostars_highres = [1.9]
+pstars_highres = 200:400:1400
+tstars_highres = 200:400:1400
+rhostars_highres = [char_tpbo25[3]]
+# rhostars_highres = [1.209]
 function make_char_param_error_map(target_func, added_text = "")
     needed_iters_highres = length(pstars_highres) * length(tstars_highres) * length(rhostars_highres)
     errs_2D = Array{Float64, 2}(undef, length(pstars_highres), length(tstars_highres))
@@ -94,6 +116,7 @@ function make_char_param_error_map(target_func, added_text = "")
         pstar = pstars_highres[p_i]
         work_done = "Single image " * string(round(length(tstars_highres) * length(rhostars_highres) * p_i / needed_iters_highres * 100))*"% complete."
         println(work_done)
+        # Threads.@threads 
         Threads.@threads for t_i in eachindex(tstars_highres)
             tstar = tstars_highres[t_i]
             rhostar = rhostars_highres[1]
@@ -104,19 +127,20 @@ function make_char_param_error_map(target_func, added_text = "")
     err_2d_heatmap = contourf(
         tstars_highres, pstars_highres, errs_2D[:, :, 1], 
         title="rho="*string(rhostars_highres[1])*"g/cm3" * " " * added_text, 
-        xlabel = "T* (K)", ylabel = "P* (MPa)")
+        xlabel = "T* (K)", ylabel = "P* (MPa)", size=(600,600))
     return err_2d_heatmap
 end
-err_2d_heatmap = make_char_param_error_map(error_target, "original")
-err_2d_heatmap_2 = make_char_param_error_map(error_target_2, "new")
-combined_plot = plot(err_2d_heatmap, err_2d_heatmap_2, layout = (1, 2))
+err_2d_heatmap = make_char_param_error_map(error_target, "sinf", )
+err_2d_heatmap_2 = make_char_param_error_map(error_target_2, "sinf + isotherm")
+err_2d_heatmap_3 = make_char_param_error_map(error_target_3, "sarti 2001")
+combined_plot = plot(err_2d_heatmap, err_2d_heatmap_2, err_2d_heatmap_3, layout = 3,)
 savefig(combined_plot, joinpath(@__DIR__, "2D error heatmap (high res).png"))
 
 
 # low res, animation
-pstars_lowres = 500:20:1300
-tstars_lowres = 500:20:1300 
-rhostars_lowres = 1.4:0.07:2.4
+pstars_lowres = 500:30:1200
+tstars_lowres = 500:30:1200
+rhostars_lowres = tpbo_25_density:0.1:char_tpbo25[3] + 1
 
 function make_char_param_error_map_3d(target_func)
     needed_iters_lowres = length(pstars_lowres) * length(tstars_lowres) * length(rhostars_lowres)
@@ -138,4 +162,5 @@ function make_char_param_error_map_3d(target_func)
     end
     return anim
 end
-gif(make_char_param_error_map_3d(error_target_2), joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 5)
+gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals_2.gif"), fps = 5)
+# gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)
