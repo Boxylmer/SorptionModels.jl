@@ -16,8 +16,8 @@ tpbo_ch4_35c = IsothermData(;
     temperature_k = 308.15, rho_pol_g_cm3 = 1.3937
     )
 tpbo_co2_5c = IsothermData(; 
-    partial_pressures_mpa = [0.012474405, 0.043391439, 0.11294484, 0.260641173, 0.563818055, 1.023901167, 1.633212939, 2.105369806, 2.615898101], 
-    concentrations_cc = [15.19436518, 33.5283133, 54.43691918, 76.32730082, 99.6986546, 121.6846495, 142.8977897, 157.6456881, 174.186204],
+    partial_pressures_mpa = [0, 0.012474405, 0.043391439, 0.11294484, 0.260641173, 0.563818055, 1.023901167, 1.633212939, 2.105369806, 2.615898101], 
+    concentrations_cc = [0, 15.19436518, 33.5283133, 54.43691918, 76.32730082, 99.6986546, 121.6846495, 142.8977897, 157.6456881, 174.186204],
     temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
     )
 tpbo_co2_20c = IsothermData(; 
@@ -72,7 +72,7 @@ tpbo_co2_5c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 278.15, p)
 #fit char params
 char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
 @show char_tpbo25
-co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 0.0; 0.0 0])
+co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 -0.05; -0.05 0])
 co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
 tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
 tpbo_co2_35c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
@@ -97,18 +97,19 @@ savefig(tpbo_co2_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
 
 
-error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, 1e-5)
-error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, 1e-5)
-error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, 1e-5)
+
+error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, 1e-9)
+error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, 1e-9)
+error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, 1e-9)
 # @show error_target(char_tpbo25)
 # @show error_target(char_tpbo_valerio)
 mw = 1e6
 
 # high res, one image
-pstars_highres = 200:400:1400
-tstars_highres = 200:400:1400
-rhostars_highres = [char_tpbo25[3]]
-# rhostars_highres = [1.209]
+pstars_highres = 200:50:1200
+tstars_highres = 200:50:1200
+# rhostars_highres = [char_tpbo25[3]]
+rhostars_highres = [1.7]
 function make_char_param_error_map(target_func, added_text = "")
     needed_iters_highres = length(pstars_highres) * length(tstars_highres) * length(rhostars_highres)
     errs_2D = Array{Float64, 2}(undef, length(pstars_highres), length(tstars_highres))
@@ -126,7 +127,7 @@ function make_char_param_error_map(target_func, added_text = "")
     # err_2d_heatmap = heatmap(tstars_highres, pstars_highres, errs_2D[:, :, 1], title="rho="*string(rhostars_highres[1])*"g/cm3", xlabel = "T* (K)", ylabel = "P* (MPa)")
     err_2d_heatmap = contourf(
         tstars_highres, pstars_highres, errs_2D[:, :, 1], 
-        title="rho="*string(rhostars_highres[1])*"g/cm3" * " " * added_text, 
+        title="rho="*string(round(rhostars_highres[1]; digits=2))*"g/cm3" * " " * added_text, 
         xlabel = "T* (K)", ylabel = "P* (MPa)", size=(600,600))
     return err_2d_heatmap
 end
@@ -138,9 +139,9 @@ savefig(combined_plot, joinpath(@__DIR__, "2D error heatmap (high res).png"))
 
 
 # low res, animation
-pstars_lowres = 500:30:1200
-tstars_lowres = 500:30:1200
-rhostars_lowres = tpbo_25_density:0.1:char_tpbo25[3] + 1
+pstars_lowres = 500:20:1200
+tstars_lowres = 500:20:1200
+rhostars_lowres = tpbo_25_density + 0.1:0.1:char_tpbo25[3] + 1
 
 function make_char_param_error_map_3d(target_func)
     needed_iters_lowres = length(pstars_lowres) * length(tstars_lowres) * length(rhostars_lowres)
@@ -163,4 +164,4 @@ function make_char_param_error_map_3d(target_func)
     return anim
 end
 gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals_2.gif"), fps = 5)
-# gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)
+gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)

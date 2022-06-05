@@ -16,12 +16,16 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
     minimum_val = 100 * eps()
     error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val)
 
-    penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * minimum_val
+    penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * eps()
     lower = zeros(length(penetrant_mass_fraction_initial_guesses))
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
     res = Optim.optimize(
-        error_target, lower, upper, penetrant_mass_fraction_initial_guesses, 
-        Fminbox(LBFGS()), 
+        error_target, 
+        lower, upper,
+        penetrant_mass_fraction_initial_guesses, 
+        # Fminbox(LBFGS()),
+        Fminbox(NelderMead()),
+        # Newton(),
         # SAMIN(),
         Optim.Options(
         allow_f_increases = false,
@@ -150,7 +154,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    infinite_dilution_pressure = 1e-5 # ???
+    infinite_dilution_pressure = 1e-9 # ???
 
     error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
     
@@ -161,8 +165,9 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     upper = [3000, 3000, 3.]
     res = Optim.optimize(
         error_function, lower, upper, 
-        [500, 500, density_lower_bound * 1.2], 
+        [500, 500, upper[3] - 100 * eps()], 
         Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
+        # Fminbox(NelderMead()),
         Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(
     #     error_function, lower, upper, 
@@ -180,8 +185,8 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
     temperatures = temperature.(isotherms)
 
     function error_function(char_param_vec)
-        given_sol = zeros(length(isotherms))  # reused
-        pred_sol = zeros(length(isotherms))   # reused
+        given_sol = zeros(length(isotherms))
+        pred_sol = zeros(length(isotherms)) 
         for i in eachindex(isotherms)
             char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
             char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]

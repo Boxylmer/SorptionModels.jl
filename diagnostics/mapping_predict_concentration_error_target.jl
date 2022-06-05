@@ -21,8 +21,8 @@ co2_tpbo25_nelf_valerio = NELFModel(co2_bulk_phase, co2_tpbo25_phase_valerio, tp
 
 
 # high res, one image
-pressures = 0.00:0.01:10
-mass_fracs = 0.001:0.01:0.3
+pressures = 0.00:0.001:10
+mass_fracs = 0.001:0.001:0.3
 tpbo25_co2_error_targets = [SorptionModels._make_nelf_model_mass_fraction_target(co2_tpbo25_nelf_valerio, 308.15, p, [1]) for p in pressures]
 function make_mass_frac_error_map(target_funcs, added_text = "")
     needed_iters_highres = length(pressures) * length(mass_fracs)
