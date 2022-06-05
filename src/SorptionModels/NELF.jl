@@ -166,8 +166,8 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     res = Optim.optimize(
         error_function, lower, upper, 
         [500, 500, upper[3] - 100 * eps()], 
-        Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
-        # Fminbox(NelderMead()),
+        # Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
+        Fminbox(NelderMead()),
         Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(
     #     error_function, lower, upper, 

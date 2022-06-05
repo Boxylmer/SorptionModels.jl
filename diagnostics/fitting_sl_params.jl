@@ -163,5 +163,5 @@ function make_char_param_error_map_3d(target_func)
     end
     return anim
 end
-gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals_2.gif"), fps = 5)
-gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)
+gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 5)
+# gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)
