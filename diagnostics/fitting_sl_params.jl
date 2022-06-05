@@ -26,8 +26,8 @@ tpbo_co2_20c = IsothermData(;
     temperature_k = 293.15, rho_pol_g_cm3 = 1.3937
     )
 tpbo_co2_35c = IsothermData(; 
-    partial_pressures_mpa = [0, 0.031852099, 0.066294896, 0.104825903, 0.142384952, 0.18000105, 0.217614795, 0.29451087, 0.380689171, 0.478277095, 0.582389897, 0.708074015, 0.842686162, 0.983102955, 1.124774806, 1.268343506, 1.449592484, 1.6496816, 1.857129922, 2.148232167, 2.474818337, 2.819902357, 3.22614195], 
-    concentrations_cc = [0, 11.7485186, 19.85668992, 26.48815715, 31.5333868, 36.0129803, 39.61060375, 45.73820821, 51.29191881, 56.59820409, 61.05145161, 65.66904217, 70.43887202, 74.25489977, 78.20606771, 81.07429981, 84.98775174, 88.39074242, 92.59248611, 96.98527872, 102.146028, 106.7905318, 112.0985474],
+    partial_pressures_mpa = [0, 0.031852099, 0.066294896, 0.104825903, 0.142384952, 0.18000105, 0.217614795, 0.29451087, 0.380689171], 
+    concentrations_cc = [0, 11.7485186, 19.85668992, 26.48815715, 31.5333868, 36.0129803, 39.61060375, 45.73820821, 51.29191881],
     temperature_k = 308.15, rho_pol_g_cm3 = 1.3937
     )
 tpbo_co2_50c = IsothermData(; 
@@ -46,6 +46,28 @@ tpbo_n2_50c = IsothermData(;
     temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
     )
 isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+
+# dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
+
+tpbo_co2_35c_dualmode = fit_model(DualMode(), tpbo_co2_35c)
+tpbo_co2_35c_pressures = partial_pressures(tpbo_co2_35c; component=1)
+tpbo_co2_35c_max_p = 0.005
+tpbo_co2_35c_pred_pressures = 0:0.005:tpbo_co2_35c_max_p
+tpbo_co2_35c_dualmode_pred = predict_concentration(tpbo_co2_35c_dualmode, tpbo_co2_35c_pred_pressures)
+
+# tpbo_co2_35c_sinf = SorptionModels.infinite_dilution_solubility(tpbo_co2_35c_dualmode)
+tpbo_co2_35c_sinf_empirical_pressure = 1e-5
+tpbo_co2_35c_sinf = predict_concentration(tpbo_co2_35c_dualmode, tpbo_co2_35c_sinf_empirical_pressure) / tpbo_co2_35c_sinf_empirical_pressure
+tpbo_co2_35c_sinf_pressures = [0, tpbo_co2_35c_max_p / 8]
+
+tpbo_co2_35c_sinf_concs = tpbo_co2_35c_sinf .* [0, tpbo_co2_35c_max_p]
+tpbo_dualmode_exp_comparison = plot(tpbo_co2_35c_pred_pressures, tpbo_co2_35c_dualmode_pred, label ="dualmode")
+plot!(tpbo_dualmode_exp_comparison, tpbo_co2_35c_sinf_pressures, tpbo_co2_35c_sinf_concs, label="infinite dilution slope")
+# scatter!(tpbo_dualmode_exp_comparison, tpbo_co2_35c_pressures, concentration(tpbo_co2_35c; component=1), label="exp")
+
+
+@show dualmode_models[5]
+
 
 char_co2 = [630, 300, 1.515, 44]
 char_ch4 = [250, 215, 0.500, 16.04]
@@ -97,10 +119,10 @@ savefig(tpbo_co2_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
 
 
-
-error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, 1e-9)
-error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, 1e-9)
-error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, 1e-9)
+inf_dil_pres = 1e-5
+error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, inf_dil_pres)
+error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, inf_dil_pres)
+error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, inf_dil_pres)
 # @show error_target(char_tpbo25)
 # @show error_target(char_tpbo_valerio)
 mw = 1e6
@@ -109,7 +131,7 @@ mw = 1e6
 pstars_highres = 200:50:1200
 tstars_highres = 200:50:1200
 # rhostars_highres = [char_tpbo25[3]]
-rhostars_highres = [1.7]
+rhostars_highres = [1.6624]
 function make_char_param_error_map(target_func, added_text = "")
     needed_iters_highres = length(pstars_highres) * length(tstars_highres) * length(rhostars_highres)
     errs_2D = Array{Float64, 2}(undef, length(pstars_highres), length(tstars_highres))
@@ -139,9 +161,9 @@ savefig(combined_plot, joinpath(@__DIR__, "2D error heatmap (high res).png"))
 
 
 # low res, animation
-pstars_lowres = 500:20:1200
-tstars_lowres = 500:20:1200
-rhostars_lowres = tpbo_25_density + 0.1:0.1:char_tpbo25[3] + 1
+pstars_lowres = 500:70:1200
+tstars_lowres = 500:70:1200
+rhostars_lowres = tpbo_25_density + 0.1:0.2:char_tpbo25[3] + 1
 
 function make_char_param_error_map_3d(target_func)
     needed_iters_lowres = length(pstars_lowres) * length(tstars_lowres) * length(rhostars_lowres)

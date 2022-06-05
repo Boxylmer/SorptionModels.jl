@@ -154,7 +154,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    infinite_dilution_pressure = 1e-9 # ???
+    infinite_dilution_pressure = 1e-5 # ???
 
     error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
     
@@ -167,8 +167,9 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
         error_function, lower, upper, 
         [500, 500, upper[3] - 100 * eps()], 
         # Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
-        Fminbox(NelderMead()),
-        Optim.Options(; allow_f_increases = false))
+        Fminbox(LBFGS()), 
+        # Fminbox(NelderMead()),
+        Optim.Options(; allow_f_increases = true))
     # res = Optim.optimize(
     #     error_function, lower, upper, 
     #     [100, 100, density_lower_bound * 1.2], 
@@ -239,6 +240,7 @@ function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristi
         err_inf = log(rss(given_sol_inf, pred_sol_inf))
         
         # @show char_param_vec, err
+        return pred_errs
         return err_inf + pred_errs
     end
     return error_function
