@@ -10,6 +10,11 @@ tpbo_ch4_5c = IsothermData(;
     concentrations_cc = [0, 7.37368523, 12.0433614, 17.76552202, 23.28373709, 27.50367509, 31.07457011],
     temperature_k = 278.15, rho_pol_g_cm3 = 1.3937
     )
+tpbo_ch4_20c = IsothermData(; 
+    partial_pressures_mpa = [0, 0.054409635, 0.101117776, 0.17570818, 0.275518841, 0.373215869], 
+    concentrations_cc = [0, 5.084334416, 8.57780684, 12.92845101, 17.55678063, 21.17207162],
+    temperature_k = 293.15, rho_pol_g_cm3 = 1.3937
+    )
 tpbo_ch4_35c = IsothermData(; 
     partial_pressures_mpa = [0, 0.05676287, 0.103720596, 0.177868877, 0.268361442, 0.371119351, 0.478013248], 
     concentrations_cc = [0, 3.741224553, 6.311976164, 9.748565324, 13.23714075, 16.47955269, 19.49981169],
@@ -45,29 +50,37 @@ tpbo_n2_50c = IsothermData(;
     concentrations_cc = [0, 2.435212223, 5.677614879, 8.139676474, 10.6450967, 12.90356804, 14.82380991],
     temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
     )
-isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
-
+isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
 # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
 
-tpbo_co2_35c_dualmode = fit_model(DualMode(), tpbo_co2_35c)
-tpbo_co2_35c_pressures = partial_pressures(tpbo_co2_35c; component=1)
-tpbo_co2_35c_max_p = 0.005
-tpbo_co2_35c_pred_pressures = 0:0.005:tpbo_co2_35c_max_p
-tpbo_co2_35c_dualmode_pred = predict_concentration(tpbo_co2_35c_dualmode, tpbo_co2_35c_pred_pressures)
 
-# tpbo_co2_35c_sinf = SorptionModels.infinite_dilution_solubility(tpbo_co2_35c_dualmode)
-tpbo_co2_35c_sinf_empirical_pressure = 1e-5
-tpbo_co2_35c_sinf = predict_concentration(tpbo_co2_35c_dualmode, tpbo_co2_35c_sinf_empirical_pressure) / tpbo_co2_35c_sinf_empirical_pressure
-tpbo_co2_35c_sinf_pressures = [0, tpbo_co2_35c_max_p / 8]
+function plot_dualmode_sinf(isotherm::IsothermData, isotherm_dualmode_exp_comparison=plot())
+    isotherm_dualmode = fit_model(DualMode(), isotherm)
+    isotherm_pressures = partial_pressures(isotherm; component=1)
+    scatter!(isotherm_dualmode_exp_comparison, isotherm_pressures, concentration(isotherm; component=1), )#label="exp")
+    isotherm_max_p = maximum(isotherm_pressures)
+    isotherm_pred_pressures = 0:0.005:isotherm_max_p
+    isotherm_dualmode_pred = predict_concentration(isotherm_dualmode, isotherm_pred_pressures)
+    plot!(isotherm_dualmode_exp_comparison, isotherm_pred_pressures, isotherm_dualmode_pred, )#label ="dualmode")
 
-tpbo_co2_35c_sinf_concs = tpbo_co2_35c_sinf .* [0, tpbo_co2_35c_max_p]
-tpbo_dualmode_exp_comparison = plot(tpbo_co2_35c_pred_pressures, tpbo_co2_35c_dualmode_pred, label ="dualmode")
-plot!(tpbo_dualmode_exp_comparison, tpbo_co2_35c_sinf_pressures, tpbo_co2_35c_sinf_concs, label="infinite dilution slope")
-# scatter!(tpbo_dualmode_exp_comparison, tpbo_co2_35c_pressures, concentration(tpbo_co2_35c; component=1), label="exp")
+    isotherm_sinf_empirical_pressure = 1e-5
+    isotherm_sinf = predict_concentration(isotherm_dualmode, isotherm_sinf_empirical_pressure) / isotherm_sinf_empirical_pressure
+    isotherm_sinf = SorptionModels.infinite_dilution_solubility(isotherm_dualmode)
 
-
-@show dualmode_models[5]
-
+    isotherm_sinf_pressures = [0, isotherm_max_p / 2]
+    isotherm_sinf_concs = (isotherm_sinf .* isotherm_sinf_pressures)
+    plot!(isotherm_dualmode_exp_comparison, isotherm_sinf_pressures, isotherm_sinf_concs, ) # label="infinite dilution slope")
+end
+plot_dualmode_sinf!(myplot, isotherm) = plot_dualmode_sinf(isotherm, myplot)
+function plot_dualmode_sinf(isotherms::AbstractVector)
+    isotherm_dualmode_exp_comparison=plot()
+    for isotherm in isotherms
+        plot_dualmode_sinf!(isotherm_dualmode_exp_comparison, isotherm)
+    end
+    return isotherm_dualmode_exp_comparison
+end
+tpbo_co2_comparison_plot = plot_dualmode_sinf([ tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c])
+savefig(tpbo_co2_comparison_plot, joinpath(@__DIR__, "tpbo_co2_dualmode_sinf_verification.png"))
 
 char_co2 = [630, 300, 1.515, 44]
 char_ch4 = [250, 215, 0.500, 16.04]
@@ -81,7 +94,7 @@ tpbo_co2_20c_exp = concentration(tpbo_co2_20c; component=1)
 tpbo_co2_5c_exp = concentration(tpbo_co2_5c; component=1)
 
 co2_bulk_phase = SL(char_co2...)
-bulk_phase_char_params = [char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
+bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
 
 char_tpbo_valerio = [474, 900, 1.6624, 100000]
 co2_tpbo25_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 0; 0 0])
@@ -94,12 +107,14 @@ tpbo_co2_5c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 278.15, p)
 #fit char params
 char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
 @show char_tpbo25
-co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 -0.05; -0.05 0])
+kij_test =  0.00
+ksw_test = [0.00]
+co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 kij_test; kij_test 0])
 co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
-tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
-tpbo_co2_35c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
-tpbo_co2_20c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
-tpbo_co2_5c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 278.15, p)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
+tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+tpbo_co2_35c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
+tpbo_co2_20c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 293.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+tpbo_co2_5c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 278.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
 
 tpbo_co2_50c_plot = plot(partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_valerio, label="valerio 50C", legend=:topleft)
 plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_fitted, label="fitted 50C")
@@ -114,12 +129,10 @@ tpbo_co2_5c_plot = plot(partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c
 plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_fitted, label="fitted 5C")
 plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_exp, label="exp 5C")
 tpbo_co2_plot = plot(tpbo_co2_50c_plot, tpbo_co2_35c_plot, tpbo_co2_20c_plot, tpbo_co2_5c_plot, layout=(2, 2))
-
+# plot!(tpbo_co2_plot, xlims=(0, 0.1))
 savefig(tpbo_co2_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
-
-
-inf_dil_pres = 1e-5
+inf_dil_pres = 1e-10
 error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, inf_dil_pres)
 error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, inf_dil_pres)
 error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, inf_dil_pres)
@@ -130,8 +143,8 @@ mw = 1e6
 # high res, one image
 pstars_highres = 200:50:1200
 tstars_highres = 200:50:1200
-# rhostars_highres = [char_tpbo25[3]]
-rhostars_highres = [1.6624]
+rhostars_highres = [char_tpbo25[3]]
+# rhostars_highres = [1.6624]
 function make_char_param_error_map(target_func, added_text = "")
     needed_iters_highres = length(pstars_highres) * length(tstars_highres) * length(rhostars_highres)
     errs_2D = Array{Float64, 2}(undef, length(pstars_highres), length(tstars_highres))

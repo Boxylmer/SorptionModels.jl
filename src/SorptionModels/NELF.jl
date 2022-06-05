@@ -62,16 +62,16 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
     function error_target(penetrant_mass_fractions)
         polymer_mass_fraction = 1 - sum(penetrant_mass_fractions)
         if polymer_mass_fraction <= 0 || polymer_mass_fraction > 1
-            @warn "Polymer mass fraction was not valid, returning very large error value: " * string(1 - sum(penetrant_mass_fractions))
-            return log1p(normalizer)
-            return 1e100
+            @warn "Polymer mass fraction was not valid, returning very large error value: " * string(polymer_mass_fraction)
+            # return log1p(normalizer)
+            return log1p(normalizer * abs(polymer_mass_fraction))
         end
         polymer_phase_mass_fractions = vcat(polymer_mass_fraction, penetrant_mass_fractions)
         polymer_phase_density_after_swelling = calculate_polymer_phase_density(model, pressure, bulk_phase_mole_fractions, polymer_phase_mass_fractions, ksw)
         polymer_phase_density_upper_bound = density_upper_bound(model.polymer_model, polymer_phase_mass_fractions)
         if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound 
-            return log1p(normalizer)
-            return 1e100
+            # return log1p(normalizer)
+            return log1p(normalizer * polymer_phase_density_after_swelling) 
         end
 
         polymer_phase_activities = ρTω_chemical_potential(
@@ -154,26 +154,27 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    infinite_dilution_pressure = 1e-5 # ???
+    infinite_dilution_pressure = 1e-10 # ???
 
     error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
-    
-    lower = [0., 0., density_lower_bound]
-    upper = [3000, 3000, 3.]
+    density_upper_bound = 1.6
+    lower = [1., 1., density_lower_bound]
+    upper = [3000, 3000, density_upper_bound]
     res = Optim.optimize(
-        error_function, lower, upper, 
-        [500, 500, upper[3] - 100 * eps()], 
-        # Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
-        Fminbox(LBFGS()), 
+        error_function, 
+        lower, upper, 
+        (lower .+ upper) ./ 2, 
+        Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
+        # Fminbox(LBFGS()), 
         # Fminbox(NelderMead()),
-        Optim.Options(; allow_f_increases = true))
+        Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(
     #     error_function, lower, upper, 
     #     [100, 100, density_lower_bound * 1.2], 
-    #     SAMIN(; rt = 0.04), 
+    #     SAMIN(; rt = 0.02), 
     #     Optim.Options(iterations=10^6))
 
     return [Optim.minimizer(res)..., polymer_molecular_weight]
