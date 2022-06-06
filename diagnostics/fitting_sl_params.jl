@@ -51,7 +51,7 @@ tpbo_n2_50c = IsothermData(;
     temperature_k = 323.15, rho_pol_g_cm3 = 1.3937
     )
 isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
-# dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
+dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
 
 
 function plot_dualmode_sinf(isotherm::IsothermData, isotherm_dualmode_exp_comparison=plot())
@@ -109,7 +109,9 @@ char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
 @show char_tpbo25
 kij_test =  0.00
 ksw_test = [0.00]
-co2_tpbo25_phase_fitted = SL([char_tpbo25[1], 630], [char_tpbo25[2], 300], [char_tpbo25[3], 1.515], [char_tpbo25[4], 44], [0 kij_test; kij_test 0])
+co2_tpbo25_phase_fitted = SL([char_tpbo25[1], char_co2[1]], [char_tpbo25[2], char_co2[2]], [char_tpbo25[3], char_co2[3]], [char_tpbo25[4], char_co2[4]], [0 kij_test; kij_test 0])
+ch4_tpbo25_phase_fitted = SL([char_tpbo25[1], char_ch4[1]], [char_tpbo25[2], char_ch4[2]], [char_tpbo25[3], char_ch4[3]], [char_tpbo25[4], char_ch4[4]], [0 0; 0 0])
+
 co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
 tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
 tpbo_co2_35c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
@@ -132,6 +134,14 @@ tpbo_co2_plot = plot(tpbo_co2_50c_plot, tpbo_co2_35c_plot, tpbo_co2_20c_plot, tp
 # plot!(tpbo_co2_plot, xlims=(0, 0.1))
 savefig(tpbo_co2_plot, joinpath(@__DIR__, "tpbo_co2_50c_plot_comparison.png"))
 
+tpbo_valerio_inf_sols_nelf = [SorptionModels.infinite_dilution_solubility(co2_tpbo25_nelf_valerio, t) for t in temperature.(isotherms[4:7])]
+tpbo_fit_inf_sols_nelf = [SorptionModels.infinite_dilution_solubility(co2_tpbo25_nelf_fitted, t) for t in temperature.(isotherms[4:7])]
+tpbo_exp_inf_sols = SorptionModels.infinite_dilution_solubility.(dualmode_models[4:7])
+parity_plot = scatter(tpbo_exp_inf_sols, tpbo_valerio_inf_sols_nelf, label="valerio", aspect_ratio=1.0, xlims=[0, maximum(tpbo_exp_inf_sols)])
+scatter!(parity_plot, tpbo_exp_inf_sols, tpbo_fit_inf_sols_nelf, label="fit")
+plot!(parity_plot, [0, maximum(tpbo_exp_inf_sols)], [0, maximum(tpbo_exp_inf_sols)])
+savefig(parity_plot, joinpath(@__DIR__, "parity plot.png"))
+
 inf_dil_pres = 1e-10
 error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params, inf_dil_pres)
 error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, inf_dil_pres)
@@ -140,9 +150,11 @@ error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, b
 # @show error_target(char_tpbo_valerio)
 mw = 1e6
 
+
+
 # high res, one image
-pstars_highres = 200:50:1200
-tstars_highres = 200:50:1200
+pstars_highres = 200:30:1200
+tstars_highres = 200:30:1200
 rhostars_highres = [char_tpbo25[3]]
 # rhostars_highres = [1.6624]
 function make_char_param_error_map(target_func, added_text = "")
@@ -163,20 +175,20 @@ function make_char_param_error_map(target_func, added_text = "")
     err_2d_heatmap = contourf(
         tstars_highres, pstars_highres, errs_2D[:, :, 1], 
         title="rho="*string(round(rhostars_highres[1]; digits=2))*"g/cm3" * " " * added_text, 
-        xlabel = "T* (K)", ylabel = "P* (MPa)", size=(600,600))
+        xlabel = "T* (K)", ylabel = "P* (MPa)", size=(600,600), clims=(minimum(errs_2D), sum(errs_2D)/length(errs_2D)))
     return err_2d_heatmap
 end
-err_2d_heatmap = make_char_param_error_map(error_target, "sinf", )
-err_2d_heatmap_2 = make_char_param_error_map(error_target_2, "sinf + isotherm")
+err_2d_heatmap = make_char_param_error_map(error_target, "sinf standard", )
+# err_2d_heatmap_2 = make_char_param_error_map(error_target_2, "sinf + isotherm")
 err_2d_heatmap_3 = make_char_param_error_map(error_target_3, "sarti 2001")
-combined_plot = plot(err_2d_heatmap, err_2d_heatmap_2, err_2d_heatmap_3, layout = 3,)
+combined_plot = plot(err_2d_heatmap, err_2d_heatmap_3, layout = 2)
 savefig(combined_plot, joinpath(@__DIR__, "2D error heatmap (high res).png"))
 
 
 # low res, animation
-pstars_lowres = 500:70:1200
-tstars_lowres = 500:70:1200
-rhostars_lowres = tpbo_25_density + 0.1:0.2:char_tpbo25[3] + 1
+pstars_lowres = 300:20:1400
+tstars_lowres = 300:20:1400
+rhostars_lowres = tpbo_25_density + 0.03:0.01:char_tpbo25[3] + 1
 
 function make_char_param_error_map_3d(target_func)
     needed_iters_lowres = length(pstars_lowres) * length(tstars_lowres) * length(rhostars_lowres)
@@ -193,10 +205,20 @@ function make_char_param_error_map_3d(target_func)
             end
         end
     end
+
+    minlocation = argmin(errs_3D)
+    @show global_min = [tstars_lowres[minlocation[2]]], [pstars_lowres[minlocation[1]]]
+    frameminlocations = [argmin(errs_3D[:, :, i]) for i in eachindex(rhostars_lowres)]
+    mintstarvals = [tstars_lowres[frameminlocations[i][2]] for i in eachindex(rhostars_lowres)]
+    minpstarvals = [pstars_lowres[frameminlocations[i][1]] for i in eachindex(rhostars_lowres)]
+
     anim = @animate for i ∈ 1:size(errs_3D)[3]
-        contourf(tstars_lowres, pstars_lowres, errs_3D[:, :, i], title="rho="*string(rhostars_lowres[i])*"g/cm3",clim=(minimum(errs_3D),maximum(errs_3D)), xlabel = "T* (K)", ylabel = "P* (MPa)")
+        myplot = contourf(tstars_lowres, pstars_lowres, errs_3D[:, :, i], title="rho="*string(round(rhostars_lowres[i]; digits=3))*"g/cm3",clim=(minimum(errs_3D),5), xlabel = "T* (K)", ylabel = "P* (MPa)")
+        annotate!(myplot, (0.8, 0.9), "min =" * string(round(minimum(errs_3D[:, :, i]); digits=3)))
+        scatter!(myplot, [mintstarvals], [minpstarvals], legend=false)
+        scatter!(myplot, global_min..., legend=false, markersize=6)
     end
     return anim
 end
-gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 5)
+gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 2)
 # gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)
