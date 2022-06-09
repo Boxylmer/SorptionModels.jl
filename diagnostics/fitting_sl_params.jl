@@ -53,7 +53,6 @@ tpbo_n2_50c = IsothermData(;
 isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
 dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
 
-
 function plot_dualmode_sinf(isotherm::IsothermData, isotherm_dualmode_exp_comparison=plot())
     isotherm_dualmode = fit_model(DualMode(), isotherm)
     isotherm_pressures = partial_pressures(isotherm; component=1)
