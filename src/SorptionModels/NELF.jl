@@ -231,7 +231,7 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
         end
         resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
         err = log1p(resid)
-        @show char_param_vec, err
+        # @show char_param_vec, err
         return err
     end
     return error_function
