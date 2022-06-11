@@ -190,16 +190,15 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
-    density_upper_bound = 4
+    density_upper_bound = Inf
     lower = [1., 1., density_lower_bound]
     upper = [3000, 3000, density_upper_bound]
     res = Optim.optimize(
         error_function, 
-        lower, upper, 
-        (lower .+ upper) ./ 2, 
-        # Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
-        Fminbox(LBFGS()), 
-        # Fminbox(GradientDescent()),
+        # lower, upper, 
+        [500, 500, density_lower_bound * 1.2], 
+        NelderMead(), 
+        # Fminbox(LBFGS()), 
         Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(
     #     error_function, lower, upper, 
