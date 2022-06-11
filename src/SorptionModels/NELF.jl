@@ -199,7 +199,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
         (lower .+ upper) ./ 2, 
         # Fminbox(LBFGS(; m=60, linesearch = Optim.LineSearches.BackTracking())), 
         Fminbox(LBFGS()), 
-        # Fminbox(NelderMead()),
+        # Fminbox(GradientDescent()),
         Optim.Options(; allow_f_increases = false))
     # res = Optim.optimize(
     #     error_function, lower, upper, 
@@ -232,7 +232,7 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
         end
         resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
         err = log1p(resid)
-        # @show char_param_vec, err
+        @show char_param_vec, err
         return err
     end
     return error_function

@@ -177,11 +177,11 @@ function make_char_param_error_map(target_func, added_text = "")
         xlabel = "T* (K)", ylabel = "P* (MPa)", size=(600,600), clims=(minimum(errs_2D), sum(errs_2D)/length(errs_2D)))
     return err_2d_heatmap
 end
-err_2d_heatmap = make_char_param_error_map(error_target, "sinf standard", )
+# err_2d_heatmap = make_char_param_error_map(error_target, "sinf standard", )
 # err_2d_heatmap_2 = make_char_param_error_map(error_target_2, "sinf + isotherm")
-err_2d_heatmap_3 = make_char_param_error_map(error_target_3, "sarti 2001")
-combined_plot = plot(err_2d_heatmap, err_2d_heatmap_3, layout = 2)
-savefig(combined_plot, joinpath(@__DIR__, "2D error heatmap (high res).png"))
+# err_2d_heatmap_3 = make_char_param_error_map(error_target_3, "sarti 2001")
+# combined_plot = plot(err_2d_heatmap, err_2d_heatmap_3, layout = 2)
+# savefig(combined_plot, joinpath(@__DIR__, "2D error heatmap (high res).png"))
 
 
 # low res, animation
@@ -219,5 +219,5 @@ function make_char_param_error_map_3d(target_func)
     end
     return anim
 end
-gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 2)
+# gif(make_char_param_error_map_3d(error_target), joinpath(@__DIR__, "3D animation of SL char vals.gif"), fps = 2)
 # gif(make_char_param_error_map_3d(error_target_3), joinpath(@__DIR__, "3D animation of SL char vals, sarti plot.gif"), fps = 5)
