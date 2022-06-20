@@ -72,14 +72,18 @@ function fit_gab_model(activities::AbstractVector, concentrations::AbstractVecto
         applied_concs = concentrations
     end
 
-    target = function(cp_k_a)
-        gm = GABModel(cp_k_a...)
-        err = rss(gm, applied_activities, applied_concs)
-        if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
-        return err
-    end
-    
-    res = Optim.optimize(target, [1., 1., 1.]; autodiff = :forward)
+    # target = function(cp_k_a)
+    #     gm = GABModel(cp_k_a...)
+    #     err = rss(gm, applied_activities, applied_concs)
+    #     # if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
+    #     return err
+    # end
+    target = _make_gab_target(applied_activities, applied_concs)
+
+    # res = Optim.optimize(target, [1., 1., 1.]; autodiff = :forward)
+    lower = [0., 0., 0.]
+    upper = [Inf, Inf, Inf]
+    res = Optim.optimize(target, lower, upper, [1., 1., 1. ], Fminbox(BFGS()); autodiff = :forward)
     
     # todo this can be made much more readable by moving corresponding_uncertainties and uncertain_parameters out of the ifs and introducing dummy values in the else case.
     if uncertainty_method == :JackKnife
@@ -100,12 +104,33 @@ function fit_gab_model(activities::AbstractVector, concentrations::AbstractVecto
     return optimized_model
 end
 
+function _make_gab_target(applied_activities, applied_concs)
+    target = function(cp_k_a)
+        gm = GABModel(cp_k_a...)
+        err = rss(gm, applied_activities, applied_concs)
+        # if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
+        return err
+    end
+    return target
+end
+
+
 """
     fit_gab_model(isotherm::IsothermData; kwargs...)
 Fit the GAB model to the concentrations and activities present in an isotherm. 
 Right now, it is assumed that the isotherm has only one component, so the model fits only to the first component. 
 # todo: if a multicomponent isotherm is provided, return a vector of GAB fittings. 
 """
-fit_gab_model(isotherm::IsothermData; kwargs...) = fit_gab_model(activities(isotherm; component=1), concentration(isotherm; component=1); kwargs...)
+function fit_gab_model(isotherm::IsothermData; kwargs...)
+    acts = activities(isotherm; component=1)
+    concs = concentration(isotherm; component=1)
+    if isnothing(acts)
+        throw(MissingException("Isotherm has no activities."))
+    elseif isnothing(concs)
+        throw(MissingException("Isotherm has no concentrations.")) 
+    end
+
+    return fit_gab_model(acts, concs; kwargs...)
+end
 
 fit_model(::GAB, isotherm::IsothermData; kwargs...) = fit_gab_model(isotherm; kwargs...)
