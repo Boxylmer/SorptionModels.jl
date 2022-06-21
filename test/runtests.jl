@@ -100,10 +100,17 @@ precision = 5
 
         # test basic fitting consistency 
         gmfitting = fit_gab_model(acts, concs)
-        @test gmfitting.cp ≈ 4.751529121566907 && 
-            gmfitting.k ≈ 2.3653742729960796 && 
-            gmfitting.a ≈ 9.807243268027493
+        @test gmfitting.cp ≈ 4.751529121566907
+        @test gmfitting.k ≈ 2.3653742729960796
+        @test gmfitting.a ≈ 9.807243268027493
         
+        init_params = SorptionModels._get_initial_conditioned_gab_params(acts, concs)
+        @test init_params[1] == 20.261
+        @test init_params[2] ≈ 1.5758399300659984
+        @test init_params[3] ≈ 0.8545460124098218
+
+
+
         # test checking for DimensionMismatch
         @test_throws DimensionMismatch fit_gab_model([1, 2, 3], [1, 2, 3, 4])
 
@@ -112,17 +119,16 @@ precision = 5
         concs_2 = [0 ± 0.5, 2.253 ± 0.5, 3.925 ± 0.5, 6.126 ± 0.5, 8.091 ± 0.5, 12.363 ± 0.5, 20.261 ± 0.5]
         
         gmfitting_2 = fit_gab_model(acts_2, concs_2)
-        @test round(gmfitting_2.cp; digits = 5) == round(4.751529121566907; digits = 5) && 
-            round(gmfitting_2.k; digits = 5) ==  round(2.3653742729960796; digits = 5) && 
-            round(gmfitting_2.a; digits = 5) == round(9.807243268027493; digits = 5)
+        @test round(gmfitting_2.cp; digits = 5) == round(4.751529121566907; digits = 5)
+        @test round(gmfitting_2.k; digits = 5) ==  round(2.3653742729960796; digits = 5)
+        @test round(gmfitting_2.a; digits = 5) == round(9.807243268027493; digits = 5)
         
-  
 
         # test fitting with JackKnife uncertainty_method
         gmfitting_3 = fit_gab_model(acts_2, concs_2; uncertainty_method=:JackKnife)
-        @test gmfitting_3.cp.err ≈ 0.4973664635441895 && 
-            gmfitting_3.k.err ≈ 0.12367760003383674 && 
-            gmfitting_3.a.err ≈ 4.090844315192642
+        @test gmfitting_3.cp.err ≈ 0.4973664635441895
+        @test gmfitting_3.k.err ≈ 0.12367760003383674
+        @test gmfitting_3.a.err ≈ 4.090844315192642
 
         # very low-solubility isotherms tend not to fit for some reason
         partial_pressures = [0.00011198, 0.000247609, 0.000521334, 0.000821977, 0.00114812]
@@ -130,12 +136,14 @@ precision = 5
         concentrations = [0.023724367, 0.040262462, 0.060287035, 0.072594922, 0.079677023]
         iso_low_conc = IsothermData(partial_pressures_mpa=partial_pressures, concentrations_cc=concentrations, activities=acts)
         model_low_conc = fit_model(GAB(), iso_low_conc)
-        conc_pred = predict_concentration(model_low_conc, partial_pressures)
-        @show conc_pred
-        @show concentrations
-        @test round(model_low_conc.cp; digits = 5) == round(0.108324147; digits = 5)
-        @test round(model_low_conc.k; digits = 5) == round(0.001815978; digits = 5)
-        @test round(model_low_conc.a; digits = 5) == round(4233.370853; digits = 5)
+        init_params_low_conc = SorptionModels._get_initial_conditioned_gab_params(acts, concentrations)
+        @test round(model_low_conc.cp; digits = 5) == round(0.10571589892661197; digits = 5)
+        @test round(model_low_conc.k; digits = 5) == round(0.038798800644367075; digits = 5)
+        @test round(model_low_conc.a; digits = 5) == round(204.7011129485613; digits = 5)
+        @test init_params_low_conc[1] == concentrations[end]
+        @test round(init_params_low_conc[2]; digits = 5) == round(0.47376105315526396; digits = 5)
+        @test round(init_params_low_conc[3]; digits = 5) == round(25.561581064859528; digits = 5)
+
     end
 
     @testset "Fundamental Sorption Models" begin

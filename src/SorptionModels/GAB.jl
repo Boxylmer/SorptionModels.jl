@@ -81,31 +81,65 @@ function fit_gab_model(activities::AbstractVector, concentrations::AbstractVecto
     target = _make_gab_target(applied_activities, applied_concs)
 
     # res = Optim.optimize(target, [1., 1., 1.]; autodiff = :forward)
-    lower = [0., 0., 0.]
-    upper = [Inf, Inf, Inf]
-    res = Optim.optimize(target, lower, upper, [1., 1., 1. ], Fminbox(BFGS()); autodiff = :forward)
-    
+    # lower = [0., 0., 0.]
+    # upper = [Inf, Inf, Inf]
+    # res = Optim.optimize(target, lower, upper, [1., 1., 1. ], Fminbox(BFGS()); autodiff = :forward)
+    init_params = _get_initial_conditioned_gab_params(applied_activities, applied_concs)
+    res = Optim.optimize(target, init_params, Newton(); autodiff = :forward,)
+
+
+    # fit_params = _uncondition_gab_guess(Optim.minimizer(res))
+    fit_params = Optim.minimizer(res)
+
     # todo this can be made much more readable by moving corresponding_uncertainties and uncertain_parameters out of the ifs and introducing dummy values in the else case.
     if uncertainty_method == :JackKnife
         data = collect(zip(applied_activities, applied_concs))
         corresponding_uncertainties = jackknife_uncertainty(GABHelperFunctions.resampled_set_fitting_wrapper, data)
-        uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
+        uncertain_parameters = [fit_params[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
         optimized_model = GABModel(uncertain_parameters...)
     elseif uncertainty_method == :Bootstrap
         data = collect(zip(applied_activities, applied_concs))  # Isotherm.dataset(isotherm)
         corresponding_uncertainties = bootstrap_uncertainty(GABHelperFunctions.resampled_set_fitting_wrapper, data)  
-        uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
+        uncertain_parameters = [fit_params[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
         optimized_model = GABModel(uncertain_parameters...)  
     elseif isnothing(uncertainty_method)
-        optimized_model = GABModel(Optim.minimizer(res)...)
+        optimized_model = GABModel(fit_params...)
     else 
         throw(ArgumentError("Invalid uncertainty_method: " * string(uncertainty_method)))
     end
     return optimized_model
 end
 
+# function _condition_gab_guess(guess)
+#     return [guess[1], log(guess[2]), log(guess[3])]
+# end
+
+_uncondition_gab_guess(guess) = 10 .^ guess
+
+function _get_initial_conditioned_gab_params(applied_activities, applied_concs)
+    cp = maximum(applied_concs)
+    target = _make_gab_presolved_target(applied_activities, applied_concs, cp)
+    res = Optim.optimize(target, [0.01, 100], Newton(); autodiff = :forward)
+    cp_k_a = [cp, Optim.minimizer(res)...]
+    return cp_k_a
+end
+
+function _make_gab_presolved_target(applied_activities, applied_concs, cp_val)
+    target = function(k_a)
+        # k_a = _uncondition_gab_guess(k_a_conditioned_guess)
+        cp_k_a = [cp_val, k_a...]
+        gm = GABModel(cp_k_a...)
+        err = rss(gm, applied_activities, applied_concs)
+        # if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
+        return err
+    end
+    return target
+end
+
 function _make_gab_target(applied_activities, applied_concs)
     target = function(cp_k_a)
+        # cp_k_a = _uncondition_gab_guess(cp_k_a_conditioned_guess)
+        # @show cp_k_a
         gm = GABModel(cp_k_a...)
         err = rss(gm, applied_activities, applied_concs)
         # if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
