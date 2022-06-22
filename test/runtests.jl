@@ -410,6 +410,18 @@ precision = 5
             @test result.henry_mode_diffusivity.val ≈ 2.649330314735546e-6
             @test result.langmuir_mode_diffusivity.val ≈ 1.7126341427211583e-7
         end
+
+        # Zimm Lundberg Analysis
+        @testset "Zimm Lundberg Analysis" begin
+            activities=[0.068087235, 0.129051621, 0.185054022, 0.226470588, 0.26212485, 0.317987195, 0.417687075, 0.54869948, 0.641314436],
+            concentrations_cc = [4.553554612, 7.361278518, 9.973016055, 12.76538706, 14.32931957, 17.19635897, 22.19538967, 28.84311218, 33.56853954]
+            isotherm = IsothermData(; activities, concentrations_cc)
+            gabmodel = fit_model(GAB(), isotherm)
+            mol_vol = 18 # cm3/mol
+            
+            zma = ZimmLundbergAnalysis()
+        end
+
     end
     # writers
     @testset "Analysis Writer Methods" begin

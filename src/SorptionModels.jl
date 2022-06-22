@@ -55,11 +55,15 @@ module SorptionModels
     include(joinpath("ModelAnalyses", "PartialImmobilization.jl"))
     export PartialImmobilizationModel
 
+    include(joinpath("ModelAnalyses", "ZimmLundberg.jl"))
+    export ZimmLundbergAnalysis
+
     # model writers
     include(joinpath("Writers", "WriteVantHoffDualMode.jl"))
     include(joinpath("Writers", "WriteIsostericHeat.jl"))
     # mobility factor not implemented yet
     include(joinpath("Writers", "WritePartialImmobilization.jl"))
+    # zimm lundberg not implemented yet
     export write_analysis
 
 end
