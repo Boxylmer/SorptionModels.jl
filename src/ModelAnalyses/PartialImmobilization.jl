@@ -18,7 +18,6 @@ Apply the method discussed in:
 to separate permeabilities into langmuir and henry mode diffusivities given a Dual Mode sorption model.
 
 
-
 """
 function PartialImmobilizationModel(model::DualModeModel, pressures_mpa::AbstractVector{<:Number}, permeabilities_barrer::AbstractVector{<:Number}; temperature_k = nothing)
     if model.use_fugacity == false
