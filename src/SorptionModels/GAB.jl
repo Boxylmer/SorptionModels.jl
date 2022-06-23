@@ -168,3 +168,4 @@ function fit_gab_model(isotherm::IsothermData; kwargs...)
 end
 
 fit_model(::GAB, isotherm::IsothermData; kwargs...) = fit_gab_model(isotherm; kwargs...)
+fit_model(::GAB, activities::AbstractVector, concentrations::AbstractVector; kwargs...) = fit_gab_model(activities, concentrations; kwargs...)
