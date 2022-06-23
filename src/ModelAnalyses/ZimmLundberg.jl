@@ -6,8 +6,19 @@ struct ZimmLundbergAnalysis{AT, AOPDT, AOPDT, CFT, ACST}
     cluster_functions::CFT
     average_cluster_size::ACST
 end
+"""
+    ZimmLundbergAnalysis(::sorption_model, activities, pen_molar_volume::Number)
 
-function ZimmLundbergAnalysis(sorption_model::GABModel, activities, pen_molar_volume)
+Apply the clustering analysis described originally in:
+`B.H. Zimm, J.L. Lundberg, Sorption of Vapors by High Polymers, J. Phys. Chem. 60 (1956) 425–428. https://doi.org/10.1021/j150538a010.`
+
+To empirically determine whether clustering occurs in the polymer at given activities. 
+
+- The `sorption_model` *must* take activities and return concentration in `CC/CC`
+- The penetrant molar volume (`pen_molar_volume`) must be in units of cm^3/mol.
+
+"""
+function ZimmLundbergAnalysis(sorption_model::GABModel, activities, pen_molar_volume::Number)
     # assumptions
     function get_volfrac(activity)
         conc = predict_concentration(sorption_model, activity)  # cc/cc
