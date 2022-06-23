@@ -413,13 +413,25 @@ precision = 5
 
         # Zimm Lundberg Analysis
         @testset "Zimm Lundberg Analysis" begin
+            # water isotherm taken from from TPBO-0.25 at 25C
             activities=[0.068087235, 0.129051621, 0.185054022, 0.226470588, 0.26212485, 0.317987195, 0.417687075, 0.54869948, 0.641314436]
             concentrations_cc = [4.553554612, 7.361278518, 9.973016055, 12.76538706, 14.32931957, 17.19635897, 22.19538967, 28.84311218, 33.56853954]
             isotherm = IsothermData(; activities, concentrations_cc)
-            @show gabmodel = fit_model(GAB(), isotherm)
-            mol_vol = 18 # cm3/mol
+            gabmodel = fit_model(GAB(), isotherm)
             
-            zma = ZimmLundbergAnalysis(gabmodel, activities, mol_vol)
+            mol_vol = 18 # cm3/mol
+            zma1 = ZimmLundbergAnalysis(gabmodel, activities, mol_vol)
+
+            # do errors work as well?
+            mol_vol = 18 ± 0.2
+            activities = activities .± (activities .* 0.001); concentrations_cc = concentrations_cc .± (concentrations_cc .* 0.001)
+            isotherm = IsothermData(; activities, concentrations_cc)
+            gabmodel = fit_model(GAB(), isotherm)
+            zma2 = ZimmLundbergAnalysis(gabmodel, activities, mol_vol)
+
+            # make sure nothing too terriblehappened
+            @test zma1.average_cluster_size[1] == zma2.average_cluster_size[1].val 
+            @test zma1.a_over_phi_derivatives[1] == zma2.a_over_phi_derivatives[1].val 
         end
     end
     
@@ -446,6 +458,19 @@ precision = 5
         permeabilities = [1221, 1091, 1038]
         pressures_mpa = [0.298, 0.637, 0.974]
         result = PartialImmobilizationModel(model, pressures_mpa, permeabilities)
+        write_analysis(result, path)
+
+        # Zimm-Lundberg
+        path = joinpath(results_folder, "Zimm-Lundberg Analysis.xlsx")
+        rm(path; force=true)
+            # water isotherm taken from from TPBO-0.25 at 25C
+        activities=[0.068087235, 0.129051621, 0.185054022, 0.226470588, 0.26212485, 0.317987195, 0.417687075, 0.54869948, 0.641314436]
+        concentrations_cc = [4.553554612, 7.361278518, 9.973016055, 12.76538706, 14.32931957, 17.19635897, 22.19538967, 28.84311218, 33.56853954]
+        activities = activities .± (activities .* 0.001); concentrations_cc = concentrations_cc .± (concentrations_cc .* 0.001)
+        mol_vol = 18 ± 0.2 # cm3/mol
+        isotherm = IsothermData(; activities, concentrations_cc)
+        gabmodel = fit_model(GAB(), isotherm)
+        result = ZimmLundbergAnalysis(gabmodel, activities, mol_vol)
         write_analysis(result, path)
 
     end

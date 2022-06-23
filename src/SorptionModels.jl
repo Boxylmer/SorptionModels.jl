@@ -9,6 +9,9 @@ module SorptionModels
     using XLSX
     using DelimitedFiles
 
+
+    include("ForwardDiffOverMeasurements.jl")
+
     include(joinpath("SorptionModels", "ModelMethods.jl"))
     export predict_concentration
     export fit_model
@@ -64,7 +67,7 @@ module SorptionModels
     include(joinpath("Writers", "WriteIsostericHeat.jl"))
     # mobility factor not implemented yet
     include(joinpath("Writers", "WritePartialImmobilization.jl"))
-    # zimm lundberg not implemented yet
+    include(joinpath("Writers", "WriteZimmLundberg.jl"))
     export write_analysis
 
 end

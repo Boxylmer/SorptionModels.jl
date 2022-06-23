@@ -1,7 +1,7 @@
-struct ZimmLundbergAnalysis{AT, AOPDT, AOPDT, CFT, ACST}
+struct ZimmLundbergAnalysis{AT, VFT, AOPVT, AOPDT, CFT, ACST}
     activities::AT
     vol_fracs::VFT
-    a_over_phi_values::AOPDT
+    a_over_phi_values::AOPVT
     a_over_phi_derivatives::AOPDT
     cluster_functions::CFT
     average_cluster_size::ACST
@@ -34,7 +34,17 @@ function ZimmLundbergAnalysis(sorption_model::GABModel, activities, pen_molar_vo
     
     vol_fracs = get_volfrac.(activities)
     aoverφ_vals = act_per_volfrac.(activities)
+
     d_aoverφ_d_a_vals = ForwardDiff.derivative.(act_per_volfrac, activities)
+    # function uncertain_func(a)
+    #     return ForwardDiff.derivative(act_per_volfrac, a)
+    # end
+    # d_aoverφ_d_a_vals=Vector{Number}(undef, length(activities))
+    # d_aoverφ_d_a_vals=
+    # for i in eachindex(activities)
+    #     res = uncertain_func(activities[i]) 
+    #     d_aoverφ_d_a_vals[i] = res
+    # end
 
     # the clustering function is G_11 / molar volume
     cluster_functions = (vol_fracs .- 1) .* d_aoverφ_d_a_vals .- 1
