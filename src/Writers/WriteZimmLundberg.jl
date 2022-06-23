@@ -68,105 +68,21 @@ function write_analysis(analysis::ZimmLundbergAnalysis, workbook::XLSX.XLSXFile;
     sheet[wrp, wcp + 12] = "Avg. Cluster Size σ"
     
     wrp+=1
-    # write_parameter_headers(wrp, wcp)
+    
     nsteps = length(analysis.activities)
-    write_vector_of_maybe_measurements(wrp, wcp, 1:1:nsteps; write_errors=false);
-    # sheet[wrp, wcp, dim=1] = 1:1:nsteps
+    write_vector_of_maybe_measurements(wrp, wcp, 1:1:nsteps; write_errors=false)
     wcp+=1
-    write_vector_of_maybe_measurements(wrp, wcp, analysis.activities); 
+    write_vector_of_maybe_measurements(wrp, wcp, analysis.activities)
     wcp+=2
-    write_vector_of_maybe_measurements(wrp, wcp, analysis.vol_fracs); 
+    write_vector_of_maybe_measurements(wrp, wcp, analysis.vol_fracs) 
     wcp+=2
-    write_vector_of_maybe_measurements(wrp, wcp, analysis.a_over_phi_values); 
+    write_vector_of_maybe_measurements(wrp, wcp, analysis.a_over_phi_values)
     wcp+=2
-    write_vector_of_maybe_measurements(wrp, wcp, analysis.a_over_phi_derivatives); 
+    write_vector_of_maybe_measurements(wrp, wcp, analysis.a_over_phi_derivatives)
     wcp+=2
-    write_vector_of_maybe_measurements(wrp, wcp, analysis.cluster_functions); 
+    write_vector_of_maybe_measurements(wrp, wcp, analysis.cluster_functions)
     wcp+=2
-    write_vector_of_maybe_measurements(wrp, wcp, analysis.average_cluster_size); 
-
-    # sheet[wrp+7, wcp] = "RSS"
-    # write_value_of_maybe_measurements(wrp+7, wcp+1, analysis.initial_rss; write_errors=false); write_value_of_maybe_measurements(wrp+7, wcp+2, analysis.final_rss)
-
-    # wcp+=5
-    # sheet[wrp, wcp] = "Covariance Matrix"
-    # write_parameter_headers(wrp, wcp)
-    # write_parameter_headers(wrp, wcp; row_col_iter=(0, 1))
-    # write_matrix_at_position(wrp + 1, wcp + 1, analysis.covariance_matrix)
-
-    # wcp+=9
-    # sheet[wrp, wcp] = "1/T"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp, 1 ./ [temperature(iso) for iso in analysis.given_isotherms]; write_errors=false)
-    # sheet[wrp, wcp + 1] = "ch (standalone)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 1, [model.ch for model in analysis.standalone_models]; write_errors=false)
-    # sheet[wrp, wcp + 2] = "ln(b) (standalone)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 2, log.([model.b for model in analysis.standalone_models]); write_errors=false)
-    # sheet[wrp, wcp + 3] = "ln(kd) (standalone)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 3, log.([model.kd for model in analysis.standalone_models]); write_errors=false)
-    # sheet[wrp, wcp + 4] = "ch (initial)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 4, [model.ch for model in analysis.initial_models]; write_errors=false)
-    # sheet[wrp, wcp + 5] = "ln(b) (initial)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 5, log.([model.b for model in analysis.initial_models]); write_errors=false)
-    # sheet[wrp, wcp + 6] = "ln(kd) (initial)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 6, log.([model.kd for model in analysis.initial_models]); write_errors=false)
-    # sheet[wrp, wcp + 7] = "ch (final)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 7, [model.ch for model in analysis.final_models]; write_errors=false)
-    # sheet[wrp, wcp + 8] = "ln(b) (final)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 8, log.([model.b for model in analysis.final_models]); write_errors=false)
-    # sheet[wrp, wcp + 9] = "ln(kd) (final)"
-    # write_vector_of_maybe_measurements(wrp + 1, wcp + 9, log.([model.kd for model in analysis.final_models]); write_errors=false)
-    # wcp=1
-
-    # wrp+=7
-
-    # wrp+= max(2, length(analysis.given_isotherms) - 8)  # move the writer by the longest vector
-    # sheet[wrp, wcp] = "Isotherms"
-    # wrp+=1
-
-
-    # for idx in eachindex(analysis.final_models, analysis.initial_models, analysis.final_predicted_isotherms, analysis.initial_predicted_isotherms)
-    #     sheet[wrp, wcp] = "Temp (K):"
-    #     write_value_of_maybe_measurements(wrp, wcp+1, temperature(analysis.given_isotherms[idx]))
-        
-    #     # isotherm stuff
-    #     wrp+=1
-    #     if analysis.use_fugacity sheet[wrp, wcp] = "Fugacity (MPa)"
-    #     else sheet[wrp, wcp] = "Pressure (MPa)" end
-    #     sheet[wrp, wcp + 1], sheet[wrp, wcp + 2], sheet[wrp, wcp + 3], sheet[wrp, wcp + 4] = "Err (MPa)", "CC/CC", "CC/CC err", "DM standalone (CC/CC)"
-    #     sheet[wrp, wcp + 5], sheet[wrp, wcp + 6], sheet[wrp, wcp + 7], sheet[wrp, wcp + 8], sheet[wrp, wcp + 9]  = "DM init (CC/CC)", "DM final (CC/CC)", "err (CC/CC)", "DM Henry Contrib (CC/CC)", "err (CC/CC)"
-    #     sheet[wrp, wcp + 10], sheet[wrp, wcp + 11] = "DM Langmuir Contrib (CC/CC)", "err (CC/CC)"
-        
-        
-    #     wrp+=1
-        
-    #     if analysis.use_fugacity
-    #         used_pressures = fugacities(analysis.given_isotherms[idx]; component=1)
-    #     else
-    #         used_pressures = partial_pressures(analysis.given_isotherms[idx]; component=1)
-    #     end
-    #     write_vector_of_maybe_measurements(wrp, wcp, fugacities(analysis.given_isotherms[idx]; component=1))
-    #     write_vector_of_maybe_measurements(wrp, wcp + 2, concentration(analysis.given_isotherms[idx]; component=1))
-    #     write_vector_of_maybe_measurements(wrp, wcp + 4, strip_measurement_to_value(predict_concentration(analysis.standalone_models[idx], used_pressures)))
-    #     write_vector_of_maybe_measurements(wrp, wcp + 5, strip_measurement_to_value(predict_concentration(analysis.initial_models[idx], used_pressures)))
-    #     write_vector_of_maybe_measurements(wrp, wcp + 6, predict_concentration(analysis.final_models[idx], used_pressures))
-    #     write_vector_of_maybe_measurements(wrp, wcp + 8, henry_mode_concentration(analysis.final_models[idx], used_pressures))
-    #     write_vector_of_maybe_measurements(wrp, wcp + 10, langmuir_mode_concentration(analysis.final_models[idx], used_pressures))
-        
-    #     # dual mode fittings
-    #     wrp+=0
-    #     wcp+=14
-    #     sheet[wrp - 1, wcp] = "Dual Mode Parameters"
-    #     sheet[wrp + 1, wcp], sheet[wrp + 2, wcp], sheet[wrp + 3, wcp] = "CH' (CC/CC)", "b (1/MPa)", "kd ((CC/CC)/MPa)"
-    #     sheet[wrp, wcp + 1], sheet[wrp, wcp + 2], sheet[wrp, wcp + 3], sheet[wrp, wcp + 4], sheet[wrp, wcp + 5] = "standalone", "standalone err", "initial", "final", "final err"
-    #     wrp+=1
-    #     write_vector_of_maybe_measurements(wrp, wcp + 1, [analysis.standalone_models[idx].ch, analysis.standalone_models[idx].b, analysis.standalone_models[idx].kd])
-    #     write_vector_of_maybe_measurements(wrp, wcp + 3, [analysis.initial_models[idx].ch, analysis.initial_models[idx].b, analysis.initial_models[idx].kd]; write_errors=false)
-    #     write_vector_of_maybe_measurements(wrp, wcp + 4, [analysis.final_models[idx].ch, analysis.final_models[idx].b, analysis.final_models[idx].kd])
-
-    #     wrp+= 1 + num_steps(analysis.given_isotherms[idx])
-    #     wcp = 1
-
-    # end
+    write_vector_of_maybe_measurements(wrp, wcp, analysis.average_cluster_size)
 
 end
 
