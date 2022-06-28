@@ -88,9 +88,9 @@ precision = 5
         concentrations = [0.023724367, 0.040262462, 0.060287035, 0.072594922, 0.079677023]
         iso_low_conc = IsothermData(partial_pressures_mpa=partial_pressures, concentrations_cc = concentrations)
         model_low_conc = fit_model(DualMode(), iso_low_conc)
-        @test model_low_conc.ch ≈ 0.10276637320912523
-        @test model_low_conc.b ≈ 2582.4028444256433
-        @test model_low_conc.kd ≈ 2.69625167954496
+        @test round(model_low_conc.ch; digits=5) ≈ 0.10277
+        @test round(model_low_conc.b; digits=1) ≈ 2582.4
+        @test round(model_low_conc.kd; digits=5) ≈ 2.69624
 
 
     # GAB
@@ -139,7 +139,7 @@ precision = 5
         init_params_low_conc = SorptionModels._get_initial_conditioned_gab_params(acts, concentrations)
         @test round(model_low_conc.cp; digits = 5) == round(0.10571589892661197; digits = 5)
         @test round(model_low_conc.k; digits = 5) == round(0.038798800644367075; digits = 5)
-        @test round(model_low_conc.a; digits = 5) == round(204.7011129485613; digits = 5)
+        @test round(model_low_conc.a; digits = 5) == 204.70775
         @test init_params_low_conc[1] == concentrations[end]
         @test round(init_params_low_conc[2]; digits = 5) == round(0.47376105315526396; digits = 5)
         @test round(init_params_low_conc[3]; digits = 5) == round(25.561581064859528; digits = 5)
@@ -318,8 +318,8 @@ precision = 5
         @test fick_d.err ≈ 4.7790203391071216e-8
 
         mbh_d = get_diffusivity(mbh_model_fit, semi_thickness_cm)
-        @test mbh_d.val ≈ 2.251436090950463e-15
-        @test mbh_d.err ≈ 2.251436090950463e-16
+        @test mbh_d.val ≈ 2.251491971659755e-15
+        @test mbh_d.err ≈ 2.251491971659755e-16
 
         # boostrap and uncertainty
         fick_model_fit_with_err = fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
@@ -362,7 +362,7 @@ precision = 5
             vhdm_analysis_but_with_fugacity = VantHoffDualModeAnalysis(isotherms; use_fugacity=true)
             @test vhdm_analysis_but_with_fugacity.final_models[1].use_fugacity == true
             @test vhdm_analysis_but_with_fugacity.final_models[2].ch.val ≈ 57.13799466676326
-            @test vhdm_analysis_but_with_fugacity.final_models[2].ch.err ≈ 29.838724853992588
+            @test vhdm_analysis_but_with_fugacity.final_models[2].ch.err ≈ 29.838700113541947
             @test vhdm_analysis.final_models[2].ch.val ≈ 56.37550904605368
         end
 
