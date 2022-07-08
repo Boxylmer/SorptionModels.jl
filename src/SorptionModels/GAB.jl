@@ -1,10 +1,15 @@
 struct GAB end
 
-struct GABModel{CPT, KT, AT} <: SorptionModel
+struct GABModel{CPT, KT, AT, PCFT, ACFT} <: SorptionModel
     cp::CPT  # units: CC/CC
     k::KT    # units: None
     a::AT    # units:   None 
+    pressure_conversion_function::PCFT  # MPa to activity
+    activity_conversion_function::ACFT  # Activity to MPa
 end
+
+GABModel(cp, k, a) = GABModel(cp, k, a, missing, missing)
+    
 
 module GABHelperFunctions
     using SorptionModels
@@ -25,27 +30,36 @@ module GABHelperFunctions
 end #  end helper functions
 
 """
-    predict_concentration(gm::GABModel, activity::Number)
+    predict_concentration(gm::GABModel, pressure::Number)
+Predict a concentration given a pressure. Note that GAB is fit to activity, so you will need to specify a `pressure_conversion_function(pressure::Number) -> activity::Number` when fitting the model.
+See `fit_gab_model`
+"""
+predict_concentration(gm::GABModel, pressure::Number) = a_predict_concentration(gm, gm.pressure_conversion_function(pressure))
+predict_concentration(gm::GABModel, pressures::AbstractVector) = a_predict_concentration(gm, gm.pressure_conversion_function.(pressures))
+
+
+"""
+    a_predict_concentration(gm::GABModel, activity::Number)
 Predict concentration based on a GAB model and given activity.
 Mixed GAB models aren't implemented due to the empirical nature of the model (and it's lack of predictivity)
 
 """
-function predict_concentration(gm::GABModel, activity::Number)
+function a_predict_concentration(gm::GABModel, activity::Number)
     (gm.cp * gm.k * gm.a * activity) / ((1 - gm.k*activity) * (1 - gm.k*activity + gm.k*gm.a*activity))
 end
 
 """
-    predict_concentration(gm::GABModel, activities::AbstractVector)
+    a_predict_concentration(gm::GABModel, activities::AbstractVector)
 Returns a vector of concentrations predicted by the GAB model for a corresponding vector of activities.
 """
-function predict_concentration(gm::GABModel, activities::AbstractVector)
+function a_predict_concentration(gm::GABModel, activities::AbstractVector)
     predictions = [predict_concentration(gm, activity) for activity in activities]
     return predictions
 end
 
 function MembraneBase.rss(gm::GABModel, activities::AbstractVector, concentrations::AbstractVector)
     if length(activities) == length(concentrations)
-        predictions = predict_concentration(gm, activities)
+        predictions = a_predict_concentration(gm, activities)
         return MembraneBase.rss(concentrations, predictions)        
     end
 
@@ -58,8 +72,13 @@ end
 Fit a set of activities and corresponding concentrations (**CC/CC**) to the GAB model. 
 
 For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
+
+- `pressure_conversion_function(pressure::Number) -> activity::Number`: if set, will allow pressures to automatically be converted to activities when needed. (MPa) 
+- `activity_conversion_function(activity::Number) -> pressure::Number`: if set, will allow activities to automatically be converted to pressures when needed. (MPa)
 """
-function fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; uncertainty_method=nothing, apply_weights=false)
+function fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; 
+    uncertainty_method=nothing, apply_weights=false, pressure_conversion_function=missing, activity_conversion_function=missing)
+
     if length(activities) != length(concentrations)
         throw(DimensionMismatch("The concentrations and activities given don't match in length, this function only works for equivalent length vectors of numbers"))
     end
@@ -95,18 +114,17 @@ function fit_gab_model(activities::AbstractVector, concentrations::AbstractVecto
     if uncertainty_method == :JackKnife
         data = collect(zip(applied_activities, applied_concs))
         corresponding_uncertainties = jackknife_uncertainty(GABHelperFunctions.resampled_set_fitting_wrapper, data)
-        uncertain_parameters = [fit_params[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
-        optimized_model = GABModel(uncertain_parameters...)
+        final_params = [fit_params[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
     elseif uncertainty_method == :Bootstrap
         data = collect(zip(applied_activities, applied_concs))  # Isotherm.dataset(isotherm)
         corresponding_uncertainties = bootstrap_uncertainty(GABHelperFunctions.resampled_set_fitting_wrapper, data)  
-        uncertain_parameters = [fit_params[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
-        optimized_model = GABModel(uncertain_parameters...)  
+        final_params = [fit_params[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
     elseif isnothing(uncertainty_method)
-        optimized_model = GABModel(fit_params...)
+        final_params = fit_params
     else 
         throw(ArgumentError("Invalid uncertainty_method: " * string(uncertainty_method)))
     end
+    optimized_model = GABModel(final_params..., pressure_conversion_function, activity_conversion_function)
     return optimized_model
 end
 
@@ -114,7 +132,7 @@ end
 #     return [guess[1], log(guess[2]), log(guess[3])]
 # end
 
-_uncondition_gab_guess(guess) = 10 .^ guess
+# _uncondition_gab_guess(guess) = 10 .^ guess
 
 function _get_initial_conditioned_gab_params(applied_activities, applied_concs)
     cp = maximum(applied_concs)
@@ -154,6 +172,8 @@ end
 Fit the GAB model to the concentrations and activities present in an isotherm. 
 Right now, it is assumed that the isotherm has only one component, so the model fits only to the first component. 
 # todo: if a multicomponent isotherm is provided, return a vector of GAB fittings. 
+
+
 """
 function fit_gab_model(isotherm::IsothermData; kwargs...)
     acts = activities(isotherm; component=1)

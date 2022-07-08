@@ -144,6 +144,9 @@ precision = 5
         @test round(init_params_low_conc[2]; digits = 5) == round(0.47376105315526396; digits = 5)
         @test round(init_params_low_conc[3]; digits = 5) == round(25.561581064859528; digits = 5)
 
+        # test predict_concentration 
+        
+
     end
 
     @testset "Fundamental Sorption Models" begin

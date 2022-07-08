@@ -15,15 +15,21 @@ end
 
 Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
 """
-function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25, use_vant_hoff_constraints=false)
+function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; 
+    model=DualMode(), num_points=25, 
+    use_vant_hoff_constraints=false,
+    gab_pressure_conversion_funcs::AbstractVector{<:Function}=missing, 
+    gab_activity_conversion_funcs::AbstractVector{<:Function}=missing)
+    
     # first fit some models to each isotherm so that we can accurately interpolate
-    if use_vant_hoff_constraints
+    if use_vant_hoff_constraints  && model <: DualMode
         sorption_models = Vector(
             strip_measurement_to_value(
                 VantHoffDualModeAnalysis(isotherms; use_fugacity=false).final_models
             )
         )
-
+    elseif model <: GAB
+        
     else
         sorption_models = [fit_model(model, isotherm; uncertainty_method=:JackKnife) for isotherm in isotherms]
     end
