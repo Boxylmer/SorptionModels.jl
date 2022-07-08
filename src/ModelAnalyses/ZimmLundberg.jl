@@ -21,7 +21,7 @@ To empirically determine whether clustering occurs in the polymer at given activ
 function ZimmLundbergAnalysis(sorption_model::GABModel, activities, pen_molar_volume::Number)
     # assumptions
     function get_volfrac(activity)
-        conc = predict_concentration(sorption_model, activity)  # cc/cc
+        conc = a_predict_concentration(sorption_model, activity)  # cc/cc
         pen_volume = conc * pen_molar_volume / MembraneBase.CC_PER_MOL_STP  # ccstp/ccpol * cm3/mol / (ccstp/mol) = (cm3/mol * mol)/ccpol = cm3/ccpol = unitless
         vol_frac = pen_volume / (1 + pen_volume)  # unitless
         return vol_frac

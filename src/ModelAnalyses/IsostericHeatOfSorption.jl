@@ -14,22 +14,36 @@ end
     (isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25) 
 
 Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
+- If the Dual Mode model is used, `use_vant_hoff_constraints` will constrain the dual mode fittings with respect to temperature. (see `VantHoffDualModeAnalysis`)
+- If the GAB model is used, `gab_pressure_conversion_funcs` (converting pressure to activity) and `gab_activity_conversion_funcs`(convert activity to pressure) will need to be defined in the same order as the isotherms.
 """
 function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; 
     model=DualMode(), num_points=25, 
     use_vant_hoff_constraints=false,
-    gab_pressure_conversion_funcs::AbstractVector{<:Function}=missing, 
-    gab_activity_conversion_funcs::AbstractVector{<:Function}=missing)
+    gab_pressure_conversion_funcs=missing, 
+    gab_activity_conversion_funcs=missing)
     
     # first fit some models to each isotherm so that we can accurately interpolate
-    if use_vant_hoff_constraints  && model <: DualMode
+    if use_vant_hoff_constraints  && typeof(model) <: DualMode
         sorption_models = Vector(
             strip_measurement_to_value(
                 VantHoffDualModeAnalysis(isotherms; use_fugacity=false).final_models
             )
         )
-    elseif model <: GAB
-        
+    elseif typeof(model) <: GAB
+        if ismissing(gab_pressure_conversion_funcs)
+            throw(ErrorException("The GAB model supplied has no way of converting pressures back to activities."))
+        end
+        if ismissing(gab_activity_conversion_funcs)
+            throw(ErrorException("The GAB model supplied has no way of converting activities to pressures."))
+        end
+        sorption_models = [fit_model(
+            model, isotherms[idx]; 
+            uncertainty_method=:JackKnife, 
+            pressure_conversion_function=gab_pressure_conversion_funcs[idx],
+            activity_conversion_function=gab_activity_conversion_funcs[idx]) 
+            for idx in 1:length(isotherms)]
+
     else
         sorption_models = [fit_model(model, isotherm; uncertainty_method=:JackKnife) for isotherm in isotherms]
     end

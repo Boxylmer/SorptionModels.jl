@@ -42,7 +42,6 @@ predict_concentration(gm::GABModel, pressures::AbstractVector) = a_predict_conce
     a_predict_concentration(gm::GABModel, activity::Number)
 Predict concentration based on a GAB model and given activity.
 Mixed GAB models aren't implemented due to the empirical nature of the model (and it's lack of predictivity)
-
 """
 function a_predict_concentration(gm::GABModel, activity::Number)
     (gm.cp * gm.k * gm.a * activity) / ((1 - gm.k*activity) * (1 - gm.k*activity + gm.k*gm.a*activity))
@@ -53,8 +52,34 @@ end
 Returns a vector of concentrations predicted by the GAB model for a corresponding vector of activities.
 """
 function a_predict_concentration(gm::GABModel, activities::AbstractVector)
-    predictions = [predict_concentration(gm, activity) for activity in activities]
+    predictions = [a_predict_concentration(gm, activity) for activity in activities]
     return predictions
+end
+
+function predict_activity(gm::GABModel, concentration::Number)
+    plus_or_minus_term = sqrt(gm.cp^2 * gm.a^2 + gm.a^2*concentration^2 + 2*gm.cp*gm.a*(2-gm.a) * concentration) 
+    denom = 2 * concentration * gm.k * (1-gm.a)
+    num_without_pm_term = gm.cp * gm.a + (2 - gm.a) * concentration
+    a_plus = (num_without_pm_term + plus_or_minus_term) / denom
+    a_minus =  (num_without_pm_term - plus_or_minus_term) / denom
+    if a_minus >= 0 && a_minus <= 1
+        return a_minus
+    elseif a_plus >= 0 && a_plus <= 1
+        return a_plus
+    elseif a_minus >=0
+        return a_minus
+    elseif a_plus >=0
+        return a_plus
+    else
+        throw(ErrorException("Could not predict activity."))
+    end
+end
+
+predict_activity(gm::GABModel, concentrations::AbstractVector) = [predict_activity(gm, conc) for conc in concentrations]
+
+function predict_pressure(gm::GABModel, concentration::Number)
+    if ismissing(gm.activity_conversion_function); throw(MissingException("An activity conversion function must be specified to predict pressure.")); end
+    return gm.activity_conversion_function(predict_activity(gm, concentration))
 end
 
 function MembraneBase.rss(gm::GABModel, activities::AbstractVector, concentrations::AbstractVector)

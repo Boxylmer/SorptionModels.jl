@@ -145,7 +145,24 @@ precision = 5
         @test round(init_params_low_conc[3]; digits = 5) == round(25.561581064859528; digits = 5)
 
         # test predict_concentration 
-        
+        # easy, ideal conversion between pressure and activity
+        pvap_est = sum(partial_pressures ./ acts) / length(acts)
+        pressure_conversion_function(pressure) = pressure / pvap_est
+        activity_conversion_function(activity) = activity * pvap_est
+        gab_model_with_converters = fit_model(GAB(), iso_low_conc; pressure_conversion_function, activity_conversion_function)
+        gab_model_with_converters_check = GABModel(model_low_conc.cp, model_low_conc.k, model_low_conc.a, pressure_conversion_function, activity_conversion_function)
+        @test gab_model_with_converters.cp == gab_model_with_converters_check.cp
+        @test round(predict_concentration(gab_model_with_converters, partial_pressures[3]); digits=5) ==
+              round(a_predict_concentration(gab_model_with_converters, acts[3]); digits=5)
+
+        # test predict activity
+        given_act = acts[1]
+        given_conc = a_predict_concentration(gab_model_with_converters, acts[1])
+        recovered_act = predict_activity(gab_model_with_converters, given_conc)
+        @test given_act ≈ recovered_act
+        given_pres = partial_pressures[1]
+        recovered_pres = predict_pressure(gab_model_with_converters, given_conc)
+        @test round(recovered_pres; digits=8) == round(given_pres; digits=8)
 
     end
 
@@ -357,6 +374,24 @@ precision = 5
         fugacities_mpa =[0.27337983, 0.684971536, 1.154961289, 1.651558222, 2.128304942, 2.599274758, 2.985937811]
     )
     isotherms = [isotherm_1, isotherm_2, isotherm_3, isotherm_4]
+
+    g_isotherm_1 =  IsothermData(; 
+        partial_pressures_mpa = [0.000138386, 0.000583942, 0.00104234, 0.001498221],
+        concentrations_cc = [0.682951321, 1.111629734, 1.407396085, 1.656181954],
+        activities = [0.04369976, 0.184397831, 0.329151532, 0.473110012],
+        temperature_k = 298.15)
+    g_isotherm_2 =  IsothermData(; 
+        partial_pressures_mpa = [0.000348261, 0.000916842, 0.001463913, 0.002013374, 0.002596481, 0.003140448],
+        concentrations_cc = [0.731497769, 1.1041389, 1.293588162, 1.597390536, 1.949575609, 2.422564057],
+        activities = [0.061926184, 0.163028384, 0.260305964, 0.358008582, 0.461693813, 0.558419375],
+        temperature_k = 308.15)
+    g_isotherm_3 =  IsothermData(; 
+        partial_pressures_mpa = [0.000637003, 0.001775022, 0.002649602],
+        concentrations_cc = [0.919657573, 1.292284349, 1.53203915],
+        activities = [0.066452474, 0.185171251, 0.276407799],
+        temperature_k = 318.15)
+    g_isotherm_pvaps = [0.003166749, 0.005623816, 0.009585843]
+    g_isotherms = [g_isotherm_1, g_isotherm_2, g_isotherm_3]
     @testset "Analysis Functions" begin
         
         # VHDM analysis
@@ -371,9 +406,14 @@ precision = 5
 
         # Isosteric Heat
         @testset "Isosteric Heat Analysis" begin    
+            gab_pressure_conversion_funcs = [(p) -> p/pvap for pvap in g_isotherm_pvaps]
+            gab_activity_conversion_funcs = [(a) -> a*pvap for pvap in g_isotherm_pvaps]
+            
             ish_analysis = IsostericHeatAnalysis(isotherms)
             ish_analysis_but_with_vhdm = IsostericHeatAnalysis(isotherms; use_vant_hoff_constraints=true)
-
+            @test_throws ErrorException IsostericHeatAnalysis(isotherms; model=GAB())
+            @test_nowarn ish_analysis_but_with_gab = IsostericHeatAnalysis(g_isotherms; model=GAB(), gab_pressure_conversion_funcs, gab_activity_conversion_funcs)
+            
             conc_no_constraint = ish_analysis.sampled_concentrations[4]
             conc_with_constraint = ish_analysis_but_with_vhdm.sampled_concentrations[4]
             @test conc_no_constraint == conc_with_constraint

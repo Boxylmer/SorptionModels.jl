@@ -14,6 +14,8 @@ module SorptionModels
 
     include(joinpath("SorptionModels", "ModelMethods.jl"))
     export predict_concentration
+    export a_predict_concentration
+    export predict_pressure, predict_activity
     export fit_model
 
     include(joinpath("SorptionModels", "DualMode.jl"))
