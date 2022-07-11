@@ -39,13 +39,13 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData};
         end
         sorption_models = [fit_model(
             model, isotherms[idx]; 
-            uncertainty_method=:JackKnife, 
+            uncertainty_method=nothing, 
             pressure_conversion_function=gab_pressure_conversion_funcs[idx],
             activity_conversion_function=gab_activity_conversion_funcs[idx]) 
             for idx in 1:length(isotherms)]
 
     else
-        sorption_models = [fit_model(model, isotherm; uncertainty_method=:JackKnife) for isotherm in isotherms]
+        sorption_models = [fit_model(model, isotherm; uncertainty_method=nothing) for isotherm in isotherms]
     end
     # calculate the x axis of the isosteric heat slope (inverse temperature)
     temperatures = temperature.(isotherms)

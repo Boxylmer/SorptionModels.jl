@@ -43,7 +43,7 @@ function write_analysis(analysis::IsostericHeatAnalysis, workbook::XLSX.XLSXFile
     sheet[writer_row_position + 1, writer_col_position, dim=1] = [measurement(temp).val for temp in analysis.inverse_temperature_vector]
     for (idx, vec) in enumerate(analysis.ln_pressure_vectors)
         sheet[writer_row_position, writer_col_position + idx] = "ln(P[MPa])"
-        sheet[writer_row_position + 1, writer_col_position + idx, dim=1] = [vec_meas.val for vec_meas in vec] 
+        sheet[writer_row_position + 1, writer_col_position + idx, dim=1] = [measurement.(vec_meas).val for vec_meas in vec] 
     end
 
     # finally, show the found isosteric heats as a function of concentration
