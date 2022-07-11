@@ -142,9 +142,8 @@ precision = 5
         @test round(model_low_conc.a; digits = 5) == 204.70775
         @test init_params_low_conc[1] == concentrations[end]
         @test round(init_params_low_conc[2]; digits = 5) == round(0.47376105315526396; digits = 5)
-        @test round(init_params_low_conc[3]; digits = 5) == round(25.561581064859528; digits = 5)
-
-        # test predict_concentration 
+        @test round(init_params_low_conc[3]; digits = 5) == round(25.561581064859528; digits = 5)      
+        # test predict_concentration using the data above 
         # easy, ideal conversion between pressure and activity
         pvap_est = sum(partial_pressures ./ acts) / length(acts)
         pressure_conversion_function(pressure) = pressure / pvap_est
@@ -163,6 +162,13 @@ precision = 5
         given_pres = partial_pressures[1]
         recovered_pres = predict_pressure(gab_model_with_converters, given_conc)
         @test round(recovered_pres; digits=8) == round(given_pres; digits=8)
+
+
+        # # methanol 25C was a weird case that fit with a naieve solution but not the "sophisticated" one. This should always work. 
+        # acts = []
+        # concs = []
+        # meth_iso = IsothermData(; activities=acts, concentrations_cc=concs)
+        # gabmodel = fit_model(GAB(), meth_iso)
 
     end
 
