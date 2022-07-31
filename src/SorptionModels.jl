@@ -9,6 +9,8 @@ module SorptionModels
     using XLSX
     using DelimitedFiles
 
+    using Plots # for diagnostic methods
+
 
     include("ForwardDiffOverMeasurements.jl")
 
@@ -72,4 +74,8 @@ module SorptionModels
     include(joinpath("Writers", "WriteZimmLundberg.jl"))
     export write_analysis
 
+
+    # Diagnostic Methods
+    include(joinpath("ModelDiagnostics", "NELFDiagnostics.jl"))
+    export nelf_characteristic_parameter_error_map
 end

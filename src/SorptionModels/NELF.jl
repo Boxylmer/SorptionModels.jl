@@ -1,3 +1,6 @@
+const DEFAULT_NELF_INFINITE_DILUTION_PRESSURE = 1e-10 # ???
+const DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT = 100000
+
 struct NELF end
 
 
@@ -180,13 +183,11 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
 function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-    polymer_molecular_weight=100000, eos=MembraneEOS.SanchezLacombe())
+    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, eos=MembraneEOS.SanchezLacombe())
     
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    infinite_dilution_pressure = 1e-10 # ???
-
-    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight)
+    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight)
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
@@ -209,7 +210,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     return [Optim.minimizer(res)..., polymer_molecular_weight]
     # work in progress
 end
-function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight=100000)
+function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
