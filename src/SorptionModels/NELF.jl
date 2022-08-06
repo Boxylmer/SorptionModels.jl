@@ -210,6 +210,11 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     return [Optim.minimizer(res)..., polymer_molecular_weight]
     # work in progress
 end
+
+function _scan_for_starting_point(target_function, lower, upper, steps::AbstractRange)
+    #todo
+end
+
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
