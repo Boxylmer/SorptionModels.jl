@@ -210,25 +210,27 @@ precision = 5
 
 
             # test the polymer fitter with TPBO-0.25
-
             char_co2 = [630, 300, 1.515, 44]
             char_ch4 = [250, 215, 0.500, 16.04]
             char_n2 = [160, 145, 0.943, 28.01]
 
-            char_tpbo_valerio = [474, 900, 1.6624, 100000]
+            # char_tpbo_valerio = [474, 900, 1.6624, 100000]
 
-            isotherms = [tpbo_ch4_5c, tpbo_ch4_35c, tpbo_co2_20c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+            isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+            bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
+            @show char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false)
+            # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
             #   pick CO2
-            given_co2_50c = concentration(tpbo_co2_50c; component=1)
-            given_co2_20c = concentration(tpbo_co2_20c; component=1)
+            # given_co2_50c = concentration(tpbo_co2_50c; component=1)
+            # given_co2_20c = concentration(tpbo_co2_20c; component=1)
             
-            co2_bulk_phase = SL(char_co2...)
+            # co2_bulk_phase = SL(char_co2...)
             
-            polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 -0.0356; -0.0356 0])
-            nelf_model_valerio = NELFModel(co2_bulk_phase, polymer_phase_valerio, 1.393)
-            given_valerio_co2_50c = [predict_concentration(nelf_model_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
-            given_valerio_co2_20c = [predict_concentration(nelf_model_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+            # polymer_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 -0.0356; -0.0356 0])
+            # nelf_model_valerio = NELFModel(co2_bulk_phase, polymer_phase_valerio, 1.393)
+            # given_valerio_co2_50c = [predict_concentration(nelf_model_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+            # given_valerio_co2_20c = [predict_concentration(nelf_model_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
             # @show fit_kij(NELF(), [tpbo_co2_20c, tpbo_co2_50c], char_co2, char_tpbo_valerio)
             # @show fit_ksw(NELF(), tpbo_co2_20c, co2_bulk_phase, polymer_phase_valerio)
             # fit char params to exp data
@@ -507,8 +509,8 @@ precision = 5
         char_ch4 = [250, 215, 0.500, 16.04]
         char_n2 = [160, 145, 0.943, 28.01]
         bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-        error_plot = nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params)
-        savefig(error_plot, joinpath(results_folder, "TPBO_25 error map.png"))
+        error_plot = nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, verbose=false)
+        # savefig(error_plot, joinpath(results_folder, "TPBO_25 error map.png"))
     
     end
 end

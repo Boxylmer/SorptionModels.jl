@@ -183,21 +183,33 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
 function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, eos=MembraneEOS.SanchezLacombe())
+    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, verbose=true, initial_search_resolution=20)
     
+    if verbose
+        println("Starting parameter generation for NELF fit")
+    end
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
     error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight)
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
-    density_upper_bound = Inf
-    lower = [1., 1., density_lower_bound]
-    upper = [3000, 3000, density_upper_bound]
+    density_upper_bound = 3
+    naive_lower = [50., 50., density_lower_bound]
+    naive_upper = [2000., 2000., density_upper_bound]
+    if verbose
+        println("Identified naive upper bounds of $naive_upper and lower bounds of $naive_lower for P, T and rho respectively.")
+    end
+    min_results, min_args, lower, upper = scan_for_starting_point_and_bounds(error_function, naive_lower, naive_upper, initial_search_resolution; verbose)
+    if verbose
+        println("Found initial starting point at point $min_args, with an RSS of $min_results, bounded by a lower bounds of $lower and upper bounds of $upper. Starting optimization...")
+    end
+    # @show min_args, lower, upper
     res = Optim.optimize(
         error_function, 
         # lower, upper, 
-        [500, 500, density_lower_bound * 1.2], 
+        # [500, 500, density_lower_bound * 1.2], 
+        min_args,
         NelderMead(), 
         # Fminbox(LBFGS()), 
         Optim.Options(; allow_f_increases = false))
@@ -211,8 +223,66 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     # work in progress
 end
 
-function _scan_for_starting_point(target_function, lower, upper, steps::AbstractRange)
-    #todo
+# todo this allocates like crazy when it really shouldn't. What's going on?
+"""
+    scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_lower::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
+Search for a vector of parameters, bounded by `naive_lower` and `naive_lower`, that is closest to minimizing a `target_function` by trying every possible value in a grid of `resolutions`. 
+- `resolutions` can be a vector of the same length as the bounds and arguments to the `target_function`. If a single integer is passed, it will assume you want the same resolution on all input dimensions.
+- This search algorithm assumes that the target_function contains one obvious local minima, but is robust to `NaN`, `missing`, and `nothing` output from `target_function`.
+
+Returns `min_results`, `min_args`, `lower_bounds`, `upper_bounds`, or rather, the output of the function that was searched, the argument vector to get said output, and the lower and upper bounds in which a better solution may exist.
+Returns only the error grid that was evaluated and skips finding any other results if `return_grid` is true. (used for diagnostic purposes)
+
+    Example
+```
+expensive_func(x)
+    return (x[1]-15)^2 + (x[2]-10)^2
+end
+@show scan_for_starting_point_and_bounds(expensive_func, (1.0, 1.0), (20., 20.), (10, 11); verbose=true)
+```
+"""
+function scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_upper::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
+    @assert length(naive_lower) == length(naive_upper)
+    if typeof(resolutions) <: Number
+        resolutions = Tuple(repeat([resolutions], length(naive_lower)))
+    end
+    if ismissing(resolutions)
+        resolutions = Tuple(repeat([20], length(naive_lower)))
+    end
+    generate_range(startval, endval, nsteps::Int64) = startval:((endval-startval)/nsteps):endval
+    get_range_args(ranges, indices) = [ranges[idx][position] for (idx, position) in enumerate(Tuple(indices))]
+    ranges = [generate_range(naive_lower[idx], naive_upper[idx], resolutions[idx]) for idx in eachindex(naive_lower)]
+    range_indices = CartesianIndices(Tuple([1:(length(ranges[idx])-1) for idx in eachindex(ranges)]))  # frankly I don't know why the indices here end up going to one above the actual matrix length
+    min_results, min_indices = missing, missing
+    
+    if return_grid
+        results_grid = MArray{Tuple{resolutions...}, Float64}(undef)
+    end
+    
+    completed_iters = 0
+
+    for indices in range_indices
+        res = target_function(get_range_args(ranges, indices))
+        completed_iters += 1
+        if isnothing(res) || ismissing(res) || isnan(res); continue; end
+        if return_grid 
+            results_grid[indices] = res
+        elseif ismissing(min_results) || res < min_results
+            min_results = res
+            min_indices = indices
+        end
+        if verbose && mod(completed_iters, 500) == 0
+            println("Initial naive search is "*string(completed_iters / length(range_indices) * 100)*"% complete.")
+        end
+    end
+    if return_grid
+        return results_grid
+    else
+        min_args = get_range_args(ranges, min_indices)
+        upper_bounds = get_range_args(ranges, Tuple(min_indices) .+ 1)
+        lower_bounds = get_range_args(ranges, Tuple(min_indices) .- 1)
+        return min_results, min_args, lower_bounds, upper_bounds
+    end
 end
 
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
