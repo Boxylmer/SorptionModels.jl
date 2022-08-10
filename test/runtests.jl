@@ -511,6 +511,11 @@ precision = 5
         char_n2 = [160, 145, 0.943, 28.01]
         bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
         error_plot = nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, verbose=false)
+        for val in error_plot
+            if isnan(val)
+                @show "Hello"
+            end
+        end
         # savefig(error_plot, joinpath(results_folder, "TPBO_25 error map.png"))
     
     end

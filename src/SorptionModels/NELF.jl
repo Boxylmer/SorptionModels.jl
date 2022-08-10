@@ -15,42 +15,50 @@ struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     # ksw_values::KSWT                # vector of values
 end
 
-function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions=[1]; ksw=nothing, units=:cc)
+function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions=[1]; ksw=nothing, units=:cc, nan_on_failure=false)
     minimum_val = 100 * eps()
-    error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val)
+    error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val, nan_on_failure)
 
     penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * eps()
     lower = zeros(length(penetrant_mass_fraction_initial_guesses))
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
-    res = Optim.optimize(
-        error_target, 
-        lower, upper,
-        penetrant_mass_fraction_initial_guesses, 
-        # Fminbox(LBFGS()),
-        Fminbox(NelderMead()),
-        # Newton(),
-        # SAMIN(),
-        Optim.Options(
-        allow_f_increases = false,
-        # x_tol = 1e-9,
-        # g_tol = 1e-7
-    ); autodiff=:forward)
+    
+    try
+        res = Optim.optimize(
+            error_target, 
+            lower, upper,
+            penetrant_mass_fraction_initial_guesses, 
+            # Fminbox(LBFGS()),
+            Fminbox(NelderMead()),
+            # Newton(),
+            # SAMIN(),
+            Optim.Options(
+            allow_f_increases = false,
+            # x_tol = 1e-9,
+            # g_tol = 1e-7
+            ); autodiff=:forward)
 
-    penetrant_mass_fractions = Optim.minimizer(res)
-    polymer_phase_mass_fractions = vcat(1 - sum(penetrant_mass_fractions), penetrant_mass_fractions)
+        penetrant_mass_fractions = Optim.minimizer(res)
+        polymer_phase_mass_fractions = vcat(1 - sum(penetrant_mass_fractions), penetrant_mass_fractions)
 
-    if units==:frac
-        return polymer_phase_mass_fractions[2:end]
-    elseif units==:g
-        concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
-        return concs_g_g
-    elseif units==:cc
-        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
-        return concs_cc_cc
+        if units==:frac
+            return polymer_phase_mass_fractions[2:end]
+        elseif units==:g
+            concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
+            return concs_g_g
+        elseif units==:cc
+            concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
+            return concs_cc_cc
+        end
+    catch e
+        if nan_on_failure
+            return NaN
+        end
+        rethrow(e)
     end
 end
 
-function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, minimum_val=100*eps())
+function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, minimum_val=100*eps(), nan_on_failure=false)
     if isnothing(ksw)
         ksw = zeros(length(bulk_phase_mole_fractions))
     end
@@ -58,21 +66,23 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
     pressure = pressure < minimum_val ? minimum_val : pressure    
     bulk_phase_mole_fractions = ((i) -> (i < minimum_val ? minimum_val : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
-    target_activities = chemical_potential(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
-    normalizer = (rss(zeros(length(bulk_phase_mole_fractions)), target_activities))
+    target_potentials = chemical_potential(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
+    normalizer = (rss(zeros(length(bulk_phase_mole_fractions)), target_potentials))
 
     function error_target(penetrant_mass_fractions)
         polymer_mass_fraction = 1 - sum(penetrant_mass_fractions)
         if polymer_mass_fraction <= 0 || polymer_mass_fraction > 1
             @warn "Polymer mass fraction was not valid, returning very large error value: " * string(polymer_mass_fraction)
-            # return log1p(normalizer)
+            if nan_on_failure; return NaN; end
             return log1p(normalizer * abs(polymer_mass_fraction))
         end
+
         polymer_phase_mass_fractions = vcat(polymer_mass_fraction, penetrant_mass_fractions)
         polymer_phase_density_after_swelling = calculate_polymer_phase_density(model, pressure, bulk_phase_mole_fractions, polymer_phase_mass_fractions, ksw)
         polymer_phase_density_upper_bound = density_upper_bound(model.polymer_model, polymer_phase_mass_fractions)
         if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound 
             # return log1p(normalizer)
+            if nan_on_failure; return NaN; end
             return log1p(normalizer * polymer_phase_density_after_swelling) 
         end
 
@@ -81,7 +91,7 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
             polymer_phase_density_after_swelling, 
             temperature, 
             polymer_phase_mass_fractions)
-        residual_squared = log1p((rss(target_activities, polymer_phase_activities[2:end])))
+        residual_squared = log1p((rss(target_potentials, polymer_phase_activities[2:end])))
         return residual_squared
     end
     return error_target
@@ -111,66 +121,10 @@ end
 Currenlty only supported for Sanchez Lacombe based models, get infinite dilution solubility in **((CC/CC) / MPa)**
 """
 # todo how will we predict the infinite dilution solubility or reject multicomponent models?
-function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # naieve
+function infinite_dilution_solubility(model::NELFModel, temperature::Number; nan_on_failure=false)  # naieve
     inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
-    return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0])[1] / inf_dilution_p
+    return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0], nan_on_failure)[1] / inf_dilution_p
 end
-
-# function infinite_dilution_solubility(model::NELFModel, temperature::Number) 
-#     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
-#         t_st = 273.15 # K
-#         p_st = 0.1  # MPa
-#         comps = model.polymer_model.components
-#         polymer = comps[1]
-#         penetrant = comps[2]
-#         p★_pol, t★_pol, ρ★_pol = MembraneEOS.characteristic_pressure(polymer), MembraneEOS.characteristic_temperature(polymer), MembraneEOS.characteristic_density(polymer)
-#         p★_pen, t★_pen, ρ★_pen, mw_pen = MembraneEOS.characteristic_pressure(penetrant), MembraneEOS.characteristic_temperature(penetrant), MembraneEOS.characteristic_density(penetrant), MembraneEOS.molecular_weight(penetrant)
-#         p★12 = (sqrt(p★_pol) - sqrt(p★_pen))^2
-#         ρ_pol = model.polymer_dry_density
-#         R = MembraneBase.R_MPA_L_K_MOL * 1000  # --> MPa * cm3 / molK
-        
-#         coeff = t_st / (temperature * p_st)
-#         exp_term_1 = mw_pen * p★_pen / (ρ★_pen * R * t★_pen) * (1 + ((t★_pen * p★_pol)/(t★_pol * p★_pen) - 1) * (ρ★_pol / ρ_pol)) * log1p(-ρ_pol/ρ★_pol)
-#         exp_term_2 = (t★_pen * p★_pol)/(t★_pol * p★_pen) - 1
-#         exp_term_3 = (ρ_pol * t★_pen)/(ρ★_pol * p★_pen * temperature) * (p★_pen + p★_pol - p★12)
-
-#         s_inf = coeff * exp(exp_term_1 + exp_term_2 + exp_term_3)
-#         return s_inf
-#         # if length(model.polymer_model.components) > 2
-#         #     throw(ErrorException("NELF model must be a pure component to "))
-#         # end
-#     else
-#         throw(ErrorException("Only NELF models using Sanchez Lacombe support infinite dilution at this time"))
-#     end
-# end 
-# function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # Valerio, modeling gas and vapor...
-#     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
-#         t_st = 273.15 # K
-#         p_st = 0.1  # MPa # maybe 0.101325 --> 1 atm?
-#         comps = model.polymer_model.components
-#         polymer = comps[1]
-#         penetrant = comps[2]
-#         p★_pol, t★_pol, ρ★_pol = MembraneEOS.characteristic_pressure(polymer), MembraneEOS.characteristic_temperature(polymer), MembraneEOS.characteristic_density(polymer)
-#         p★_pen, t★_pen, ρ★_pen, mw_pen = MembraneEOS.characteristic_pressure(penetrant), MembraneEOS.characteristic_temperature(penetrant), MembraneEOS.characteristic_density(penetrant), MembraneEOS.molecular_weight(penetrant)
-#         p★12 = (sqrt(p★_pol) - sqrt(p★_pen))^2
-#         ρ_pol = model.polymer_dry_density
-#         R = MembraneBase.R_MPA_L_K_MOL * 1000  # --> MPa * cm3 / molK
-        
-#         v★_pen = R * t★_pen / p★_pen
-#         v★_pol = R * t★_pol / p★_pol
-#         r_0_pen = mw_pen / (ρ★_pen * v★_pen)
-#         k12 = 0 
-
-#         coeff = t_st / (temperature * p_st)
-#         term_1 = (1 + (v★_pen/v★_pol - 1)*ρ★_pol/ρ_pol) * log1p(-ρ_pol/ρ★_pol)
-#         term_2 = (v★_pen/v★_pol - 1)
-#         term_3 = (ρ_pol/ρ★_pol) * (t★_pen/temperature) * (2/p★_pen) * (1-k12) * sqrt(p★_pen * p★_pol)
-#         ln_s_inf = coeff + r_0_pen*(term_1 + term_2 + term_3)
-#         return exp(ln_s_inf)
-#     else
-#         throw(ErrorException("Only NELF models using Sanchez Lacombe support infinite dilution at this time"))
-#     end
-# end
 
 # functions for fit data to NELF parameters
 """
@@ -190,7 +144,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     end
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight)
+    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight; nan_on_failure=true)
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
@@ -297,7 +251,7 @@ function scan_for_starting_point_and_bounds_3_dims(target_function::Function, na
     return min_results, min_args, lower_bounds, upper_bounds
 end
 
-function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
+function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
