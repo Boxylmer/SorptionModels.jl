@@ -235,12 +235,12 @@ Returns only the error grid that was evaluated and skips finding any other resul
 
     Example
 ```
-expensive_func(x)
+function expensive_func(x)
     return (x[1]-15)^2 + (x[2]-10)^2
 end
 @show scan_for_starting_point_and_bounds(expensive_func, (1.0, 1.0), (20., 20.), (10, 11); verbose=true)
 ```
-"""
+# """
 function scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_upper::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
     @assert length(naive_lower) == length(naive_upper)
     if typeof(resolutions) <: Number
@@ -251,6 +251,10 @@ function scan_for_starting_point_and_bounds(target_function::Function, naive_low
     end
     generate_range(startval, endval, nsteps::Int64) = startval:((endval-startval)/nsteps):endval
     get_range_args(ranges, indices) = [ranges[idx][position] for (idx, position) in enumerate(Tuple(indices))]
+
+    
+    # get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/resolutions[dimension])
+
     ranges = [generate_range(naive_lower[idx], naive_upper[idx], resolutions[idx]) for idx in eachindex(naive_lower)]
     range_indices = CartesianIndices(Tuple([1:(length(ranges[idx])-1) for idx in eachindex(ranges)]))  # frankly I don't know why the indices here end up going to one above the actual matrix length
     min_results, min_indices = missing, missing
@@ -284,6 +288,45 @@ function scan_for_starting_point_and_bounds(target_function::Function, naive_low
         return min_results, min_args, lower_bounds, upper_bounds
     end
 end
+
+# function scan_for_starting_point_and_bounds(target_function::Function, naive_lower, naive_upper, resolutions=20; verbose=true)
+#     @assert length(naive_lower) == length(naive_upper)
+#     if typeof(resolutions) <: Number
+#         resolutions = Tuple(repeat([resolutions], length(naive_lower)))
+#     end
+    
+#     get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/resolutions[dimension])
+#     function get_args(indices::Tuple)::SVector{length(indices), Float64}
+#         args = MVector{length(indices), Float64}(undef)
+#         for (ind_dim, ind_val) in enumerate(indices)
+#             args[ind_dim] = get_arg_value(ind_dim, ind_val)
+#         end
+#         return args
+#     end
+#     indices = CartesianIndices(resolutions)
+#     completed_iters = 0
+#     min_results::Float64 = Inf
+#     min_indices = missing
+    
+#     for ind in indices
+#         tuple_indices = Tuple(ind)
+#         args = get_args(tuple_indices)
+#         res = target_function(args)
+#         completed_iters += 1
+#         if isnothing(res) || ismissing(res) || isnan(res); continue; end
+#         if res < min_results
+#             min_results = res
+#             min_indices = tuple_indices
+#         end
+#         if verbose && mod(completed_iters, 500) == 0
+#             println("Initial naive search is "*string(round(completed_iters / length(indices) * 100))*"% complete.")
+#         end
+#     end
+#     min_args = get_args(min_indices)
+#     upper_bounds = get_args(min_indices .+ 1)
+#     lower_bounds = get_args(min_indices .- 1)
+#     return min_results, min_args, lower_bounds, upper_bounds
+# end
 
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]

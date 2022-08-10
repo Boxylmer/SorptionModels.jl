@@ -5,6 +5,7 @@ module SorptionModels
     using ForwardDiff
     using Optim
     using Measurements
+    using StaticArrays
 
     using XLSX
     using DelimitedFiles
