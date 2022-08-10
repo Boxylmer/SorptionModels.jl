@@ -144,7 +144,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     end
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight; nan_on_failure=true)
+    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight; nan_on_failure=false)
     
     densities = polymer_density.(isotherms)
     density_lower_bound = maximum(densities)
@@ -268,7 +268,7 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
 
             polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
             nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0])[1] / infinite_dilution_pressure
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] / infinite_dilution_pressure
             given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
         end
         resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
