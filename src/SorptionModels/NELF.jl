@@ -111,8 +111,9 @@ end
     infinite_dilution_solubility(model::NELFModel, temperature::Number)
 Currenlty only supported for Sanchez Lacombe based models, get infinite dilution solubility in **((CC/CC) / MPa)**
 """
+# todo swap this simple one out, which seems to work better
 # function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # naieve
-#     inf_dilution_p = 1e-10
+#     inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
 #     return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0])[1] / inf_dilution_p
 # end
 
