@@ -15,7 +15,7 @@ struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     # ksw_values::KSWT                # vector of values
 end
 
-function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, units=:cc)
+function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions=[1]; ksw=nothing, units=:cc)
     minimum_val = 100 * eps()
     error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val)
 
@@ -49,7 +49,6 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
         return concs_cc_cc
     end
 end
-predict_concentration(model::NELFModel, temperature::Number, pressure::Number; kwargs...) = predict_concentration(model, temperature, pressure, [1]; kwargs...)
 
 function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, minimum_val=100*eps())
     if isnothing(ksw)
@@ -111,7 +110,7 @@ end
     infinite_dilution_solubility(model::NELFModel, temperature::Number)
 Currenlty only supported for Sanchez Lacombe based models, get infinite dilution solubility in **((CC/CC) / MPa)**
 """
-# todo swap this simple one out, which seems to work better
+# todo how will we predict the infinite dilution solubility or reject multicomponent models?
 function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # naieve
     inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
     return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0])[1] / inf_dilution_p
@@ -226,7 +225,7 @@ end
 
 # todo this allocates like crazy when it really shouldn't. What's going on?
 """
-    scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_lower::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
+    scan_for_starting_point_and_bounds_3_dims(target_function::Function, naive_lower::Vector{Float64}, naive_lower::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
 Search for a vector of parameters, bounded by `naive_lower` and `naive_lower`, that is closest to minimizing a `target_function` by trying every possible value in a grid of `resolutions`. 
 - `resolutions` can be a vector of the same length as the bounds and arguments to the `target_function`. If a single integer is passed, it will assume you want the same resolution on all input dimensions.
 - This search algorithm assumes that the target_function contains one obvious local minima, but is robust to `NaN`, `missing`, and `nothing` output from `target_function`.
@@ -237,59 +236,11 @@ Returns only the error grid that was evaluated and skips finding any other resul
     Example
 ```
 function expensive_func(x)
-    return (x[1]-15)^2 + (x[2]-10)^2
+    return (x[1]-15)^2 + (x[2]-10)^2 + (x[3]-12)^2
 end
-@show scan_for_starting_point_and_bounds(expensive_func, (1.0, 1.0), (20., 20.), (10, 11); verbose=true)
+@show scan_for_starting_point_and_bounds_3_dims(expensive_func, (1.0, 1.0, 1.), (20., 20., 20.), (10, 11, 12); verbose=true)
 ```
 # """
-# function scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_upper::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
-#     @assert length(naive_lower) == length(naive_upper)
-#     if typeof(resolutions) <: Number
-#         resolutions = Tuple(repeat([resolutions], length(naive_lower)))
-#     end
-#     if ismissing(resolutions)
-#         resolutions = Tuple(repeat([20], length(naive_lower)))
-#     end
-#     generate_range(startval, endval, nsteps::Int64) = startval:((endval-startval)/nsteps):endval
-#     get_range_args(ranges, indices) = [ranges[idx][position] for (idx, position) in enumerate(Tuple(indices))]
-
-    
-#     # get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/resolutions[dimension])
-
-#     ranges = [generate_range(naive_lower[idx], naive_upper[idx], resolutions[idx]) for idx in eachindex(naive_lower)]
-#     range_indices = CartesianIndices(Tuple([1:(length(ranges[idx])-1) for idx in eachindex(ranges)]))  # frankly I don't know why the indices here end up going to one above the actual matrix length
-#     min_results, min_indices = missing, missing
-    
-#     if return_grid
-#         results_grid = MArray{Tuple{resolutions...}, Float64}(undef)
-#     end
-    
-#     completed_iters = 0
-
-#     for indices in range_indices
-#         res = target_function(get_range_args(ranges, indices))
-#         completed_iters += 1
-#         if isnothing(res) || ismissing(res) || isnan(res); continue; end
-#         if return_grid 
-#             results_grid[indices] = res
-#         elseif ismissing(min_results) || res < min_results
-#             min_results = res
-#             min_indices = indices
-#         end
-#         if verbose && mod(completed_iters, 500) == 0
-#             println("Initial naive search is "*string(completed_iters / length(range_indices) * 100)*"% complete.")
-#         end
-#     end
-#     if return_grid
-#         return results_grid
-#     else
-#         min_args = get_range_args(ranges, min_indices)
-#         upper_bounds = get_range_args(ranges, Tuple(min_indices) .+ 1)
-#         lower_bounds = get_range_args(ranges, Tuple(min_indices) .- 1)
-#         return min_results, min_args, lower_bounds, upper_bounds
-#     end
-# end
-
 function scan_for_starting_point_and_bounds_3_dims(target_function::Function, naive_lower, naive_upper, resolutions=20; verbose=false)
     @assert length(naive_lower) == length(naive_upper)
     dim_resolutions = MVector{length(naive_lower), Int64}(undef)
