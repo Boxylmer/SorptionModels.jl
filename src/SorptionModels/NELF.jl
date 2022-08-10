@@ -112,38 +112,38 @@ end
 Currenlty only supported for Sanchez Lacombe based models, get infinite dilution solubility in **((CC/CC) / MPa)**
 """
 # todo swap this simple one out, which seems to work better
-# function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # naieve
-#     inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
-#     return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0])[1] / inf_dilution_p
-# end
-
-function infinite_dilution_solubility(model::NELFModel, temperature::Number)
-    if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
-        t_st = 273.15 # K
-        p_st = 0.1  # MPa
-        comps = model.polymer_model.components
-        polymer = comps[1]
-        penetrant = comps[2]
-        p★_pol, t★_pol, ρ★_pol = MembraneEOS.characteristic_pressure(polymer), MembraneEOS.characteristic_temperature(polymer), MembraneEOS.characteristic_density(polymer)
-        p★_pen, t★_pen, ρ★_pen, mw_pen = MembraneEOS.characteristic_pressure(penetrant), MembraneEOS.characteristic_temperature(penetrant), MembraneEOS.characteristic_density(penetrant), MembraneEOS.molecular_weight(penetrant)
-        p★12 = (sqrt(p★_pol) - sqrt(p★_pen))^2
-        ρ_pol = model.polymer_dry_density
-        R = MembraneBase.R_MPA_L_K_MOL * 1000  # --> MPa * cm3 / molK
-        
-        coeff = t_st / (temperature * p_st)
-        exp_term_1 = mw_pen * p★_pen / (ρ★_pen * R * t★_pen) * (1 + ((t★_pen * p★_pol)/(t★_pol * p★_pen) - 1) * (ρ★_pol / ρ_pol)) * log1p(-ρ_pol/ρ★_pol)
-        exp_term_2 = (t★_pen * p★_pol)/(t★_pol * p★_pen) - 1
-        exp_term_3 = (ρ_pol * t★_pen)/(ρ★_pol * p★_pen * temperature) * (p★_pen + p★_pol - p★12)
-
-        s_inf = coeff * exp(exp_term_1 + exp_term_2 + exp_term_3)
-        return s_inf
-        # if length(model.polymer_model.components) > 2
-        #     throw(ErrorException("NELF model must be a pure component to "))
-        # end
-    else
-        throw(ErrorException("Only NELF models using Sanchez Lacombe support infinite dilution at this time"))
-    end
+function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # naieve
+    inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
+    return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0])[1] / inf_dilution_p
 end
+
+# function infinite_dilution_solubility(model::NELFModel, temperature::Number) 
+#     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
+#         t_st = 273.15 # K
+#         p_st = 0.1  # MPa
+#         comps = model.polymer_model.components
+#         polymer = comps[1]
+#         penetrant = comps[2]
+#         p★_pol, t★_pol, ρ★_pol = MembraneEOS.characteristic_pressure(polymer), MembraneEOS.characteristic_temperature(polymer), MembraneEOS.characteristic_density(polymer)
+#         p★_pen, t★_pen, ρ★_pen, mw_pen = MembraneEOS.characteristic_pressure(penetrant), MembraneEOS.characteristic_temperature(penetrant), MembraneEOS.characteristic_density(penetrant), MembraneEOS.molecular_weight(penetrant)
+#         p★12 = (sqrt(p★_pol) - sqrt(p★_pen))^2
+#         ρ_pol = model.polymer_dry_density
+#         R = MembraneBase.R_MPA_L_K_MOL * 1000  # --> MPa * cm3 / molK
+        
+#         coeff = t_st / (temperature * p_st)
+#         exp_term_1 = mw_pen * p★_pen / (ρ★_pen * R * t★_pen) * (1 + ((t★_pen * p★_pol)/(t★_pol * p★_pen) - 1) * (ρ★_pol / ρ_pol)) * log1p(-ρ_pol/ρ★_pol)
+#         exp_term_2 = (t★_pen * p★_pol)/(t★_pol * p★_pen) - 1
+#         exp_term_3 = (ρ_pol * t★_pen)/(ρ★_pol * p★_pen * temperature) * (p★_pen + p★_pol - p★12)
+
+#         s_inf = coeff * exp(exp_term_1 + exp_term_2 + exp_term_3)
+#         return s_inf
+#         # if length(model.polymer_model.components) > 2
+#         #     throw(ErrorException("NELF model must be a pure component to "))
+#         # end
+#     else
+#         throw(ErrorException("Only NELF models using Sanchez Lacombe support infinite dilution at this time"))
+#     end
+# end 
 # function infinite_dilution_solubility(model::NELFModel, temperature::Number)  # Valerio, modeling gas and vapor...
 #     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
 #         t_st = 273.15 # K
@@ -201,7 +201,7 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     if verbose
         println("Identified naive upper bounds of $naive_upper and lower bounds of $naive_lower for P, T and rho respectively.")
     end
-    min_results, min_args, lower, upper = scan_for_starting_point_and_bounds(error_function, naive_lower, naive_upper, initial_search_resolution; verbose)
+    min_results, min_args, lower, upper = scan_for_starting_point_and_bounds_3_dims(error_function, naive_lower, naive_upper, initial_search_resolution; verbose)
     if verbose
         println("Found initial starting point at point $min_args, with an RSS of $min_results, bounded by a lower bounds of $lower and upper bounds of $upper. Starting optimization...")
     end
@@ -242,92 +242,109 @@ end
 @show scan_for_starting_point_and_bounds(expensive_func, (1.0, 1.0), (20., 20.), (10, 11); verbose=true)
 ```
 # """
-function scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_upper::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
-    @assert length(naive_lower) == length(naive_upper)
-    if typeof(resolutions) <: Number
-        resolutions = Tuple(repeat([resolutions], length(naive_lower)))
-    end
-    if ismissing(resolutions)
-        resolutions = Tuple(repeat([20], length(naive_lower)))
-    end
-    generate_range(startval, endval, nsteps::Int64) = startval:((endval-startval)/nsteps):endval
-    get_range_args(ranges, indices) = [ranges[idx][position] for (idx, position) in enumerate(Tuple(indices))]
-
-    
-    # get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/resolutions[dimension])
-
-    ranges = [generate_range(naive_lower[idx], naive_upper[idx], resolutions[idx]) for idx in eachindex(naive_lower)]
-    range_indices = CartesianIndices(Tuple([1:(length(ranges[idx])-1) for idx in eachindex(ranges)]))  # frankly I don't know why the indices here end up going to one above the actual matrix length
-    min_results, min_indices = missing, missing
-    
-    if return_grid
-        results_grid = MArray{Tuple{resolutions...}, Float64}(undef)
-    end
-    
-    completed_iters = 0
-
-    for indices in range_indices
-        res = target_function(get_range_args(ranges, indices))
-        completed_iters += 1
-        if isnothing(res) || ismissing(res) || isnan(res); continue; end
-        if return_grid 
-            results_grid[indices] = res
-        elseif ismissing(min_results) || res < min_results
-            min_results = res
-            min_indices = indices
-        end
-        if verbose && mod(completed_iters, 500) == 0
-            println("Initial naive search is "*string(completed_iters / length(range_indices) * 100)*"% complete.")
-        end
-    end
-    if return_grid
-        return results_grid
-    else
-        min_args = get_range_args(ranges, min_indices)
-        upper_bounds = get_range_args(ranges, Tuple(min_indices) .+ 1)
-        lower_bounds = get_range_args(ranges, Tuple(min_indices) .- 1)
-        return min_results, min_args, lower_bounds, upper_bounds
-    end
-end
-
-# function scan_for_starting_point_and_bounds(target_function::Function, naive_lower, naive_upper, resolutions=20; verbose=true)
+# function scan_for_starting_point_and_bounds(target_function::Function, naive_lower::Vector{Float64}, naive_upper::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
 #     @assert length(naive_lower) == length(naive_upper)
 #     if typeof(resolutions) <: Number
 #         resolutions = Tuple(repeat([resolutions], length(naive_lower)))
 #     end
-    
-#     get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/resolutions[dimension])
-#     function get_args(indices::Tuple)::SVector{length(indices), Float64}
-#         args = MVector{length(indices), Float64}(undef)
-#         for (ind_dim, ind_val) in enumerate(indices)
-#             args[ind_dim] = get_arg_value(ind_dim, ind_val)
-#         end
-#         return args
+#     if ismissing(resolutions)
+#         resolutions = Tuple(repeat([20], length(naive_lower)))
 #     end
-#     indices = CartesianIndices(resolutions)
-#     completed_iters = 0
-#     min_results::Float64 = Inf
-#     min_indices = missing
+#     generate_range(startval, endval, nsteps::Int64) = startval:((endval-startval)/nsteps):endval
+#     get_range_args(ranges, indices) = [ranges[idx][position] for (idx, position) in enumerate(Tuple(indices))]
+
     
-#     for ind in indices
-#         tuple_indices = Tuple(ind)
-#         args = get_args(tuple_indices)
-#         res = target_function(args)
+#     # get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/resolutions[dimension])
+
+#     ranges = [generate_range(naive_lower[idx], naive_upper[idx], resolutions[idx]) for idx in eachindex(naive_lower)]
+#     range_indices = CartesianIndices(Tuple([1:(length(ranges[idx])-1) for idx in eachindex(ranges)]))  # frankly I don't know why the indices here end up going to one above the actual matrix length
+#     min_results, min_indices = missing, missing
+    
+#     if return_grid
+#         results_grid = MArray{Tuple{resolutions...}, Float64}(undef)
+#     end
+    
+#     completed_iters = 0
+
+#     for indices in range_indices
+#         res = target_function(get_range_args(ranges, indices))
 #         completed_iters += 1
 #         if isnothing(res) || ismissing(res) || isnan(res); continue; end
-#         if res < min_results
+#         if return_grid 
+#             results_grid[indices] = res
+#         elseif ismissing(min_results) || res < min_results
 #             min_results = res
-#             min_indices = tuple_indices
+#             min_indices = indices
 #         end
 #         if verbose && mod(completed_iters, 500) == 0
-#             println("Initial naive search is "*string(round(completed_iters / length(indices) * 100))*"% complete.")
+#             println("Initial naive search is "*string(completed_iters / length(range_indices) * 100)*"% complete.")
 #         end
 #     end
-#     min_args = get_args(min_indices)
-#     upper_bounds = get_args(min_indices .+ 1)
-#     lower_bounds = get_args(min_indices .- 1)
-#     return min_results, min_args, lower_bounds, upper_bounds
+#     if return_grid
+#         return results_grid
+#     else
+#         min_args = get_range_args(ranges, min_indices)
+#         upper_bounds = get_range_args(ranges, Tuple(min_indices) .+ 1)
+#         lower_bounds = get_range_args(ranges, Tuple(min_indices) .- 1)
+#         return min_results, min_args, lower_bounds, upper_bounds
+#     end
 # end
+
+function scan_for_starting_point_and_bounds_3_dims(target_function::Function, naive_lower, naive_upper, resolutions=20; verbose=false)
+    @assert length(naive_lower) == length(naive_upper)
+    dim_resolutions = MVector{length(naive_lower), Int64}(undef)
+    if typeof(resolutions) <: Number
+        dim_resolutions .= resolutions, resolutions, resolutions
+    else
+        dim_resolutions .= resolutions
+    end
+    n_dims = length(dim_resolutions)
+    
+    get_arg_value(dimension::Int64, index::Int64)::Float64 = naive_lower[dimension] + (naive_upper[dimension]-naive_lower[dimension])*(index/dim_resolutions[dimension])
+    function get_args(indices)
+        mvec = MVector{length(indices), Float64}(undef)
+        get_args!(mvec, indices)
+        return mvec
+    end
+    function get_args!(mvec, indices)
+        for idx in eachindex(indices, mvec)
+            mvec[idx] = get_arg_value(idx, indices[idx])
+        end
+    end
+    
+    # write in what should get allocated
+    min_results = Inf                               # no allocation somehow
+    min_indices = MVector{n_dims, Int64}(undef)     # 1 allocation
+    temp_args = MVector{n_dims, Float64}(undef)     # 1 allocation
+    temp_indices = MVector{n_dims, Int64}(undef)    # 1 allocation
+    completed_iters = 0
+    
+    for p_index in 1:dim_resolutions[1]
+        for t_index in 1:dim_resolutions[2]
+            for ρ_index in 1:dim_resolutions[3]
+                temp_indices .= p_index, t_index, ρ_index
+                get_args!(temp_args, temp_indices)
+                res = target_function(temp_args)
+
+                if verbose; completed_iters += 1; end
+                if isnothing(res) || ismissing(res) || isnan(res); continue; end
+                if res < min_results
+                    min_results = res
+                    min_indices .= temp_indices
+                end
+                if verbose && (mod(completed_iters, 500) == 0)
+                    print("Initial naive search is " * string(round(completed_iters / (dim_resolutions[1] * dim_resolutions[2] * dim_resolutions[3]) * 100))*"% complete.\r")
+                end
+            end
+        end
+    end
+    min_args = get_args(min_indices)                    # 1 allocation
+    min_indices .+= 1
+    upper_bounds = get_args(min_indices)                # 1 allocation
+    min_indices .-= 2
+    lower_bounds = get_args(min_indices)                # 1 allocation
+    return min_results, min_args, lower_bounds, upper_bounds
+end
 
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]

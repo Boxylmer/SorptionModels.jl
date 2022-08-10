@@ -208,6 +208,7 @@ precision = 5
             nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
             @test nelf_concs_co2_psuedo[3] ≈ nelf_concs_pure_co2[3]
 
+            @test round(infinite_dilution_solubility(nelfmodel, temperature)) ≈ 40
 
             # test the polymer fitter with TPBO-0.25
             char_co2 = [630, 300, 1.515, 44]
@@ -218,7 +219,7 @@ precision = 5
 
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-            @show char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true)
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true)
             # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
             #   pick CO2
