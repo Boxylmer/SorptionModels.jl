@@ -1,9 +1,4 @@
 
-
-
-# high res, one image
-
-
 function nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, added_text = ""; 
     pstars=200:30:1200, tstars=200:30:1200, rhostars=missing, verbose=true, data_only=true, nan_on_failure=true)
     
