@@ -10,7 +10,7 @@ end
 """
     MobilityFactorAnalysis(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
 
-Deconvolute a vector of fitted transient sorption models, the corresponding equilibrium isotherm, and the semi-thickness of the polymer sample into a DiffusivityDeconvolution object.
+Deconvolute a vector of fitted transient sorption models, the corresponding equilibrium isotherm, and the semi-thickness of the polymer sample into a MobilityFactorAnalysis object.
 
 # Arguments
 - `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be deconvoluted.
@@ -32,28 +32,7 @@ Deconvolute an isotherm and already-known diffusivity values into their kinetic 
 * `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
 """
 function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
-    if num_components(isotherm) > 1
-        throw(ErrorException("Deconvoluting diffusivity isn't implemented for multicomponent isotherms yet"))
-    end
-    if !(num_steps(isotherm) == length(diffusivities))
-        throw(DimensionMismatch("Lengths of isotherm steps and diffusion coefficients didn't line up."))
-    end
-    if isnothing(activities(isotherm))
-        throw(MissingException("Isotherm did not have any activities"))
-    end
-    # if isnothing(molecular_weights(isotherm))
-    #     throw(MissingException("Isotherm does not contain molecular weights"))
-    # end
-
-    # single component
-    penetrant_mass_fracs = penetrant_mass_fractions(isotherm; component=1)  # component 1 
-    penetrant_activities = activities(isotherm, component=1)
-    lna = log.(penetrant_activities)
-    lnw = log.(penetrant_mass_fracs)
-    slopes = estimate_slope_by_adjacent_points.(Ref(lna), Ref(lnw), 1:length(lna))
-
-    kinetic_factors = slopes[1:length(diffusivities)].*diffusivities 
-    thermo_factors = 1 ./ slopes
-    
-    return MobilityFactorAnalysis(lna, lnw, slopes, kinetic_factors, thermo_factors)
+    tfa = ThermodynamicFactorAnalysis(isotherm)
+    kinetic_factors = tfa.slopes[1:length(diffusivities)].*diffusivities 
+    return MobilityFactorAnalysis(tfa.lna, tfa.lnw, tfa.slopes, kinetic_factors, tfa.thermodynamic_factors)
 end

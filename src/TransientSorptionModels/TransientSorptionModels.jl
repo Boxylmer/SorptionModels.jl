@@ -51,9 +51,9 @@ function fit_transient_sorption_model(
     
     # resample data if necessary
     if !isnothing(interpolation_method)
-        _step_data = strip_measurement_to_value(resample(step_data, interpolation_datapoints, interpolation_method))
+        _step_data = resample(step_data, interpolation_datapoints, interpolation_method)
     else 
-        _step_data = strip_measurement_to_value(step_data) 
+        _step_data = step_data
     end
     # prepare fitting model and parameters
     if typeof(model_choice) <: FickianSorption
@@ -94,20 +94,18 @@ function fit_transient_sorption_model(
         return rss(unlinearized_model, _step_data)
     end
     if resampling_mode
-        iterations= 10
-        time_limit = 1
+        iterations = 10
+        time_limit = 12
     else
-        iterations= 100
+        iterations = 100
         time_limit = 120
     end
-
-    # res = Optim.optimize(target_function, lb, ub, initial_params, Fminbox(BFGS()), 
-    #     Optim.Options(allow_f_increases=true, iterations=iterations, time_limit=time_limit); autodiff=:forward)
     
     res = Optim.optimize(target_function, lb, ub, initial_params, Fminbox(BFGS()), 
         Optim.Options(allow_f_increases=true, iterations=iterations, time_limit=time_limit); autodiff=:forward)
 
     fitted_params = Optim.minimizer(res)
+    
     # deal with fittings
     "Specify a dataset [(time, sorption)...] and get back a vector of parameters."
     function fitting_uncertainty_wrapper(full_dataset)
@@ -125,7 +123,7 @@ function fit_transient_sorption_model(
         errors = jackknife_uncertainty(fitting_uncertainty_wrapper, dataset(_step_data))
 
     elseif uncertainty_method == :Hessian
-        throw(ErrorException("Inverse Hessian error propagation isn't working for this set of models just yet"))
+        throw(ErrorException("Inverse Hessian error estimation isn't working for this set of models just yet"))
     elseif isnothing(uncertainty_method)
         errors = nothing
     else

@@ -59,6 +59,9 @@ module SorptionModels
     include(joinpath("ModelAnalyses", "IsostericHeatOfSorption.jl"))
     export IsostericHeatAnalysis
 
+    include(joinpath("ModelAnalyses", "ThermoFactor.jl"))
+    export ThermodynamicFactorAnalysis
+
     include(joinpath("ModelAnalyses", "MobilityFactor.jl"))
     export MobilityFactorAnalysis
 
@@ -72,6 +75,7 @@ module SorptionModels
     include(joinpath("Writers", "WriteVantHoffDualMode.jl"))
     include(joinpath("Writers", "WriteIsostericHeat.jl"))
     # mobility factor not implemented yet
+    # thermodynamic factor not implemented yet
     include(joinpath("Writers", "WritePartialImmobilization.jl"))
     include(joinpath("Writers", "WriteZimmLundberg.jl"))
     export write_analysis

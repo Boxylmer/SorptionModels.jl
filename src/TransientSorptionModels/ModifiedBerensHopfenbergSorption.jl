@@ -13,7 +13,7 @@ ModifiedBerensHopfenbergSorptionModel(mf, kf, mr, kr, beta) = ModifiedBerensHopf
 
 function linearize_model(model::ModifiedBerensHopfenbergSorptionModel)
     if model.is_model_linearized
-        throw(ErrorException("Nope"))
+        throw(ErrorException("Model is already linearized"))
         return model
     else
         return ModifiedBerensHopfenbergSorptionModel(model.m_f, log(model.k_f), model.m_r, log(model.k_r), log(model.beta), true)
@@ -24,7 +24,7 @@ function unlinearize_model(model::ModifiedBerensHopfenbergSorptionModel)
     if model.is_model_linearized
         return ModifiedBerensHopfenbergSorptionModel(model.m_f, exp(model.k_f), model.m_r, exp(model.k_r), exp(model.beta), false)
     else
-        throw(ErrorException("Nope"))
+        throw(ErrorException("Model is not linearized"))
         return model
     end
 end

@@ -219,7 +219,7 @@ precision = 5
 
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true)
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true; initial_search_resolution=10)
             # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
             #   pick CO2
@@ -404,7 +404,7 @@ precision = 5
         end
 
         # Mobility Factor
-        @testset "Mobility Factor" begin
+        @testset "Mobility Factor and Thermo Factor" begin
             # water diffusion in TPBO-0.25 at 25C, taken from Box et al., in BH model 
             act = [0.067952153, 0.128795589, 0.184686884, 0.226021282, 0.261604807, 0.317356324, 0.416858405, 0.547610888, 0.640042101]
             dif = [9.54865E-07, 9.14651E-07, 8.29247E-07, 1.36793E-06, 8.94442E-07, 8.86731E-07, 8.78362E-07, 6.20711E-06, 5.29102E-06]
@@ -422,8 +422,10 @@ precision = 5
                 pen_mws_g_mol=18.01528
             )
             mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
+            therm_fact_analysis = ThermodynamicFactorAnalysis(iso)
             @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.07131661298753e-7
             @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0273999147371586
+            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
         end
 
         # Partial Immobilization Model
