@@ -476,6 +476,8 @@ precision = 5
         rm(path; force=true)
         write_analysis(IsostericHeatAnalysis(isotherms), path)
 
+        # no thermodynamic factor implemented yet
+
         # no mobility factor implemented yet
         
         # Partial Immobilization 
