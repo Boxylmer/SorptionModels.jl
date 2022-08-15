@@ -252,6 +252,7 @@ function scan_for_starting_point_and_bounds_3_dims(target_function::Function, na
 end
 
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
+    # classic infinite dilution parameter target
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
@@ -319,41 +320,14 @@ function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristi
     return error_function
 end
 
-function _make_nelf_model_parameter_target_3(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight=100000)
-    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
-    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
-    densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
-    temperatures = temperature.(isotherms)
-
-    function error_function(char_param_vec)
-        given_sol = zeros(length(isotherms))  # reused
-        pred_sol = zeros(length(isotherms))   # reused
-        for i in eachindex(isotherms)
-            char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
-            char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]
-            char_densities = [char_param_vec[3], bulk_phase_characteristic_params[i][3]]
-            molecular_weights = [NaN, bulk_phase_characteristic_params[i][4]]
-
-            polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
-            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
-            pred_sol[i] = (infinite_dilution_solubility(nelf_model, temperatures[i]))
-            given_sol[i] = (infinite_dilution_solubility(dualmode_models[i]::DualModeModel))
-        end
-        resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
-        err = log1p(resid)
-        # @show char_param_vec, err
-        return err
-    end
-    return error_function
-end
 
 """
     fit_kij(NELF(), isotherms, bulk_parameters, polymer_parameters; [interpolation_model]=DualMode(), [kij_fit_p_mpa]=1e-4)
 Find the best kij and ksw parameters for the NELF model according to the Sanchez Lacombe EOS. 
 # Arguments
-- `isotherms`: `Vector` of `IsothermData` structs using the polymer in question with **only one kind of gas**. Temperature, pressure, density, and concentration must be provided.
-- `bulk_parameters`: vector of the gas or vapor's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3]`.
-- `polymer_parameters`: vector of the polymer's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3]`.
+- `isotherms`: `Vector` of `IsothermData` structs using the polymer in question with **only one kind of component**. Temperature, pressure, density, and concentration must be provided.
+- `bulk_parameters`: vector of the gas or vapor's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3, mw_g_mol]`.
+- `polymer_parameters`: vector of the polymer's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3, mw_g_mol]`.
 """
 function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_parameters::AbstractVector{<:Number}, polymer_parameters::AbstractVector{<:Number}; 
     interpolation_model=DualMode(), kij_fit_p_mpa=1e-4)
