@@ -280,7 +280,7 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
     return error_function
 end
 
-function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure, polymer_molecular_weight=100000)
+function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
@@ -313,7 +313,6 @@ function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristi
         end
         err_inf = log(rss(given_sol_inf, pred_sol_inf))
         
-        # @show char_param_vec, err
 
         return err_inf + pred_errs
     end
