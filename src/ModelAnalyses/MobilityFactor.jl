@@ -14,7 +14,7 @@ Deconvolute a vector of fitted transient sorption models, the corresponding equi
 
 # Arguments
 - `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be deconvoluted.
-* `transient_sorption_models::AbstractVector{<:TransientSorptionModel}`: Vector of TransientSorptionModel objects. Each fitted model needs to correspond to each step in the isotherm.
+* `transient_sorption_models::AbstractVector{<:TransientSorptionModel}`: Vector of TransientSorptionModel objects. You need at least as many isotherm steps as transients, but you can supply fewer transients if you don't have them for every isotherm step.
 * `semi_thickness_cm::Number`: Half (semi) thickness of the polymer sample used in the sorption experiment in ``cm``.  
 """
 function MobilityFactorAnalysis(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
@@ -32,6 +32,7 @@ Deconvolute an isotherm and already-known diffusivity values into their kinetic 
 * `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
 """
 function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
+    @assert length(isotherm) >= length(diffusivities)
     tfa = ThermodynamicFactorAnalysis(isotherm)
     kinetic_factors = tfa.slopes[1:length(diffusivities)].*diffusivities 
     return MobilityFactorAnalysis(tfa.lna, tfa.lnw, tfa.slopes, kinetic_factors, tfa.thermodynamic_factors)
