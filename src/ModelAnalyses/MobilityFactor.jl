@@ -32,7 +32,7 @@ Deconvolute an isotherm and already-known diffusivity values into their kinetic 
 * `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
 """
 function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
-    @assert length(isotherm) >= length(diffusivities)
+    @assert num_steps(isotherm) >= length(diffusivities)
     tfa = ThermodynamicFactorAnalysis(isotherm)
     kinetic_factors = tfa.slopes[1:length(diffusivities)].*diffusivities 
     return MobilityFactorAnalysis(tfa.lna, tfa.lnw, tfa.slopes, kinetic_factors, tfa.thermodynamic_factors)
