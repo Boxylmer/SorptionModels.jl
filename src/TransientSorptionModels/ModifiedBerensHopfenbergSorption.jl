@@ -42,7 +42,12 @@ function predict_sorption(sorptionmodel::ModifiedBerensHopfenbergSorptionModel, 
     beta_ratio = 4 * sorptionmodel.k_f / (pi^2 * sorptionmodel.beta)
     fick_2 = - exp(-sorptionmodel.beta * time_seconds) * sqrt(beta_ratio) * tan(sqrt(1/beta_ratio))
 
-    summation = sum([(exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds)) / ((2*n+1)^2 * (1 - (2*n+1)^2 * sorptionmodel.k_f / sorptionmodel.beta)) for n in iter_start:(iters)])
+    # summation = sum([(exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds)) / ((2*n+1)^2 * (1 - (2*n+1)^2 * sorptionmodel.k_f / sorptionmodel.beta)) for n in iter_start:(iters)])
+    summation = 0 
+    @inbounds for n in 0:iters
+        summation += (exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds)) / ((2*n+1)^2 * (1 - (2*n+1)^2 * sorptionmodel.k_f / sorptionmodel.beta))
+    end
+    
     fick_3 = -8/pi^2 * summation
 
     relax = sorptionmodel.m_r * (1 - exp(-sorptionmodel.k_r * time_seconds))

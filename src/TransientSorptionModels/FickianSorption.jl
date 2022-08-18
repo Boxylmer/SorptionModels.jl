@@ -30,7 +30,12 @@ function predict_sorption(sorptionmodel::FickianSorptionModel, time_seconds::Num
     if sorptionmodel.is_model_linearized
         sorptionmodel = unlinearize_model(sorptionmodel)
     end
-    summation = sum([1/(2*n+1)^2 * exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds) for n in 0:(iters)])
+    summation = 0
+    @inbounds for n in 0:iters
+        summation += 1/(2*n+1)^2 * exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds)
+    end
+    
+    # summation = sum([1/(2*n+1)^2 * exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds) for n in 0:(iters)])
     sorptionmodel.m_f * (1 - 8/pi^2 * summation)
 end
 

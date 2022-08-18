@@ -5,6 +5,7 @@ using Measurements
 using MembraneBase
 using MembraneEOS
 using Plots
+using BenchmarkTools
 
 precision = 5
 
@@ -305,7 +306,7 @@ precision = 5
         
         # testing fitting without errors (no true tests)
         exp_data = TransientStepData(
-            [1,       2,       3,        4,       5,      6,      7,      8,      9,      10,    15,    20,    25,    30,    40,   50,    70,   90,     100], 
+            [1.,       2,       3,        4,       5,      6,      7,      8,      9,      10,    15,    20,    25,    30,    40,   50,    70,   90,     100], 
             [0.00194, 0.00515, 0.009107, 0.01359, 0.0184, 0.0237, 0.0291, 0.0348, 0.0407, 0.046, 0.077, 0.109, 0.141, 0.171, 0.22, 0.278, 0.36, 0.4364, 0.4671]            
         )
         fick_model_fit = fit_transient_sorption_model(exp_data, FickianSorption())
@@ -317,12 +318,12 @@ precision = 5
         semi_thickness_cm = 0.02 ± 0.001
 
         fick_d = get_diffusivity(fick_model_fit, semi_thickness_cm)
-        @test fick_d.val ≈ 4.779020339107122e-7
-        @test fick_d.err ≈ 4.7790203391071216e-8
+        @test isapprox(fick_d.val, 4.779020339107122e-7, atol =1e-5)
+        @test isapprox(fick_d.err, 4.7790203391071216e-8, atol=1e-7)
 
         mbh_d = get_diffusivity(mbh_model_fit, semi_thickness_cm)
-        @test mbh_d.val ≈ 2.251491971659755e-15
-        @test mbh_d.err ≈ 2.251491971659755e-16
+        @test isapprox(mbh_d.val, 2.251491971659755e-15, atol=1e-14)
+        @test isapprox(mbh_d.err, 2.251491971659755e-16, atol=1e-15)
 
         # boostrap and uncertainty
         fick_model_fit_with_err = fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
@@ -330,6 +331,22 @@ precision = 5
         @test fick_d_with_err.val ≈ fick_d.val
         # @test fick_d_with_err.err ≈ 7.950417186869458e-8 # errors are random due to low sample size
         
+
+        # benchmarks and allocating
+        #10,546,944
+        #11,096,576
+        #272,784
+        @show single_fit_allocs = @allocated fit_transient_sorption_model(exp_data, FickianSorption())
+        #129,185,280
+        #140,445,520
+        #132,250,512
+        #3,434,224
+        @show bootstrap_fit_allocs = @allocated  fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
+        #142.868 ms
+        #19.243 ms
+        @show @btime fit_transient_sorption_model($exp_data, BerensHopfenbergSorption(); uncertainty_method=:Bootstrap)
+        # @profview fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
+        return
     end
 
     isotherm_1 = IsothermData(;  # CH4 in TPBO-0.50 at 20C

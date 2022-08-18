@@ -22,6 +22,13 @@ function MembraneBase.rss(sorptionmodel::TransientSorptionModel, step_data::Tran
     sorption_err = sum((sorption_pred - step_data.dimensionlesssorption).^2)
     return sorption_err
 end
+# function MembraneBase.rss(sorptionmodel::TransientSorptionModel, step_data::Vector{<:Tuple{<:Number, :Number}})
+#     rss = 0
+#     for step in step_data
+#         rss += (predict_sorption(sorptionmodel, step[1]) - step[2])^2
+#     end
+#     return rss
+# end
 
 """
     fit_transient_sorption_model(
@@ -67,7 +74,7 @@ function fit_transient_sorption_model(
         # initial_params = [0.9, -3, 0.1, -10]
         model = BerensHopfenbergSorptionModel
         if isnothing(custom_initial_params)
-            initial_fickan_fit = linearize_model(fit_transient_sorption_model(_step_data, FickianSorption()))
+            initial_fickan_fit = linearize_model(fit_transient_sorption_model(_step_data, FickianSorption(), interpolation_method=nothing, uncertainty_method=nothing))
             initial_params = [initial_fickan_fit.m_f, initial_fickan_fit.k_f, 0.1, log(0.0001)]
         end
     elseif typeof(model_choice) <: ModifiedBerensHopfenbergSorption
@@ -76,7 +83,7 @@ function fit_transient_sorption_model(
         # initial_params = [0.9, -3, 0.1, -10, -5]
         model = ModifiedBerensHopfenbergSorptionModel
         if isnothing(custom_initial_params)
-            initial_bh_fit = linearize_model(fit_transient_sorption_model(_step_data, BerensHopfenbergSorption()))
+            initial_bh_fit = linearize_model(fit_transient_sorption_model(_step_data, BerensHopfenbergSorption(), interpolation_method=nothing, uncertainty_method=nothing))
             initial_params = [initial_bh_fit.m_f, initial_bh_fit.k_f, initial_bh_fit.m_r, initial_bh_fit.k_r, 1.]
         end
     else
@@ -110,7 +117,7 @@ function fit_transient_sorption_model(
     "Specify a dataset [(time, sorption)...] and get back a vector of parameters."
     function fitting_uncertainty_wrapper(full_dataset)
         transient_step = TransientStepData(full_dataset)
-        return fit_transient_sorption_model(transient_step, model_choice; custom_initial_params=fitted_params, resampling_mode=true, uncertainty_method=nothing)
+        return fit_transient_sorption_model(transient_step, model_choice; custom_initial_params=fitted_params, resampling_mode=true, uncertainty_method=nothing, interpolation_method=nothing)
     end
 
     if uncertainty_method == :Bootstrap
