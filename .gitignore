@@ -1,3 +1,4 @@
 /Manifest.toml
 test/writer_output/Isosteric Heat Analysis.xlsx
 test/writer_output/Vant Hoff Dual Mode Analysis.xlsx
+docs/build

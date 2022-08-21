@@ -53,8 +53,13 @@ end
     - This will return the linearized parameter fittings in lieu of the normal model objects. 
 """
 function fit_transient_sorption_model(
-    step_data::TransientStepData, model_choice; custom_initial_params=nothing, interpolation_method=nothing, interpolation_datapoints=1000, 
-    uncertainty_method=nothing, num_uncertainty_resamples=20, resampling_mode=false)
+    step_data::TransientStepData, model_choice; 
+    custom_initial_params=nothing, 
+    interpolation_method=nothing, 
+    interpolation_datapoints=1000, 
+    uncertainty_method=nothing, 
+    num_uncertainty_resamples=20, 
+    resampling_mode=false)
     
     # resample data if necessary
     if !isnothing(interpolation_method)
