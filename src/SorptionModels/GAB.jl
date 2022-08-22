@@ -56,6 +56,7 @@ function a_predict_concentration(gm::GABModel, activities::AbstractVector)
     return predictions
 end
 
+
 function predict_activity(gm::GABModel, concentration::Number)
     plus_or_minus_term = sqrt(gm.cp^2 * gm.a^2 + gm.a^2*concentration^2 + 2*gm.cp*gm.a*(2-gm.a) * concentration) 
     denom = 2 * concentration * gm.k * (1-gm.a)
@@ -92,17 +93,12 @@ function MembraneBase.rss(gm::GABModel, activities::AbstractVector, concentratio
     throw(ErrorException("The isotherm given has more than one component, this function only works for pure isotherms")) 
 end
 
-"""
-    fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; uncertainty_method=nothing)
-Fit a set of activities and corresponding concentrations (**CC/CC**) to the GAB model. 
 
-For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
-
-- `pressure_conversion_function(pressure::Number) -> activity::Number`: if set, will allow pressures to automatically be converted to activities when needed. (MPa) 
-- `activity_conversion_function(activity::Number) -> pressure::Number`: if set, will allow activities to automatically be converted to pressures when needed. (MPa)
-"""
 function fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; 
-    uncertainty_method=nothing, apply_weights=false, pressure_conversion_function=missing, activity_conversion_function=missing)
+    uncertainty_method=nothing, 
+    apply_weights=false, 
+    pressure_conversion_function=missing,
+    activity_conversion_function=missing)
 
     if length(activities) != length(concentrations)
         throw(DimensionMismatch("The concentrations and activities given don't match in length, this function only works for equivalent length vectors of numbers"))
@@ -153,11 +149,57 @@ function fit_gab_model(activities::AbstractVector, concentrations::AbstractVecto
     return optimized_model
 end
 
-# function _condition_gab_guess(guess)
-#     return [guess[1], log(guess[2]), log(guess[3])]
-# end
+function fit_gab_model(isotherm::IsothermData; kwargs...)
+    acts = activities(isotherm; component=1)
+    concs = concentration(isotherm; component=1)
+    if isnothing(acts)
+        throw(MissingException("Isotherm has no activities."))
+    elseif isnothing(concs)
+        throw(MissingException("Isotherm has no concentrations.")) 
+    end
 
-# _uncondition_gab_guess(guess) = 10 .^ guess
+    return fit_gab_model(acts, concs; kwargs...)
+end
+
+
+"""
+    fit_model(GAB(), isotherm::IsothermData, 
+    [uncertainty_method=nothing], 
+    [apply_weights=false], 
+    [pressure_conversion_function=missing], 
+    [activity_conversion_function=missing])
+
+Fit the GAB model to the concentrations and activities present in an isotherm. 
+Right now, it is assumed that the isotherm has only one component, so the model fits only to the first component. 
+# todo: if a multicomponent isotherm is provided, return a vector of GAB fittings. Right now it will not do this. 
+
+
+For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
+Options
+- For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
+- `apply_weights` will use a weighted nonlinear regression method to solve the parameters, given that `Measurement` types are used somewhere in the data. 
+- `pressure_conversion_function(pressure::Number) -> activity::Number`: Function that, if set, will allow pressures to automatically be converted to activities when needed. (MPa) 
+- `activity_conversion_function(activity::Number) -> pressure::Number`: Function that, if set, will allow activities to automatically be converted to pressures when needed. (MPa)
+
+For example, if your vapor is considered an ideal gas, and you know your vapor pressure to be pvap, your conversion functions might look like
+```
+pressure_conversion_function(pressure) = pressure / pvap
+activity_conversion_function(activity) = activity * pvap
+``` 
+
+"""
+
+fit_model(::GAB, isotherm::IsothermData; kwargs...) = fit_gab_model(isotherm; kwargs...)
+
+"""
+    fit_model(GAB(), activities::AbstractVector, concentrations::AbstractVector; kwargs...)
+Fit a set of activities and corresponding concentrations (**CC/CC**) to the GAB model. 
+
+- see the above function for applicable key words.
+"""
+fit_model(::GAB, activities::AbstractVector, concentrations::AbstractVector; kwargs...) = fit_gab_model(activities, concentrations; kwargs...)
+
+
 
 function _get_initial_conditioned_gab_params(applied_activities, applied_concs)
     cp = maximum(applied_concs)
@@ -190,27 +232,3 @@ function _make_gab_target(applied_activities, applied_concs)
     end
     return target
 end
-
-
-"""
-    fit_gab_model(isotherm::IsothermData; kwargs...)
-Fit the GAB model to the concentrations and activities present in an isotherm. 
-Right now, it is assumed that the isotherm has only one component, so the model fits only to the first component. 
-# todo: if a multicomponent isotherm is provided, return a vector of GAB fittings. 
-
-
-"""
-function fit_gab_model(isotherm::IsothermData; kwargs...)
-    acts = activities(isotherm; component=1)
-    concs = concentration(isotherm; component=1)
-    if isnothing(acts)
-        throw(MissingException("Isotherm has no activities."))
-    elseif isnothing(concs)
-        throw(MissingException("Isotherm has no concentrations.")) 
-    end
-
-    return fit_gab_model(acts, concs; kwargs...)
-end
-
-fit_model(::GAB, isotherm::IsothermData; kwargs...) = fit_gab_model(isotherm; kwargs...)
-fit_model(::GAB, activities::AbstractVector, concentrations::AbstractVector; kwargs...) = fit_gab_model(activities, concentrations; kwargs...)

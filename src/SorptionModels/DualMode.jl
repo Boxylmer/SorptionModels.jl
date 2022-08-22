@@ -171,7 +171,7 @@ Fit the dual mode model to the pressures and concentrations present in the isoth
 
 Options
 - For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
-- Apply weights will use a weighted nonlinear regression method to solve the parameters, given that `Measurement` types are used somewhere in the data. 
+- `apply_weights` will use a weighted nonlinear regression method to solve the parameters, given that `Measurement` types are used somewhere in the data. 
 - `use_fugacity` will fit the model to fugacities instead of pressures.  
 """
 fit_model(::DualMode, isotherm::IsothermData; kwargs...) = fit_dualmode_model(isotherm; kwargs...)
