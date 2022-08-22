@@ -1,6 +1,10 @@
 abstract type SorptionModel end
 
+"""
+    predict_concentration(model::SorptionModel, args...)
 
+Predict concentration with a sorption model. Predictions are generally returned in the format of a vector of values corresponding to an input of a vector of pressures.
+"""
 function predict_concentration end
 
 """

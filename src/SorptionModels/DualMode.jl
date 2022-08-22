@@ -112,13 +112,7 @@ function MembraneBase.rss(dm::DualModeModel, isotherm::IsothermData; use_fugacit
 end
 
 
-"""
-    fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing)
-Fit the dual mode model to the pressures and concentrations present in the isotherm. 
 
-For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
-
-"""
 function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, use_fugacity=false, apply_weights=false)
     # see if isotherm is only a single component
     if isotherm.num_components != 1
@@ -171,6 +165,15 @@ function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, 
     return optimized_model
 end
 
+"""
+    fit_model(DualMode(), isotherm::IsothermData, [uncertainty_method=nothing], [apply_weights=false], [use_fugacity=false])
+Fit the dual mode model to the pressures and concentrations present in the isotherm. 
+
+Options
+- For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
+- Apply weights will use a weighted nonlinear regression method to solve the parameters, given that `Measurement` types are used somewhere in the data. 
+- `use_fugacity` will fit the model to fugacities instead of pressures.  
+"""
 fit_model(::DualMode, isotherm::IsothermData; kwargs...) = fit_dualmode_model(isotherm; kwargs...)
 
 function MembraneBase.strip_measurement_to_value(model::DualModeModel)

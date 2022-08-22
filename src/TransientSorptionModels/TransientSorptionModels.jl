@@ -1,4 +1,4 @@
-abstract type TransientSorptionModel end 
+abstract type TransientSorptionModel end  # todo needs to be an abstract type of SorptionModel
 
 """
     predict_sorption(sorptionmodel::TransientSorptionModel, time_seconds::AbstractVector{<:Number})
@@ -36,7 +36,7 @@ end
         uncertainty_method=nothing, num_uncertainty_resamples=20, resampling_mode=false)
 
 # Arguments
-- `step_data::TransientStepData`: See [`TransientStepData`](@ref)
+- `step_data::TransientStepData`: See [`SorptionModels.TransientStepData`](@ref)
 - `model`: Type of transient sorption model to fit the `step_data` to. Available options are:
     - `FickianSorption()`
     - `BerensHopfenbergSorption()`
@@ -44,7 +44,7 @@ end
 # Optional Arguments
 - `custom_initial_params::Vector`: Vector of initial guesses to start with. Must match the number of parameters in the model.
     - These parameters are *linearized* in their parameter space. Make sure you understand the linearization of the model parameters before you try to specify custom initial guesses. 
-- `interpolation_method`: See `resample` in [`TransientStepData`](@ref).
+- `interpolation_method`: See `resample` in [`SorptionModels.TransientStepData`](@ref).
 - `interpolation_datapoints::Integer`: Number of data points to interpolate to, see above. 
 - `uncertainty_method`: currently only supports `nothing` and the `:Bootstrap` method of determining uncertainty.
 - `num_uncertainty_resamples`: Number of times to resample for determining the uncertainty of the model fit (if applicable).

@@ -30,14 +30,16 @@ end
 
 function predict_sorption(sorptionmodel::BerensHopfenbergSorptionModel, time_seconds::Number; iters=15)
     if sorptionmodel.is_model_linearized
-        sorptionmodel = unlinearize_model(sorptionmodel)
+        _sorptionmodel = unlinearize_model(sorptionmodel)
+    else
+        _sorptionmodel = sorptionmodel
     end
     # summation = sum([1/(2*n+1)^2 * exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds) for n in 0:(iters)])
     summation = 0
     @inbounds for n in 0:iters
-        summation += 1/(2*n+1)^2 * exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds)
+        summation += 1/(2*n+1)^2 * exp(-(2*n+1)^2 * _sorptionmodel.k_f * time_seconds)
     end
 
-    sorptionmodel.m_f * (1 - 8/(pi^2) * summation) + sorptionmodel.m_r * (1 - exp(-sorptionmodel.k_r * time_seconds))
+    _sorptionmodel.m_f * (1 - 8/(pi^2) * summation) + _sorptionmodel.m_r * (1 - exp(-_sorptionmodel.k_r * time_seconds))
 end
 

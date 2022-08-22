@@ -3,6 +3,7 @@ using Documenter, SorptionModels
 makedocs(
     sitename="SorptionModels.jl",
     modules = [SorptionModels],
+    format = Documenter.HTML(prettyurls = false),
 )
 
 # deploydocs(
