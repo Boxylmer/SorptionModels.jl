@@ -10,7 +10,7 @@ module SorptionModels
     using XLSX
     using DelimitedFiles
 
-    using Plots # for diagnostic methods
+    using Plots # for diagnostic methods todo remove this
 
 
     include("ForwardDiffOverMeasurements.jl")
