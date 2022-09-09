@@ -97,9 +97,9 @@ function predict_pressure(dm::DualModeModel, concentrations_cc_cc::Number)
     return p
 end
 
-function MembraneBase.rss(dm::DualModeModel, isotherm::IsothermData; use_fugacity=false)
+function MembraneBase.rss(dm::DualModeModel, isotherm::IsothermData)
     if isotherm.num_components == 1
-        if use_fugacity
+        if dm.use_fugacity
             predictions = predict_concentration(dm, fugacities(isotherm; component=1))  
         else
             predictions = predict_concentration(dm, partial_pressures(isotherm, component=1))
@@ -111,6 +111,9 @@ function MembraneBase.rss(dm::DualModeModel, isotherm::IsothermData; use_fugacit
     throw(DimensionMismatch("The isotherm given has more than one component, this function only works for pure isotherms")) 
 end
 
+function MembraneBase.rss(dm::DualModeModel, pres_or_fugs::AbstractVector, concentrations::AbstractVector)
+    return rss(predict_concentration(dm, pres_or_fugs), concentrations)
+end
 
 
 function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, use_fugacity=false, apply_weights=false)
@@ -127,7 +130,7 @@ function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, 
 
     target = function(ch_b_kd)
         dmm = DualModeModel(ch_b_kd...; use_fugacity)
-        err = rss(dmm, used_isotherm; use_fugacity=use_fugacity)
+        err = rss(dmm, used_isotherm)
         if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
         return err
     end
@@ -144,7 +147,9 @@ function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, 
     end
     
     if !isnothing(uncertainty_method)
-        data = isotherm_dataset(pressure_function(used_isotherm), concentration(used_isotherm), 1)
+        ps = pressure_function(used_isotherm; component=1)
+        cs = concentration(used_isotherm; component=1)
+        data = collect(zip(ps, cs))
     end
 
     if uncertainty_method == :JackKnife
@@ -160,8 +165,6 @@ function fit_dualmode_model(isotherm::IsothermData; uncertainty_method=nothing, 
     else
         throw(ArgumentError("Invalid uncertainty_method: " * string(uncertainty_method)))
     end
-
-    
     return optimized_model
 end
 
@@ -172,7 +175,7 @@ Fit the dual mode model to the pressures and concentrations present in the isoth
 Options
 - For determining the uncertainty of the model parameters, the `:JackKnife`, and `:Bootstrap` methods are available. 
 - `apply_weights` will use a weighted nonlinear regression method to solve the parameters, given that `Measurement` types are used somewhere in the data. 
-- `use_fugacity` will fit the model to fugacities instead of pressures.  
+- `use_fugacity` will fit the model to fugacities instead of pressures (they should be present in the isotherm data).  
 """
 fit_model(::DualMode, isotherm::IsothermData; kwargs...) = fit_dualmode_model(isotherm; kwargs...)
 
