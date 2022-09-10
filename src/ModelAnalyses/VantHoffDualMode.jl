@@ -81,7 +81,7 @@ module VHDMFHelper
     # rss given a model vector
     function total_rss(model_vectors::AbstractVector{<:AbstractVector}, isotherms, use_fugacity::Bool)
         models = SVector{length(model_vectors), DualModeModel}([DualModeModel(model_vector...; use_fugacity) for model_vector in model_vectors])
-        err = sum([rss(models[idx], isotherms[idx]; use_fugacity=use_fugacity) for idx in eachindex(models, isotherms)])
+        err = sum([rss(models[idx], isotherms[idx]) for idx in eachindex(models, isotherms)])
         return (err)
     end
 

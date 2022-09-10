@@ -220,7 +220,7 @@ precision = 5
 
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true; initial_search_resolution=10)
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10)
             # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
             #   pick CO2
@@ -336,17 +336,18 @@ precision = 5
         #10,546,944
         #11,096,576
         #272,784
-        @show single_fit_allocs = @allocated fit_transient_sorption_model(exp_data, FickianSorption())
+        single_fit_allocs = @allocated fit_transient_sorption_model(exp_data, FickianSorption())
         #129,185,280
         #140,445,520
         #132,250,512
         #3,434,224
-        @show bootstrap_fit_allocs = @allocated  fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
+        #3,341,584
+        bootstrap_fit_allocs = @allocated  fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
+        # @test bootstrap_fit_allocs <= 3341584
         #142.868 ms
         #19.243 ms
-        @show @btime fit_transient_sorption_model($exp_data, BerensHopfenbergSorption(); uncertainty_method=:Bootstrap)
+        # @show @btime fit_transient_sorption_model($exp_data, BerensHopfenbergSorption(); uncertainty_method=:Bootstrap)
         # @profview fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
-        return
     end
 
     isotherm_1 = IsothermData(;  # CH4 in TPBO-0.50 at 20C
@@ -374,6 +375,8 @@ precision = 5
         fugacities_mpa =[0.27337983, 0.684971536, 1.154961289, 1.651558222, 2.128304942, 2.599274758, 2.985937811])
     isotherms = [isotherm_1, isotherm_2, isotherm_3, isotherm_4]
 
+
+
     g_isotherm_1 =  IsothermData(; 
         partial_pressures_mpa = [0.000138386, 0.000583942, 0.00104234, 0.001498221],
         concentrations_cc = [0.682951321, 1.111629734, 1.407396085, 1.656181954],
@@ -391,6 +394,9 @@ precision = 5
         temperature_k = 318.15)
     g_isotherm_pvaps = [0.003166749, 0.005623816, 0.009585843]
     g_isotherms = [g_isotherm_1, g_isotherm_2, g_isotherm_3]
+
+
+
     @testset "Analysis Functions" begin
         
         # VHDM analysis
@@ -440,8 +446,8 @@ precision = 5
             )
             mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
             therm_fact_analysis = ThermodynamicFactorAnalysis(iso)
-            @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.07131661298753e-7
-            @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0273999147371586
+            @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.117024704029978e-7
+            @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
             @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
         end
 
@@ -476,6 +482,33 @@ precision = 5
             # make sure nothing too terriblehappened
             @test zma1.average_cluster_size[1] == zma2.average_cluster_size[1].val 
             @test zma1.a_over_phi_derivatives[1] == zma2.a_over_phi_derivatives[1].val 
+        end
+
+        # Dual Mode Desorption
+        @testset "Dual Mode Desorption Analysis" begin
+            isotherm_desorption = IsothermData(; 
+                partial_pressures_mpa = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031, 2.60974313, 1.199714642, 0.575992209, 0.30991402, 0.145032338],
+                concentrations_cc = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482, 111.9833899, 98.93545196, 81.21343867, 66.62816092, 50.92125421]
+            )
+            dmda = DualModeDesorption(isotherm_desorption)
+            dmda_naive = DualModeDesorption(isotherm_desorption; naive=true)
+            dmda_static_b = DualModeDesorption(isotherm_desorption; share_b=false)
+            
+            @show dmda_with_err = DualModeDesorption(isotherm_desorption; uncertainty_method=:JackKnife)
+            @show dmda_naive_with_err = DualModeDesorption(isotherm_desorption; naive=true, uncertainty_method=:JackKnife)
+            @show dmda_static_b_with_err = DualModeDesorption(isotherm_desorption; share_b=false, uncertainty_method=:JackKnife)
+
+            @test round(dmda_with_err.sorbing_model.ch.val; digits=1) == 71.3
+            @test round(dmda_with_err.sorbing_model.ch.err; digits=1) == 2.6
+
+            @test round(dmda_static_b_with_err.desorbing_model.ch.val; digits=1) == 124.7
+            @test round(dmda_static_b_with_err.desorbing_model.ch.err; digits=1) == 2.7
+
+
+            # direct_pressures = partial_pressures(isotherm_desorption; component=1)
+            # direct_concentrations = concentration(isotherm_desorption; component=1)
+            # predicted_pressures = 0:0.05:maximum(direct_pressures)
+            # predicted_sorbing, predicted_desorbing = predict_concentration(dmda, predicted_pressures)
         end
     end
     

@@ -25,7 +25,7 @@ function nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_para
         end
     end
     minlocation = argmin(errs_3D)
-    @show global_min = [tstars[minlocation[2]]], [pstars[minlocation[1]]]
+    global_min = [tstars[minlocation[2]]], [pstars[minlocation[1]]]
     if verbose
         println("Global minimum at a (T*, P*) of: ", global_min, " and ρ* of ", rhostars[minlocation[3]])
     end

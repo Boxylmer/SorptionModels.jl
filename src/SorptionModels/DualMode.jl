@@ -11,6 +11,12 @@ function DualModeModel(ch, b, kd; use_fugacity=false)
     return DualModeModel(ch, b, kd, use_fugacity)
 end
 
+function Base.show(io::IO, obj::DualModeModel)
+    ch = obj.ch; b = obj.b; kd = obj.kd
+    using_fug = obj.use_fugacity ? "using fugacity." : "using pressures."
+    print(io, "CH' = $ch, b = $b, kd = $kd $using_fug")
+end
+
 module DualModeHelperFunctions
     using SorptionModels
     using MembraneBase
