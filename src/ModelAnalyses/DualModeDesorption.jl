@@ -26,7 +26,7 @@ function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertai
         return DualModeDesorption(
             fit_model(DualMode(), sorbing_isotherm; use_fugacity, uncertainty_method), 
             fit_model(DualMode(), desorbing_isotherm; use_fugacity, uncertainty_method), 
-            max_p,
+            measurement(max_p).val,
             isotherm
         )
     end
@@ -55,7 +55,7 @@ function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertai
 
     sorbing_model = DualModeModel(params[1], params[2], params[3]; use_fugacity)
     desorbing_model = DualModeModel(params[4], params[2], params[5]; use_fugacity)
-    return DualModeDesorption(sorbing_model, desorbing_model, max_p, isotherm)
+    return DualModeDesorption(sorbing_model, desorbing_model, measurement(max_p).val, isotherm)
 
 end
 
