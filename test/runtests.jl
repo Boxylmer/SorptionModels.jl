@@ -556,13 +556,13 @@ precision = 5
 
         # Dual Mode Desorption
 
-        isotherm_desorption = IsothermData(; 
-            partial_pressures_mpa = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031, 2.60974313, 1.199714642, 0.575992209, 0.30991402, 0.145032338],
-            concentrations_cc = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482, 111.9833899, 98.93545196, 81.21343867, 66.62816092, 50.92125421]
+        isotherm_desorption_with_errs = IsothermData(; 
+            partial_pressures_mpa = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031, 2.60974313, 1.199714642, 0.575992209, 0.30991402, 0.145032338] .± 0.01,
+            concentrations_cc = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482, 111.9833899, 98.93545196, 81.21343867, 66.62816092, 50.92125421] .± 0.01
         )
         path = joinpath(results_folder, "Dual Mode Desorption.xlsx")
         rm(path; force=true)
-        dmda = DualModeDesorption(isotherm_desorption; uncertainty_method=:JackKnife)
+        dmda = DualModeDesorption(isotherm_desorption_with_errs; uncertainty_method=:JackKnife)
         write_analysis(dmda, path)
     end
 

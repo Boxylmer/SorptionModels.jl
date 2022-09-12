@@ -1,7 +1,7 @@
 name = "SorptionModels"
 uuid = "44adabc6-386d-4db0-bb6e-0f7b06129544"
 authors = ["Will <sypheren@gmail.com> and contributors"]
-version = "0.1.28"
+version = "0.1.29"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"

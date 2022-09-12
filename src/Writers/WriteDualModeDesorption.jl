@@ -23,10 +23,10 @@ function write_analysis(analysis::DualModeDesorption, workbook::XLSX.XLSXFile; n
 
     if using_fugacity(analysis)
         p_text = "fugacity (MPa)"
-        original_ps = fugacity(analysis.isotherm; component=1)
+        original_ps = strip_measurement_to_value(fugacity(analysis.isotherm; component=1))
     else
         p_text = "pressure (MPa)"
-        original_ps = partial_pressures(analysis.isotherm; component=1)
+        original_ps = strip_measurement_to_value(partial_pressures(analysis.isotherm; component=1))
     end
     original_cs = concentration(analysis.isotherm; component=1)
 
