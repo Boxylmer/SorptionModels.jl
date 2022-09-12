@@ -81,6 +81,7 @@ module SorptionModels
     # thermodynamic factor not implemented yet
     include(joinpath("Writers", "WritePartialImmobilization.jl"))
     include(joinpath("Writers", "WriteZimmLundberg.jl"))
+    include(joinpath("Writers", "WriteDualModeDesorption.jl"))
     export write_analysis
 
 

@@ -1,16 +1,33 @@
 struct DualModeDesorption{SMT, DMT}
     sorbing_model::SMT
     desorbing_model::DMT
+    max_p::Float64
+    isotherm::IsothermData
 end
 
-function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertainty_method=nothing, naive=false, share_b=true)
+function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertainty_method=nothing, naive=false, share_b=true, verbose=false)
+    sorbing_isotherm = increasing_concentration(isotherm)
+    desorbing_isotherm = remove_increasing_concentration_steps(isotherm)
+
+    if use_fugacity
+        max_p = maximum(fugacity(isotherm; component=1))
+    else
+        max_p = maximum(partial_pressures(isotherm; component=1))
+    end
+    
+    if num_steps(sorbing_isotherm) <= 1 || num_steps(desorbing_isotherm) <= 1
+        if verbose
+            @warn "Isotherm either did not contain any sorption steps or did not contain any desorption steps."
+        end
+        return nothing
+    end
 
     if naive
-        sorbing_isotherm = increasing_concentration(isotherm)
-        desorbing_isotherm = remove_increasing_concentration_steps(isotherm)
         return DualModeDesorption(
             fit_model(DualMode(), sorbing_isotherm; use_fugacity, uncertainty_method), 
             fit_model(DualMode(), desorbing_isotherm; use_fugacity, uncertainty_method), 
+            max_p,
+            isotherm
         )
     end
 
@@ -38,7 +55,7 @@ function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertai
 
     sorbing_model = DualModeModel(params[1], params[2], params[3]; use_fugacity)
     desorbing_model = DualModeModel(params[4], params[2], params[5]; use_fugacity)
-    return DualModeDesorption(sorbing_model, desorbing_model)
+    return DualModeDesorption(sorbing_model, desorbing_model, max_p, isotherm)
 
 end
 
@@ -125,3 +142,5 @@ end
 function Base.show(io::IO, obj::DualModeDesorption)
     print(io, "Sorbing: " * string(obj.sorbing_model) * ", Desorbing: " * string(obj.desorbing_model))
 end
+
+using_fugacity(dmd::DualModeDesorption) = dmd.sorbing_model.use_fugacity

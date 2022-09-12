@@ -60,6 +60,7 @@ function write_analysis(analysis::IsostericHeatAnalysis, workbook::XLSX.XLSXFile
 
 end
 
+# todo all of these "write analysis" functions, when given a filepath, could be combined
 function write_analysis(analysis::IsostericHeatAnalysis, filepath::AbstractString; name=IHAH.default_isosteric_heat_sheet_name)
     if !isfile(filepath)
         XLSX.openxlsx(filepath, mode="w") do _ end
