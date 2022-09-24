@@ -137,7 +137,8 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 """
 function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, verbose=true, initial_search_resolution=20)
+    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, verbose=true, initial_search_resolution=20,
+    custom_densities::Union{Missing, AbstractArray}=missing)
     
     if verbose
         println("Starting parameter generation for NELF fit")
@@ -145,8 +146,11 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
     error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight; nan_on_failure=false)
-    
-    densities = polymer_density.(isotherms)
+    if ismissing(custom_densities)
+        densities = polymer_density.(isotherms)
+    else
+        densities = custom_densities
+    end
     density_lower_bound = maximum(densities)
     density_upper_bound = 3
     naive_lower = [50., 50., density_lower_bound]
