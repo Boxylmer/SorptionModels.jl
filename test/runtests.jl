@@ -507,6 +507,13 @@ precision = 5
             # non-desorbing isotherms shouldn't work
             @test isnothing(DualModeDesorption(isotherm_1))
 
+            # test a case where an isotherm with only one desorption step didn't work. This is because jackknife doesn't work when one missing data point causes there to be no desorption data.
+            pres = [1 ± 0.1, 2, 3, 4, 3]
+            conc = [5, 9 ± 0.4, 12, 17, 13]
+            iso = IsothermData(partial_pressures_mpa = pres, concentrations_cc = conc)
+            @test_nowarn DualModeDesorption(iso; uncertainty_method=:JackKnife)
+
+    
             # direct_pressures = partial_pressures(isotherm_desorption; component=1)
             # direct_concentrations = concentration(isotherm_desorption; component=1)
             # predicted_pressures = 0:0.05:maximum(direct_pressures)
@@ -565,7 +572,6 @@ precision = 5
         dmda = DualModeDesorption(isotherm_desorption_with_errs; uncertainty_method=:JackKnife)
         write_analysis(dmda, path)
     end
-
 
     @testset "Diagnostic Methods" begin
         results_folder = joinpath(@__DIR__, "diagnostics_output")

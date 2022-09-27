@@ -45,8 +45,20 @@ function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertai
     params = fitter(data)
 
     if uncertainty_method == :JackKnife
-        uncertainties = jackknife_uncertainty(fitter, data)
-        params = params .± uncertainties
+        if num_steps(desorbing_isotherm) < 3
+            if verbose
+                npts = num_steps(desorbing_isotherm)
+                @warn "Not enough desorption data points (got $npts, need at least 3) to jackknife dual mode desorption analysis. Skipping uncertainty calculation."
+            end
+        elseif num_steps(sorbing_isotherm) < 3
+            if verbose
+                npts = num_steps(sorbing_isotherm)
+                @warn "Not enough sorption data points (got $npts, need at least 3) to jackknife dual mode desorption analysis. Skipping uncertainty calculation."
+            end
+        else    
+            uncertainties = jackknife_uncertainty(fitter, data)
+            params = params .± uncertainties
+        end
     elseif isnothing(uncertainty_method)
         
     else
@@ -74,8 +86,8 @@ function make_dualmode_desorption_fitting_function(use_fugacity, share_b=true)::
         # split the isotherm into a sorption and desorption component
         sorbing_isotherm = increasing_concentration(iso)
         desorbing_isotherm = remove_increasing_concentration_steps(iso)
-        if num_steps(sorbing_isotherm) <= 1 || num_steps(desorbing_isotherm) <= 1
-            throw(BoundsError("Isotherm either did not contain any sorption steps or did not contain any desorption steps."))
+        if num_steps(sorbing_isotherm) <= 0 || num_steps(desorbing_isotherm) <= 0
+            throw(ErrorException("Isotherm either did not contain any sorption steps or did not contain any desorption steps."))
         end
         
     
