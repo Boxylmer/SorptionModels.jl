@@ -284,8 +284,8 @@ precision = 5
         
         # DGRPT
 
-            # dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
-            # @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in pressures]
+            dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)
+            @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in pressures]
 
     end
 
@@ -494,9 +494,9 @@ precision = 5
             dmda_naive = DualModeDesorption(isotherm_desorption; naive=true)
             dmda_static_b = DualModeDesorption(isotherm_desorption; share_b=false)
             
-            @show dmda_with_err = DualModeDesorption(isotherm_desorption; uncertainty_method=:JackKnife)
-            @show dmda_naive_with_err = DualModeDesorption(isotherm_desorption; naive=true, uncertainty_method=:JackKnife)
-            @show dmda_static_b_with_err = DualModeDesorption(isotherm_desorption; share_b=false, uncertainty_method=:JackKnife)
+            dmda_with_err = DualModeDesorption(isotherm_desorption; uncertainty_method=:JackKnife)
+            dmda_naive_with_err = DualModeDesorption(isotherm_desorption; naive=true, uncertainty_method=:JackKnife)
+            dmda_static_b_with_err = DualModeDesorption(isotherm_desorption; share_b=false, uncertainty_method=:JackKnife)
 
             @test round(dmda_with_err.sorbing_model.ch.val; digits=1) == 71.3
             @test round(dmda_with_err.sorbing_model.ch.err; digits=1) == 2.6
