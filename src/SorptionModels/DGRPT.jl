@@ -1,5 +1,5 @@
 struct DGRPT end
-const default_dgrpt_taylor_expansion_order = 12
+const default_dgrpt_taylor_expansion_order = 5
 
 """
 

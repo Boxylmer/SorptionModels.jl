@@ -4,6 +4,7 @@ module SorptionModels
     using MembraneEOS
     using ForwardDiff
     using Optim
+    using Roots
     using Measurements
     using StaticArrays
 
