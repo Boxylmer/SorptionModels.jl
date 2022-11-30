@@ -1,8 +1,7 @@
 struct DGRPT end
-const default_dgrpt_taylor_expansion_order = 5
+const default_dgrpt_taylor_expansion_order = 5  # todo change to 1 and runtests
 
 """
-
     Requires that in the kijmatrix, the polymer is the first index. The remaining indexes must match `penetrants`.
 
 """
@@ -14,22 +13,23 @@ struct DGRPTModel{BMT, POLYMT, PDT} <: SorptionModel
 end
 
 function predict_concentration(
-        model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions; 
+        model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions=[1]; 
         taylor_series_order=default_dgrpt_taylor_expansion_order, units=:cc)
-    penetrant_mass_fraction_initial_guesses = ones(length(bulk_penetrant_mole_fractions)) * 1e-5
-   
+        penetrant_mass_fraction_initial_guesses = ones(length(bulk_penetrant_mole_fractions)) * 1e-4
+    
     # Optim.jl target
     mass_fraction_error = make_penetrant_mass_fraction_target(model, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order)
-
-    lower = ones(length(penetrant_mass_fraction_initial_guesses))*eps()
-    upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
+    println("starting DGRPT Prediction")
+    lower = ones(length(penetrant_mass_fraction_initial_guesses)) * 1e-6
+    upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- 1e-3
     res = Optim.optimize(
         mass_fraction_error, lower, upper, 
         penetrant_mass_fraction_initial_guesses, 
         Fminbox(LBFGS()),
+        # Fminbox(NelderMead()),
         Optim.Options(
             allow_f_increases = false,
-            x_tol = 1e-4,
+            # x_tol = 1e-10,
             # g_tol = 1e-7,
             # f_tol = 1e-4,
         ); autodiff=:forward)

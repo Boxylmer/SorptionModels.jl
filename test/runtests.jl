@@ -288,14 +288,17 @@ precision = 5
             dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in pressures]
 
             # compare to nelf w/ no swelling
-            ps = [0.1, 1, 2, 3, 4]
+            ps = [0.1, 1, 2, 3, 3.5]
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             
-            @show nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in ps]
-            @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0])[1] for p in ps]
-            @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=2)[1] for p in ps]
-            @show dgrpt_concs_pure_co2 = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=1)[1] for p in ps]
-
+            nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in ps]
+            dgrpt_concs_pure_co2_1_term = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=1)[1] for p in ps]
+            dgrpt_concs_pure_co2_2_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=2)[1] for p in ps]
+            dgrpt_concs_pure_co2_5_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=5)[1] for p in ps]
+            @show nelf_concs_pure_co2
+            @show dgrpt_concs_pure_co2_1_term
+            @show dgrpt_concs_pure_co2_2_terms
+            @show dgrpt_concs_pure_co2_5_terms
     end
 
     @testset "Transient Sorption Models" begin
