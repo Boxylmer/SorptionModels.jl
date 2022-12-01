@@ -112,6 +112,7 @@ function solve_polymer_density(
         roots_polymer_density_target = make_roots_polymer_density_target(model, temperature, polymer_phase_mass_fractions; taylor_series_order)
         solved_density = find_zeros(roots_polymer_density_target, eps()*10, max_polymer_density - eps(); no_pts=12, naive=false)
         if length(solved_density) > 1
+            # @warn "Multiple densities found!: " * string(solved_density)
             return maximum(solved_density)
         elseif length(solved_density) == 0
             return solve_polymer_density(model, temperature, polymer_phase_mass_fractions; taylor_series_order, method=:optim)
