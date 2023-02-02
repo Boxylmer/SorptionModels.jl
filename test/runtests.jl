@@ -221,6 +221,9 @@ precision = 5
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
             char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10)
+
+
+            @show char_tpbo25_with_errs_hessian = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, uncertainty_method=:Hessian)
             # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
             #   pick CO2

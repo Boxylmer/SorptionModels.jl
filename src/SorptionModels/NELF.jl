@@ -128,17 +128,20 @@ end
 
 # functions for fit data to NELF parameters
 """
-    fit_model(::NELF, model_choice, isotherms, bulk_phase_characteristic_params, [polymer_molecular_weight])
+    fit_model(::NELF, model_choice, isotherms, bulk_phase_characteristic_params, [polymer_molecular_weight]; [custom_densities], [initial_search_resolution], [uncertainty_method])
 Find the EOS parameters of a polymer from a vector of `IsothermData`s using the NELF model. 
 # Arguments
 - `model_choice`: MembraneEOS model to use
 - `isotherms`: `Vector` of `IsothermData` structs using the polymer in question. Temperature, pressure, density, and concentration must be provided.
 - `bulk_phase_characteristic_params`: Vector of pure characteristic parameter vectors following the same order as the isotherms. 
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
+- `polymer_molecular_weight`: A known molecular weight for the polymer (otherwise a default, arbitrarily large value is assumed)
+- `custom_densities`: An array (matching the dimensions of the input isotherms) of densities to use instead of the ones in the isotherm data provided. 
+- `uncertainty_method`: Calculate the uncertainty of the parameters from the fitting. For NELF, the Hessian method is currently the only one implemented.
 """
 function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
     polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, verbose=true, initial_search_resolution=20,
-    custom_densities::Union{Missing, AbstractArray}=missing)
+    custom_densities::Union{Missing, AbstractArray}=missing, uncertainty_method=nothing)
     
     if verbose
         println("Starting parameter generation for NELF fit")
@@ -177,7 +180,26 @@ function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase
     #     SAMIN(; rt = 0.02), 
     #     Optim.Options(iterations=10^6))
 
-    return [Optim.minimizer(res)..., polymer_molecular_weight]
+    _minimizer = Optim.minimizer(res)
+
+    if uncertainty_method == :Bootstrap
+        # errors = bootstrap_uncertainty(
+        #     fitting_uncertainty_wrapper, dataset(_step_data); nsamples=num_uncertainty_resamples
+        # )
+        throw(ErrorException("Bootstrapping isn't working for this set of models just yet"))
+    elseif uncertainty_method == :jackKnife
+        throw(ErrorException("Jackknifing isn't working for this set of models just yet"))
+        errors = jackknife_uncertainty(fitting_uncertainty_wrapper, dataset(_step_data))
+
+    elseif uncertainty_method == :Hessian
+        errors = rss_minimizer_standard_errors(error_function, _minimizer, length(isotherms))
+        minimizer = [_minimizer[i] .± errors[i] for i in eachindex(_minimizer, errors)]
+    elseif isnothing(uncertainty_method)
+        minimizer = _minimizer
+    else
+        throw(ArgumentError("Uncertainty method should be a symbol, e.g., :Hessian, :JackKnife, or :Bootstrap"))
+    end
+    return [minimizer..., polymer_molecular_weight]
     # work in progress
 end
 
