@@ -222,8 +222,22 @@ precision = 5
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
             char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10)
 
+            # just running to make sure it doesn't throw
+            char_tpbo25_with_errs_hessian = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, uncertainty_method=:Hessian)
+            
+            
+            # infinite dilution
+            sinf_entr = infinite_dilution_solubility_entropic(nelfmodel, temperature)
+            sinf_enth = infinite_dilution_solubility_enthalpic(nelfmodel, temperature)
 
-            @show char_tpbo25_with_errs_hessian = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, uncertainty_method=:Hessian)
+            ln_sinf = sinf_enth + sinf_entr + log(273.15/(0.101325 * temperature))
+            sinf_analytical = exp(ln_sinf)
+            sinf_numerical = infinite_dilution_solubility(nelfmodel, temperature)
+            @test round(sinf_analytical; sigdigits=2) == round(sinf_numerical; sigdigits=2)
+            
+            
+            
+            
             # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
             # now that we have some characteristic parameters, we can try to fit individual kij and ksw for a gas
             #   pick CO2

@@ -33,9 +33,11 @@ module SorptionModels
 
     include(joinpath("SorptionModels", "NELF.jl"))
     export NELF, NELFModel
+    export infinite_dilution_solubility_entropic, infinite_dilution_solubility_enthalpic
     export calculate_polymer_phase_density
     export calculate_swelled_polymer_density
     export fit_kij, fit_ksw
+
 
     include(joinpath("SorptionModels", "DGRPT.jl"))
     export DGRPT, DGRPTModel

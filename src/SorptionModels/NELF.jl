@@ -118,12 +118,45 @@ end
 
 """
     infinite_dilution_solubility(model::NELFModel, temperature::Number)
-Currenlty only supported for Sanchez Lacombe based models, get infinite dilution solubility in **((CC/CC) / MPa)**
+Get infinite dilution solubility in **((CC/CC) / MPa)**
 """
 # todo how will we predict the infinite dilution solubility or reject multicomponent models?
 function infinite_dilution_solubility(model::NELFModel, temperature::Number; nan_on_failure=false)  # naieve
     inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
     return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0], nan_on_failure)[1] / inf_dilution_p
+end
+
+function infinite_dilution_solubility_entropic(model::NELFModel, temperature::Number; polymer_index=1, penetrant_index=2)
+    if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
+        slpolymerparams = model.polymer_model.components[polymer_index]
+        slpenetrantparams = model.polymer_model.components[penetrant_index]
+        r1 = MembraneEOS.sanchez_lacombe_ri0(slpenetrantparams)
+        v1 = MembraneEOS.sanchez_lacombe_pure_characteristic_volume(slpenetrantparams)
+        v2 = MembraneEOS.sanchez_lacombe_pure_characteristic_volume(slpolymerparams)
+        ρ2★ = MembraneEOS.characteristic_density(slpolymerparams)
+        ρ2 = model.polymer_dry_density
+        comp = r1 * (((v1/v2 - 1) * ρ2★/ρ2 + 1) * log(1-ρ2/ρ2★) + (v1/v2 - 1))
+        return comp
+    else
+    end
+end 
+
+function infinite_dilution_solubility_enthalpic(model::NELFModel, temperature::Number; polymer_index=1, penetrant_index=2)
+    if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
+        slpolymerparams = model.polymer_model.components[polymer_index]
+        slpenetrantparams = model.polymer_model.components[penetrant_index]
+        r1 = MembraneEOS.sanchez_lacombe_ri0(slpenetrantparams)
+        t1 = MembraneEOS.characteristic_temperature(slpenetrantparams)
+        kij = model.polymer_model.kij[polymer_index, penetrant_index]
+        p1 = MembraneEOS.characteristic_pressure(slpenetrantparams)
+        p2 = MembraneEOS.characteristic_pressure(slpolymerparams)
+
+        ρ2★ = MembraneEOS.characteristic_density(slpolymerparams)
+        ρ2 = model.polymer_dry_density
+        comp = r1 * (ρ2/ρ2★) * (t1/temperature) * (2/p1) * (1-kij) * sqrt(p1*p2)
+        return comp
+    else
+    end
 end
 
 # functions for fit data to NELF parameters

@@ -19,7 +19,6 @@ function predict_concentration(
     
     # Optim.jl target
     mass_fraction_error = make_penetrant_mass_fraction_target(model, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order)
-    println("starting DGRPT Prediction")
     lower = ones(length(penetrant_mass_fraction_initial_guesses)) * 1e-6
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- 1e-3
     res = Optim.optimize(
