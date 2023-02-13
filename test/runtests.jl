@@ -227,7 +227,7 @@ precision = 5
             
             
             # infinite dilution
-            sinf_entr = infinite_dilution_solubility_entropic(nelfmodel, temperature)
+            sinf_entr = infinite_dilution_solubility_entropic(nelfmodel)
             sinf_enth = infinite_dilution_solubility_enthalpic(nelfmodel, temperature)
 
             ln_sinf = sinf_enth + sinf_entr + log(273.15/(0.101325 * temperature))

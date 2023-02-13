@@ -126,7 +126,7 @@ function infinite_dilution_solubility(model::NELFModel, temperature::Number; nan
     return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0], nan_on_failure)[1] / inf_dilution_p
 end
 
-function infinite_dilution_solubility_entropic(model::NELFModel, temperature::Number; polymer_index=1, penetrant_index=2)
+function infinite_dilution_solubility_entropic(model::NELFModel; polymer_index=1, penetrant_index=2)
     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
         slpolymerparams = model.polymer_model.components[polymer_index]
         slpenetrantparams = model.polymer_model.components[penetrant_index]
