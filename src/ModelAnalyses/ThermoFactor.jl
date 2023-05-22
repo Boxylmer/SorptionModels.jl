@@ -27,7 +27,7 @@ function ThermodynamicFactorAnalysis(isotherm::IsothermData)
     penetrant_activities = activities(isotherm, component=1)
     lna = log.(penetrant_activities)
     lnw = log.(penetrant_mass_fracs)
-    slopes = estimate_slope_by_adjacent_points.(Ref(lna), Ref(lnw), 1:length(lna))
+    slopes = estimate_slope_by_adjacent_points((lna), (lnw))
     thermo_factors = 1 ./ slopes
     return ThermodynamicFactorAnalysis(lna, lnw, slopes, thermo_factors)
 end

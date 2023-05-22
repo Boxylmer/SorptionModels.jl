@@ -1,0 +1,35 @@
+struct MolarVolumeAnalysis{DT}
+    concentrations_cc_cc::DT
+    dp_dc::DT
+    dfracional_dilation_dp::DT
+    partial_molar_volumes_cm3_mol::DT
+end
+
+"""
+    MolarVolumeAnalysis(model::SorptionModel, pressures_mpa, frac_dilations)
+
+Apply the calculation discussed in
+
+R. Raharjo, B. Freeman, E. Sanders, Pure and mixed gas CH4 and n-C4H10 sorption and dilation in poly(dimethylsiloxane), Journal of Membrane Science. 292 (2007) 45–61. https://doi.org/10.1016/j.memsci.2007.01.012.
+
+to calculate the partial molar volume of a component in a polymer phase.
+
+- The model in question should take true pressures and not fugacities. 
+- The isothermal compressibility factor (units of MPa^-1) is neglected by default. It is used for calculating the change in volume due to external pressure and can generally be neglected for condensible gasses, low pressure liquids, and vapors. For permanent gasses and high pressure liquids, ensure this can be neglected or specify it's value.
+
+"""
+
+function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector{<:Number}, frac_dilations::AbstractVector{<:Number}, 
+    isothermal_compressability=0)
+    
+    concentrations = predict_concentration(model, pressures_mpa)
+
+    continuous_pressure_curve(c_ccpercc) = predict_pressure(model, c_ccpercc)
+    dp_dc = ForwardDiff.derivative.(continuous_pressure_curve, concentrations) # mpa / cc/cc
+
+    dfracdil_dp = estimate_slope_by_adjacent_points(pressures_mpa, frac_dilations) # 1 / mpa
+
+    volumes = (dfracdil_dp .+ isothermal_compressability) .* dp_dc .* MembraneBase.CC_PER_MOL_STP # (1/MPa) * (Mpa / (cc/cc)) * (cc/mol) = cm3/mol
+    return MolarVolumeAnalysis(concentrations, dp_dc, dfracdil_dp, volumes)
+end
+

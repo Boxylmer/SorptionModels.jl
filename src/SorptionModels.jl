@@ -77,6 +77,9 @@ module SorptionModels
     include(joinpath("ModelAnalyses", "DualModeDesorption.jl"))
     export DualModeDesorption
 
+    include(joinpath("ModelAnalyses", "MolarVolume.jl"))
+    export MolarVolumeAnalysis
+
     # model writers
     include(joinpath("Writers", "WriteVantHoffDualMode.jl"))
     include(joinpath("Writers", "WriteIsostericHeat.jl"))

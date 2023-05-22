@@ -553,6 +553,17 @@ precision = 5
             # predicted_pressures = 0:0.05:maximum(direct_pressures)
             # predicted_sorbing, predicted_desorbing = predict_concentration(dmda, predicted_pressures)
         end
+
+        # Partial Molar Volumes
+        @testset "Molar Volume Analysis" begin
+            # no uncertainty
+            model = DualModeModel(35.3, 915.5, 128.8)
+            pressures_mpa = [0.0, 0.1, 0.9, 1.7, 2.2, 2.6, 3.1]
+            frac_dilations = [0.0, 0.002, 0.012, 0.022, 0.026, 0.028, 0.029]
+            molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
+            @show molar_vol_analysis
+            @show molar_vol_analysis.partial_molar_volumes_cm3_mol
+        end
     end
     
     # writers
