@@ -98,9 +98,16 @@ function predict_pressure(dm::DualModeModel, concentrations_cc_cc::Number)
     ch = dm.ch
     k = dm.kd
     c = concentrations_cc_cc
-    p = (sqrt((b^2)*(ch-c)^2+2*b*k*(ch + c) + k^2) + b*(c-ch) - k)/(2*b*k)
-    if p < 0; return 0; end
-    return p
+    
+    if b * k != 0
+        p = (sqrt((b^2)*(ch-c)^2+2*b*k*(ch + c) + k^2) + b*(c-ch) - k)/(2*b*k)
+    elseif b == 0
+        p = c / k
+    else
+        p = 0
+    end
+    
+    return maximum(promote(0, p))
 end
 
 function MembraneBase.rss(dm::DualModeModel, isotherm::IsothermData)

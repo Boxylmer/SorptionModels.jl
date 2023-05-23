@@ -1,8 +1,8 @@
 # SorptionModels.jl
 
-*Get more out of your solubility data*
+*Get more out of your sorption data*
 
-SorptionModels.jl provides a number of models which describe solubility in polymers, as well as various analyses you can perform to extract information from your models once they are fit to experimental data.
+SorptionModels.jl provides a number of models and which describe solubility in polymers, as well as various analyses you can perform to extract information from your models once they are fit to experimental data.
 
 
 ## Using this package

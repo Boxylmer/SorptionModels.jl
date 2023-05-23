@@ -88,6 +88,7 @@ module SorptionModels
     include(joinpath("Writers", "WritePartialImmobilization.jl"))
     include(joinpath("Writers", "WriteZimmLundberg.jl"))
     include(joinpath("Writers", "WriteDualModeDesorption.jl"))
+    include(joinpath("Writers", "WriteMolarVolume.jl"))
     export write_analysis
 
 

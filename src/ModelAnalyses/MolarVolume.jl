@@ -1,8 +1,8 @@
-struct MolarVolumeAnalysis{DT}
-    concentrations_cc_cc::DT
-    dp_dc::DT
-    dfracional_dilation_dp::DT
-    partial_molar_volumes_cm3_mol::DT
+struct MolarVolumeAnalysis{CT, DPDCT, DFDPT, PMVT}
+    concentrations_cc_cc::CT
+    dp_dc::DPDCT
+    dfracional_dilation_dp::DFDPT
+    partial_molar_volumes_cm3_mol::PMVT
 end
 
 """
@@ -25,6 +25,7 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
     concentrations = predict_concentration(model, pressures_mpa)
 
     continuous_pressure_curve(c_ccpercc) = predict_pressure(model, c_ccpercc)
+
     dp_dc = ForwardDiff.derivative.(continuous_pressure_curve, concentrations) # mpa / cc/cc
 
     dfracdil_dp = estimate_slope_by_adjacent_points(pressures_mpa, frac_dilations) # 1 / mpa

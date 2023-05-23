@@ -557,12 +557,25 @@ precision = 5
         # Partial Molar Volumes
         @testset "Molar Volume Analysis" begin
             # no uncertainty
-            model = DualModeModel(35.3, 915.5, 128.8)
-            pressures_mpa = [0.0, 0.1, 0.9, 1.7, 2.2, 2.6, 3.1]
-            frac_dilations = [0.0, 0.002, 0.012, 0.022, 0.026, 0.028, 0.029]
+            model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325)) # cc/mpa
+            pressures_mpa = [0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .* 0.101325
+            frac_dilations = [0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] ./ 100
             molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
-            @show molar_vol_analysis
-            @show molar_vol_analysis.partial_molar_volumes_cm3_mol
+            res_no_uncertain = molar_vol_analysis.partial_molar_volumes_cm3_mol[3]
+    
+            # with uncertainty
+            model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
+            pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
+            frac_dilations = ([0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] .± 0.02) ./ 100 
+            molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
+            res_uncertain = molar_vol_analysis.partial_molar_volumes_cm3_mol[3].val
+
+            # with uncertainty and compressibility
+            molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, 1e-5)
+            res_uncertain_compressible = molar_vol_analysis.partial_molar_volumes_cm3_mol[3].val
+
+            @test res_no_uncertain == res_uncertain
+            @test res_no_uncertain != res_uncertain_compressible
         end
     end
     
@@ -616,6 +629,24 @@ precision = 5
         rm(path; force=true)
         dmda = DualModeDesorption(isotherm_desorption_with_errs; uncertainty_method=:JackKnife)
         write_analysis(dmda, path)
+
+        # Partial Molar Volumes
+        path = joinpath(results_folder, "Molar Volume Analysis.xlsx")
+        rm(path; force=true)
+        model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325)) # cc/mpa
+        pressures_mpa = [0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .* 0.101325
+        frac_dilations = [0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] ./ 100
+        molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
+        write_analysis(molar_vol_analysis, path)
+       
+        model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
+        pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
+        frac_dilations = ([0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] .± 0.02) ./ 100 
+        molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
+        write_analysis(molar_vol_analysis, path; name="Also with uncertainty!")
+  
+
+
     end
 
     @testset "Diagnostic Methods" begin
@@ -674,8 +705,8 @@ precision = 5
 
         # dgrpt_concs_pure_co2_2_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=2)[1] for p in ps]
         # dgrpt_concs_pure_co2_5_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=5)[1] for p in ps]
-        @show dgrpt_concs_pure_co2_1_term
-        @show dgrpt_dens_pure_co2_1_term
+        # @show dgrpt_concs_pure_co2_1_term
+        # @show dgrpt_dens_pure_co2_1_term
         
     end
 end
