@@ -37,11 +37,11 @@ function write_analysis(analysis::MolarVolumeAnalysis, workbook::XLSX.XLSXFile; 
     sheet[wrp, wcp + 7] = "Frac. Dilation"
     sheet[wrp, wcp + 8] = "Frac. Dilation σ"
     sheet[wrp, wcp + 9] = "Continuous Dilation"
-    sheet[wrp, wcp +10] = "Cont. Dilation σ"   
-    sheet[wrp, wcp +12] = "d(ΔV/V0)/dp (1/MPa)"
-    sheet[wrp, wcp +13] = "d(ΔV/V0)/dp σ"
-    sheet[wrp, wcp +14] = "Partial molar volume (cm3/mol)"
-    sheet[wrp, wcp +15] = "Partial molar volume σ"
+    sheet[wrp, wcp + 10] = "Cont. Dilation σ"   
+    sheet[wrp, wcp + 11] = "d(ΔV/V0)/dp (1/MPa)"
+    sheet[wrp, wcp + 12] = "d(ΔV/V0)/dp σ"
+    sheet[wrp, wcp + 13] = "Partial molar volume (cm3/mol)"
+    sheet[wrp, wcp + 14] = "Partial molar volume σ"
 
     wrp += 1
     
@@ -52,8 +52,8 @@ function write_analysis(analysis::MolarVolumeAnalysis, workbook::XLSX.XLSXFile; 
     write_vector_of_maybe_measurements(wrp, wcp + 5, analysis.dp_dc)
     write_vector_of_maybe_measurements(wrp, wcp + 7, analysis.frac_dilations)
     write_vector_of_maybe_measurements(wrp, wcp + 9, analysis.continuous_dilations)
-    write_vector_of_maybe_measurements(wrp, wcp +11, analysis.dfracional_dilation_dp)
-    write_vector_of_maybe_measurements(wrp, wcp +13, analysis.partial_molar_volumes_cm3_mol)
+    write_vector_of_maybe_measurements(wrp, wcp + 11, analysis.dfracional_dilation_dp)
+    write_vector_of_maybe_measurements(wrp, wcp + 13, analysis.partial_molar_volumes_cm3_mol)
 
 end
 
