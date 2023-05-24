@@ -29,7 +29,7 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
     continuous_pressure_curve(c_ccpercc) = predict_pressure(model, c_ccpercc)
 
     dp_dc = ForwardDiff.derivative.(continuous_pressure_curve, concentrations) # mpa / cc/cc
-
+    
     continuous_dilation_curve = fit(pressures_mpa, frac_dilations, poly_fit)
     continuous_dilation_curve_derivative = derivative(continuous_dilation_curve, 1)
     continuous_dilations = continuous_dilation_curve.(pressures_mpa)
