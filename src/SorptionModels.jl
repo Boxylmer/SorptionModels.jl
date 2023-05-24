@@ -7,6 +7,7 @@ module SorptionModels
     using Roots
     using Measurements
     using StaticArrays
+    using Polynomials
 
     using XLSX
     using DelimitedFiles

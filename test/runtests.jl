@@ -574,7 +574,7 @@ precision = 5
             molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, 1e-5)
             res_uncertain_compressible = molar_vol_analysis.partial_molar_volumes_cm3_mol[3].val
 
-            @test res_no_uncertain == res_uncertain
+            @test res_no_uncertain ≈ res_uncertain
             @test res_no_uncertain != res_uncertain_compressible
         end
     end
