@@ -723,7 +723,7 @@ precision = 5
         #   one(x) in measurements returns the underlying measurement type rather than `measurement`, so until polynomials fixes https://github.com/JuliaMath/Polynomials.jl/issues/501, measurements must be restricted to pre-1.9 versions.
         x = [0, 27.3, 66.2, 111.3, 134, 202.6, 256.8, 296.8, 358.2, 407.4, 453.4, 501.4] .* 0.00689476
         y = [0 ± 0, 0.010053518 ± 0.000577937, 0.01908272 ± 0.001100238, 0.02783634 ± 0.001609498, 0.030801961 ± 0.00178267, 0.042389159 ± 0.002462366, 0.050273318 ± 0.002927624, 0.05573762 ± 0.003251388, 0.065036662 ± 0.003804798, 0.070552007 ± 0.004134467, 0.076878536 ± 0.004513929, 0.082775442 ± 0.004868871, ]
-        fit(x, y, 4)
+        SorptionModels.Polynomials.fit(x, y, 4)
 
     end
 end
