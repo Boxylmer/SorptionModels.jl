@@ -576,6 +576,9 @@ precision = 5
 
             @test res_no_uncertain ≈ res_uncertain
             @test res_no_uncertain != res_uncertain_compressible
+
+            MolarVolumeAnalysis(DualModeModel(1±1, 4, 5), [1, 2, 3, 4, 5 ± 0.1], [1, 2, 3, 4, 5] ./ 100 .± 0.001, 1e-5)
+
         end
     end
     
