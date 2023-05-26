@@ -34,6 +34,12 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
     continuous_dilation_curve_derivative = derivative(continuous_dilation_curve, 1)
     continuous_dilations = continuous_dilation_curve.(pressures_mpa)
     continuous_dilation_derivatives = continuous_dilation_curve_derivative.(pressures_mpa)
+
+
+    
+
+
+
     # dfracdil_dp = estimate_slope_by_adjacent_points(pressures_mpa, frac_dilations) # 1 / mpa
 
     volumes = (continuous_dilation_derivatives .+ isothermal_compressability) .* dp_dc .* MembraneBase.CC_PER_MOL_STP # (1/MPa) * (Mpa / (cc/cc)) * (cc/mol) = cm3/mol
