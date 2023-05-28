@@ -25,7 +25,7 @@ to calculate the partial molar volume of a component in a polymer phase.
 - Polynomials are currently used to approximate the derivative of the dilation data, `poly_fit` specifies the degree of the polynomial to be used. 
 """
 function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector{<:Number}, frac_dilations::AbstractVector{<:Number}, 
-    isothermal_compressability=0, poly_fit=4, n_interp=30)
+    isothermal_compressability=0; uncertainty_method=:Hessian, n_interp=30)
     
     concentrations = predict_concentration(model, pressures_mpa)
 
@@ -38,7 +38,7 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
     # continuous_dilations = continuous_dilation_curve.(pressures_mpa)
     # continuous_dilation_derivatives = continuous_dilation_curve_derivative.(pressures_mpa)
 
-    dilation_function_params = find_dilation_function_params(pressures_mpa, frac_dilations, :Hessian)
+    dilation_function_params = find_dilation_function_params(pressures_mpa, frac_dilations, uncertainty_method)
     continuous_dilations = dilation_empirical_function.(pressures_mpa, dilation_function_params...)
     continuous_dilation_derivatives = ForwardDiff.derivative.(x -> dilation_empirical_function(x, dilation_function_params...), pressures_mpa)
 
