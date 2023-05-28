@@ -42,10 +42,18 @@ function write_analysis(analysis::MolarVolumeAnalysis, workbook::XLSX.XLSXFile; 
     sheet[wrp, wcp + 12] = "d(ΔV/V0)/dp σ"
     sheet[wrp, wcp + 13] = "Partial molar volume (cm3/mol)"
     sheet[wrp, wcp + 14] = "Partial molar volume σ"
-    sheet[wrp, wcp + 15] = "Interpolated pressures"
+    sheet[wrp, wcp + 15] = "Interpolated pressures (MPa)"
     sheet[wrp, wcp + 16] = "Interpolated pressure σ"
     sheet[wrp, wcp + 17] = "Interpolated dilations"
     sheet[wrp, wcp + 18] = "Interpolated dilation σ"
+    sheet[wrp, wcp + 19] = "Interpolated concentration (CC/CC)"
+    sheet[wrp, wcp + 20] = "Interpolated concentration σ"
+    sheet[wrp, wcp + 21] = "Interpolated dp/dc (MPa/(CC/CC))"
+    sheet[wrp, wcp + 22] = "Interpolated dp/dc σ"
+    sheet[wrp, wcp + 23] = "Interpolated d(ΔV/V0)/dp (1/MPa)"
+    sheet[wrp, wcp + 24] = "Interpolated d(ΔV/V0)/dp σ"
+    sheet[wrp, wcp + 25] = "Interpolated molar volumes (cm3/mol)"
+    sheet[wrp, wcp + 26] = "Interpolated molar volume σ"
 
     wrp += 1
     
@@ -60,6 +68,10 @@ function write_analysis(analysis::MolarVolumeAnalysis, workbook::XLSX.XLSXFile; 
     write_vector_of_maybe_measurements(wrp, wcp + 13, analysis.partial_molar_volumes_cm3_mol)
     write_vector_of_maybe_measurements(wrp, wcp + 15, analysis.diagnostic_pressures_mpa)
     write_vector_of_maybe_measurements(wrp, wcp + 17, analysis.diagnostic_frac_dilations)
+    write_vector_of_maybe_measurements(wrp, wcp + 19, analysis.diagnostic_concentrations)
+    write_vector_of_maybe_measurements(wrp, wcp + 21, analysis.diagnostic_dp_dc)
+    write_vector_of_maybe_measurements(wrp, wcp + 23, analysis.diagnostic_dilation_derivatives)
+    write_vector_of_maybe_measurements(wrp, wcp + 25, analysis.diagnostic_volumes)
 
 end
 

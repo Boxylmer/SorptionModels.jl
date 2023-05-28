@@ -1,14 +1,18 @@
-struct MolarVolumeAnalysis{PT, CT, DPDCT, FDT, CDT, DFDPT, PMVT}
-    pressures_mpa::PT
-    concentrations_cc_cc::CT
-    dp_dc::DPDCT
-    frac_dilations::FDT
-    continuous_dilations::CDT
-    dfracional_dilation_dp::DFDPT
-    partial_molar_volumes_cm3_mol::PMVT
+struct MolarVolumeAnalysis
+    pressures_mpa
+    concentrations_cc_cc
+    dp_dc
+    frac_dilations
+    continuous_dilations
+    dfracional_dilation_dp
+    partial_molar_volumes_cm3_mol
 
-    diagnostic_pressures_mpa::PT
-    diagnostic_frac_dilations::CDT
+    diagnostic_pressures_mpa
+    diagnostic_frac_dilations
+    diagnostic_concentrations
+    diagnostic_dp_dc
+    diagnostic_dilation_derivatives
+    diagnostic_volumes
 end
 
 """
@@ -44,12 +48,15 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
 
     diagnostic_pressures_mpa = collect(range(minimum(pressures_mpa), maximum(pressures_mpa), n_interp))
     diagnostic_frac_dilations = dilation_empirical_function.(diagnostic_pressures_mpa, dilation_function_params...)
-
+    diagnostic_concentrations = predict_concentration(model, diagnostic_pressures_mpa)
+    diagnostic_dp_dc = ForwardDiff.derivative.(continuous_pressure_curve, diagnostic_concentrations)
+    diagnostic_dilation_derivatives = ForwardDiff.derivative.(x -> dilation_empirical_function(x, dilation_function_params...), diagnostic_pressures_mpa)
+    diagnostic_volumes = (diagnostic_dilation_derivatives .+ isothermal_compressability) .* diagnostic_dp_dc .* MembraneBase.CC_PER_MOL_STP # (1/MPa) * (Mpa / (cc/cc)) * (cc/mol) = cm3/mol
     # dfracdil_dp = estimate_slope_by_adjacent_points(pressures_mpa, frac_dilations) # 1 / mpa
 
     volumes = (continuous_dilation_derivatives .+ isothermal_compressability) .* dp_dc .* MembraneBase.CC_PER_MOL_STP # (1/MPa) * (Mpa / (cc/cc)) * (cc/mol) = cm3/mol
     return MolarVolumeAnalysis(pressures_mpa, concentrations, dp_dc, frac_dilations, continuous_dilations, continuous_dilation_derivatives, volumes,
-        diagnostic_pressures_mpa, diagnostic_frac_dilations)
+        diagnostic_pressures_mpa, diagnostic_frac_dilations, diagnostic_concentrations, diagnostic_dp_dc, diagnostic_dilation_derivatives, diagnostic_volumes)
 end
 
 # function dilation_empirical_function(p_mpa, a, b, c)
