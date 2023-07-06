@@ -26,7 +26,7 @@ to calculate the partial molar volume of a component in a polymer phase.
 
 - The model in question should take true pressures and not fugacities. 
 - The isothermal compressibility factor (units of MPa^-1) is neglected by default. It is used for calculating the change in volume due to external pressure and can generally be neglected for condensible gasses, low pressure liquids, and vapors. For permanent gasses and high pressure liquids, ensure this can be neglected or specify it's value.
-- Polynomials are currently used to approximate the derivative of the dilation data, `poly_fit` specifies the degree of the polynomial to be used. 
+- A modified dual mode model is used to approximate the derivative of the dilation data. If you're uncertainty is very high and you're using :Hessian uncertainties, it's likely you're overfitting and should use :JackKnife instead, as it will more adequately represent the uncertainty in your fit.  
 """
 function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector{<:Number}, frac_dilations::AbstractVector{<:Number}, 
     isothermal_compressability=0; uncertainty_method=:Hessian, n_interp=30)
@@ -36,11 +36,6 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
     continuous_pressure_curve(c_ccpercc) = predict_pressure(model, c_ccpercc)
 
     dp_dc = ForwardDiff.derivative.(continuous_pressure_curve, concentrations) # mpa / cc/cc
-    
-    # continuous_dilation_curve = fit(pressures_mpa, frac_dilations, poly_fit)
-    # continuous_dilation_curve_derivative = derivative(continuous_dilation_curve, 1)
-    # continuous_dilations = continuous_dilation_curve.(pressures_mpa)
-    # continuous_dilation_derivatives = continuous_dilation_curve_derivative.(pressures_mpa)
 
     dilation_function_params = find_dilation_function_params(pressures_mpa, frac_dilations, uncertainty_method)
     continuous_dilations = dilation_empirical_function.(pressures_mpa, dilation_function_params...)
@@ -59,12 +54,7 @@ function MolarVolumeAnalysis(model::SorptionModel, pressures_mpa::AbstractVector
         diagnostic_pressures_mpa, diagnostic_frac_dilations, diagnostic_concentrations, diagnostic_dp_dc, diagnostic_dilation_derivatives, diagnostic_volumes)
 end
 
-# function dilation_empirical_function(p_mpa, a, b, c)
-#     res = a * b * c * p_mpa / ((1 - b * p_mpa) * (1 - b * p_mpa + c * b * p_mpa))
-#     return res
-# end
-
-function dilation_empirical_function(p_mpa, a, b, c, d)
+function dilation_empirical_function(p_mpa, a, b, c, d = 0)
     res = a * p_mpa /(1 + b*p_mpa) + c * p_mpa + d * p_mpa^2
     return res
 end
@@ -74,7 +64,7 @@ function dilation_empirical_function_sqerr(X, Y, params)
     sum((dilation_empirical_function.(X, params...) .- Y).^2)
 end
 
-function find_dilation_function_params(pressures_mpa::AbstractVector{<:Number}, frac_dilations::AbstractVector{<:Number}, uncertainty_method=nothing)
+function find_dilation_function_params(pressures_mpa, frac_dilations, uncertainty_method=nothing)
     start = [1, 1, 1, 1.]
     obj = x -> dilation_empirical_function_sqerr(
         strip_measurement_to_value(pressures_mpa), 
@@ -86,6 +76,12 @@ function find_dilation_function_params(pressures_mpa::AbstractVector{<:Number}, 
 
     if uncertainty_method == :Hessian
         model_uncertainty = rss_minimizer_standard_errors(obj, res, n)
+        return res .± model_uncertainty
+
+    elseif uncertainty_method == :JackKnife
+        data = collect(zip(pressures_mpa, frac_dilations))
+        fit_function(data) = find_dilation_function_params(collect.(collect(zip(data...)))...)
+        model_uncertainty = jackknife_uncertainty(fit_function, data)
         return res .± model_uncertainty
     else
         return res

@@ -644,15 +644,20 @@ precision = 5
         model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325)) # cc/mpa
         pressures_mpa = [0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .* 0.101325
         frac_dilations = [0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] ./ 100
-        molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
+        molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations; uncertainty_method=nothing)
         write_analysis(molar_vol_analysis, path)
        
         model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
         pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
         frac_dilations = ([0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] .± 0.02) ./ 100 
         molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations)
-        write_analysis(molar_vol_analysis, path; name="Also with uncertainty!")
-  
+        write_analysis(molar_vol_analysis, path; name="With hessian an uncertain input")
+
+        model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
+        pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
+        frac_dilations = ([0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] .± 0.02) ./ 100 
+        molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, uncertainty_method=:JackKnife)
+        write_analysis(molar_vol_analysis, path; name="Also with jackknifing!")
 
 
     end
