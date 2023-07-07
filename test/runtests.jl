@@ -659,6 +659,18 @@ precision = 5
         molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, uncertainty_method=:JackKnife)
         write_analysis(molar_vol_analysis, path; name="Also with jackknifing!")
 
+            # one particular error prone case        
+        co2_000_p = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031]
+        co2_000_c = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482]
+        co2_000_dil_p = [0, 44.5, 104.6, 153.4, 231, 336.8, 381.5, 433.5, 470.3] .* 0.00689476
+        co2_000_frac_dil = [0 ± 0, 0.012127622 ± 0.00044235, 0.026889891 ± 0.000985522, 0.036407288 ± 0.001338418, 0.048826916 ± 0.001802068, 0.06476425 ± 0.00240217, 0.071486539 ± 0.002656993, 0.078237062 ± 0.00291389, 0.08335314 ± 0.003109253]
+        iso = IsothermData(partial_pressures_mpa = co2_000_p, concentrations_cc = co2_000_c)
+        dmmodel = fit_model(DualMode(), iso; uncertainty_method = :JackKnife)
+        co2_000_mva_many_param = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, n_params=4)
+        co2_000_mva_few_params = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, n_params=3)
+        @test Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) != Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) 
+        @show Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) 
+        @show Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) 
 
     end
 
