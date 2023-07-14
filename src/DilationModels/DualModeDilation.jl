@@ -1,11 +1,11 @@
 struct DualModeDilation end
 
 struct DualModeDilationModel{T} <: DilationModel
-    vd::T
-    f::T
-    ch::T
-    b::T
-    kd::T
+    vd::T  # cm3(pol) / cm3(stp)
+    f::T   # unitless
+    ch::T  # cc/cc
+    b::T   # 1/MPa
+    kd::T  # cc/cc / MPa
 end
 
 function DualModeDilationModel(vd, f, m::DualModeModel)
