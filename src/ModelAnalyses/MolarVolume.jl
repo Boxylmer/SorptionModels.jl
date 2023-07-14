@@ -13,6 +13,8 @@ struct MolarVolumeAnalysis
     diagnostic_dp_dc
     diagnostic_dilation_derivatives
     diagnostic_volumes
+
+    dilation_model::DilationModel
 end
 
 """
@@ -79,5 +81,5 @@ function MolarVolumeAnalysis(sorptionmodel::SorptionModel, pressures_mpa::Abstra
 
     volumes = (continuous_dilation_derivatives .+ isothermal_compressability) .* dp_dc .* MembraneBase.CC_PER_MOL_STP # (1/MPa) * (Mpa / (cc/cc)) * (cc/mol) = cm3/mol
     return MolarVolumeAnalysis(pressures_mpa, concentrations, dp_dc, frac_dilations, continuous_dilations, continuous_dilation_derivatives, volumes,
-        diagnostic_pressures_mpa, diagnostic_frac_dilations, diagnostic_concentrations, diagnostic_dp_dc, diagnostic_dilation_derivatives, diagnostic_volumes)
+        diagnostic_pressures_mpa, diagnostic_frac_dilations, diagnostic_concentrations, diagnostic_dp_dc, diagnostic_dilation_derivatives, diagnostic_volumes, dilation_model)
 end
