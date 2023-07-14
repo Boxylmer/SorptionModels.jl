@@ -14,4 +14,4 @@ Fit a sorption model to an isotherm. If the data required for the model is not i
 
 Any keyword arguments get passed on to the specific model.
 """
-function fit_model(model, ::IsothermData) end
+function fit_model(model::SorptionModel, ::IsothermData) end

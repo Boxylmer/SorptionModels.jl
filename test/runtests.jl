@@ -384,6 +384,44 @@ precision = 5
         # @profview fit_transient_sorption_model(exp_data, FickianSorption(); uncertainty_method=:Bootstrap)
     end
 
+    @testset "Dilation Models" begin
+        pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
+        frac_dilations = ([0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] .± 0.02) ./ 100 
+        
+        # empirical dilation model
+        edm = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations)
+        edm_jk = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, :JackKnife)
+        edm_h = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, :Hessian)
+        
+        edm_n1 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 1)
+        edm_n2 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 2)
+        edm_n3 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 3)
+        edm_n4 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 4)
+
+        pred_edm = predict_dilation(edm, pressures_mpa)
+        pred_edm_jk = predict_dilation(edm_jk, pressures_mpa)
+        pred_edm_h = predict_dilation(edm_h, pressures_mpa)
+
+        @test edm == edm_n3
+
+        @test strip_measurement_to_value(pred_edm) == strip_measurement_to_value(pred_edm_jk) == strip_measurement_to_value(pred_edm_h)
+        @test edm_n1 != edm_n2 != edm_n3 != edm_n4
+       
+        @test size(predict_dilation_derivative(edm, ps))[1] == 5
+        
+        # dual mode dilation model
+        dmmodel = DualModeModel(0.01, 0.01, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
+        dmd = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel)
+        dmd_jk = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :JackKnife)
+        dmd_h = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :Hessian)
+
+        pred_dmd = predict_dilation(dmd, pressures_mpa)
+        pred_dmd_jk = predict_dilation(dmd_jk, pressures_mpa)
+        pred_dmd_h  = predict_dilation(dmd_h, pressures_mpa)
+
+        @test strip_measurement_to_value(pred_dmd) == strip_measurement_to_value(pred_dmd_jk) == strip_measurement_to_value(pred_dmd_h)
+    end
+
     isotherm_1 = IsothermData(;  # CH4 in TPBO-0.50 at 20C
         partial_pressures_mpa = [0.259163083, 0.680732225, 1.153210606, 1.681231582, 2.230997679, 2.726364496, 3.143840263],
         concentrations_cc = [20.06902712, 34.42914464, 44.07950458, 51.56463956, 57.01452812, 61.02024241, 63.74277795],
@@ -584,9 +622,26 @@ precision = 5
             co2_025_mva = MolarVolumeAnalysis(DualModeModel(74.09 ± 0.43, 4.616 ± 0.06, 13.61 ± 0.17), co2_025_dil_p, co2_025_frac_dil, 0)
             co2_025_mva.dfracional_dilation_dp
             co2_025_mva.continuous_dilations
+
+
+            # no uncertainty, dualmode
+            model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325)) # cc/mpa
+            pressures_mpa = [0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .* 0.101325
+            frac_dilations = [0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] ./ 100
+            molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations; modeltype=DualModeDilation())
+            res_no_uncertain = molar_vol_analysis.partial_molar_volumes_cm3_mol[3]
+    
+            # with uncertainty, dualmode
+            model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
+            pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
+            frac_dilations = ([0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] .± 0.02) ./ 100 
+            molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations; uncertainty_method = :JackKnife, modeltype=DualModeDilation())
+            res_uncertain = molar_vol_analysis.partial_molar_volumes_cm3_mol[3].val
+            @test res_no_uncertain == res_uncertain
+
         end
     end
-    
+
     # writers
     @testset "Analysis Writer Methods" begin
         results_folder = joinpath(@__DIR__, "writer_output")
@@ -669,8 +724,11 @@ precision = 5
         co2_000_mva_many_param = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, n_params=4)
         co2_000_mva_few_params = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, n_params=3)
         @test Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) != Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) 
-        @show Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) 
-        @show Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) 
+        @test Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) != Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) 
+
+        molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, uncertainty_method=:JackKnife, modeltype=DualModeDilation())
+        write_analysis(molar_vol_analysis, path; name="dualmode dilation & jackknife")
+        
 
     end
 

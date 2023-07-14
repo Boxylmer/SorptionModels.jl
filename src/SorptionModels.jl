@@ -17,12 +17,14 @@ module SorptionModels
 
     include("ForwardDiffOverMeasurements.jl")
 
+
+    # traditional sorption models
     include(joinpath("SorptionModels", "ModelMethods.jl"))
+    export fit_model
     export predict_concentration
     export a_predict_concentration
     export predict_pressure, predict_activity
     export infinite_dilution_solubility
-    export fit_model
 
     include(joinpath("SorptionModels", "DualMode.jl"))
     export fit_dualmode_model
@@ -39,10 +41,11 @@ module SorptionModels
     export calculate_swelled_polymer_density
     export fit_kij, fit_ksw
 
-
     include(joinpath("SorptionModels", "DGRPT.jl"))
     export DGRPT, DGRPTModel
 
+
+    # transient sorption models
     include(joinpath("TransientSorptionModels", "TransientSorptionModels.jl"))
     export fit_transient_sorption_model
     export get_diffusivity
@@ -55,6 +58,15 @@ module SorptionModels
     include(joinpath("TransientSorptionModels", "ModifiedBerensHopfenbergSorption.jl"))
     export ModifiedBerensHopfenbergSorption, ModifiedBerensHopfenbergSorptionModel
 
+
+    # dilation models
+    include(joinpath("DilationModels", "DilationModels.jl"))
+    export predict_dilation
+    export predict_dilation_derivative
+    include(joinpath("DilationModels", "EmpiricalDilation.jl"))
+    export EmpiricalDilation, EmpiricalDilationModel
+    include(joinpath("DilationModels", "DualModeDilation.jl"))
+    export DualModeDilation, DualModeDilationModel
 
     # Model specific analysis
     include(joinpath("ModelAnalyses", "VantHoffDualMode.jl"))
