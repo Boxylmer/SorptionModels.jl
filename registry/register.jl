@@ -1,4 +1,7 @@
 using LocalRegistry
+using Pkg
 using SorptionModels
 
-register(SorptionModels; registry="github.com/Boxylmer/MembraneRegistry")
+
+Pkg.Registry.update()
+register(SorptionModels; registry="MembraneRegistry")
