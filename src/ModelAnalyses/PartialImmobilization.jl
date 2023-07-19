@@ -1,6 +1,7 @@
-struct PartialImmobilizationModel{HMDT, LMDT, RXVT, RYVT, PMT, PBT, TKT}
+struct PartialImmobilizationModel{HMDT, LMDT, FT, RXVT, RYVT, PMT, PBT, TKT}
     henry_mode_diffusivity::HMDT
     langmuir_mode_diffusivity::LMDT
+    f::FT
     regression_x_values::RXVT
     regression_y_values::RYVT
 
@@ -33,8 +34,10 @@ function PartialImmobilizationModel(model::DualModeModel, pressures_mpa::Abstrac
     henry_mode_diffusivity = intercept / model.kd
     langmuir_mode_diffusivity = slope
 
+    f = langmuir_mode_diffusivity / henry_mode_diffusivity
+
     return PartialImmobilizationModel(
-        henry_mode_diffusivity, langmuir_mode_diffusivity,
+        henry_mode_diffusivity, langmuir_mode_diffusivity, f,
         regression_x_values, regression_y_values,
         pressures_mpa, permeabilities_barrer, temperature_k, model
         )

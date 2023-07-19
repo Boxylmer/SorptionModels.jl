@@ -1,52 +1,89 @@
-"""
-write_analysis(analysis::PartialImmobilizationModel, filepath::AbstractString; [analysis_name])
-write_dual_mode_diffusivity_deconvolution(analyses::AbstractVector{PartialImmobilizationModel}, filepath::AbstractString; [analysis_names])
+DEFAULT_PARTIAL_IMMOBILIZATION_ANALYSIS_NAME = "Partial Immobilization Analysis"
 
-Write a Partial Immobilization Model `analysis` out to a .csv titled by `filepath`. If analysis names are not provided, default names are created.
-Methods are provided for a single analysis, or vectors of analyses (all written to one file).
+"""
+write_analysis(analysis::PartialImmobilizationModel, workbook::XLSX.XLSXFile; [name])
+write_analysis(analysis::PartialImmobilizationModel, filepath::AbstractString; [name])
+
+Write a partial immobilization `analysis` out to a .xlsx `workbook`` or an .xlsx `filepath`. If a worksheet `name` is not provided, default names are created.
 
 See [`PartialImmobilizationModel`](@ref)
 """
-function write_analysis(
-    analysis::PartialImmobilizationModel, 
-    filepath::AbstractString; 
-    analyses_name = missing)
-    write_analysis([analysis], filepath; analyses_names = [analyses_name])
+function write_analysis(analysis::PartialImmobilizationModel, workbook::XLSX.XLSXFile; name=DEFAULT_PARTIAL_IMMOBILIZATION_ANALYSIS_NAME)
+    sheet = XLSX.addsheet!(workbook, name)
+    wrp = 1  # writer row position
+    wcp = 1  # writer col position
+
+    function write_vector_of_maybe_measurements(row, col, vec; write_errors=true)
+        sheet[row, col, dim=1] = strip_measurement_to_value(vec)
+        if write_errors
+            if eltype(vec) <: Measurement
+                sheet[row, col+1, dim=1] = [vecval.err for vecval in vec]
+            else
+                sheet[row, col+1, dim=1] = ["No uncertainty"]
+            end
+        end
+    end
+
+    function write_maybe_measurement(row, col, meas)
+        sheet[row, col] = strip_measurement_to_value(meas)
+        if typeof(meas) <: Measurement
+            sheet[row, col+1] = meas.err 
+        else
+            sheet[row, col+1] = "No uncertainty"
+        end
+    end
+    
+    sheet[wrp, wcp] = "Temperature (K)"
+    if analysis.model.use_fugacity == false
+        sheet[wrp, wcp + 1] = "P (MPa)"
+        sheet[wrp, wcp + 2] = "P σ"
+    else
+        sheet[wrp, wcp + 1] = "Fugacity (MPa)"
+        sheet[wrp, wcp + 2] = "Fugacity σ"
+    end
+    
+    sheet[wrp, wcp + 3] = "C (CC/CC)"
+    sheet[wrp, wcp + 4] = "C σ"
+
+    sheet[wrp, wcp + 5] = "Perm. (Barrer)"
+    sheet[wrp, wcp + 6] = "Perm. σ"
+    sheet[wrp, wcp + 7] = "DH (cm^2/s)"
+    sheet[wrp, wcp + 8] = "DH σ"   
+    sheet[wrp, wcp + 9] = "DD (cm^2/s)"
+    sheet[wrp, wcp + 10] = "DD σ"   
+    sheet[wrp, wcp + 11] = "F (Dh/Dd)"
+    sheet[wrp, wcp + 12] = "F σ"
+
+    if analysis.model.use_fugacity == false
+        sheet[wrp, wcp + 13] = "ch'*b/(1+bp)"
+        sheet[wrp, wcp + 14] = "ch'*b/(1+bp) σ"
+    else
+        sheet[wrp, wcp + 13] = "ch'*b/(1+bf)"
+        sheet[wrp, wcp + 14] = "ch'*b/(1+bf) σ"
+    end
+
+    wrp += 1
+
+    if !isnothing(analysis.temperature_k)
+        sheet[wrp, wcp] = typeof(analysis.temperature_k) <: Measurement ? analysis.temperature_k.val : analysis.temperature_k
+    else
+        sheet[wrp, wcp] = "Not specified"
+    end
+    write_vector_of_maybe_measurements(wrp, wcp + 1, analysis.pressures_mpa)
+    write_vector_of_maybe_measurements(wrp, wcp + 3, predict_concentration(analysis.model, analysis.pressures_mpa))
+    write_maybe_measurement(wrp, wcp + 5, analysis.permeabilities_barrer)
+    write_maybe_measurement(wrp, wcp + 7, analysis.langmuir_mode_diffusivity)
+    write_maybe_measurement(wrp, wcp + 9, analysis.henry_mode_diffusivity)
+    write_maybe_measurement(wrp, wcp + 11, analysis.f)
+    write_vector_of_maybe_measurements(wrp, wcp + 13, analysis.regression_x_values)
 end
 
-function write_analysis(
-    analyses::AbstractVector{<:PartialImmobilizationModel},
-    filepath::AbstractString;
-    analyses_names::AbstractVector = missing)
-    permeability_deconvolution_results = []
-
-    if ismissing(analyses_names)
-        analyses_names = "Analysis " .* string.(1:length(analyses))
+function write_analysis(analysis::PartialImmobilizationModel, filepath::AbstractString; name=DEFAULT_PARTIAL_IMMOBILIZATION_ANALYSIS_NAME)
+    if !isfile(filepath)
+        XLSX.openxlsx(filepath, mode="w") do _ end
     end
-
-    for (idx, analysis) in enumerate(analyses)
-        langmuir_diffusivity, henry_diffusivity = analysis.langmuir_mode_diffusivity, analysis.henry_mode_diffusivity
-        f = langmuir_diffusivity / henry_diffusivity
-        x_values = [measurement(xval).val for xval in analysis.regression_x_values]
-
-        # ch_b_over_1_plus_fp = model.ch * model.b / (1 .+ model.b .* corresponding_fugacities)
-        push!(permeability_deconvolution_results, [analyses_names[idx]])
-        push!(permeability_deconvolution_results, ["Temperature (K): ", strip_measurement_to_value(analysis.temperature_k)])
-        if analysis.model.use_fugacity == false
-            push!(permeability_deconvolution_results, ["Pressures (MPa): ", analysis.pressures_mpa...])
-        else
-            push!(permeability_deconvolution_results, ["Fugacities (MPa): ", analysis.pressures_mpa...])
-        end
-        push!(permeability_deconvolution_results, ["Permeabilities (Barrer): ", analysis.permeabilities_barrer...])
-        push!(permeability_deconvolution_results, ["Langmuir Diffusivity (cm^2/s): ", measurement(langmuir_diffusivity).val, "+/-", measurement(langmuir_diffusivity).err])
-        push!(permeability_deconvolution_results, ["Henry Diffusivity (cm^2/s): ", measurement(henry_diffusivity).val, "+/-", measurement(henry_diffusivity).err])
-        push!(permeability_deconvolution_results, ["F (Dh/Dd): ", measurement(f).val, "+/-", measurement(f).err])
-        push!(permeability_deconvolution_results, ["ch'*b/(1+bf)", x_values...])
+    
+    XLSX.openxlsx(filepath, mode="rw") do xf 
+        return write_analysis(analysis, xf; name=name)
     end
-    writedlm(
-        joinpath(
-            @__DIR__, 
-            filepath, 
-        ), permeability_deconvolution_results, ",")
-
 end

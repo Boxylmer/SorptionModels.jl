@@ -407,7 +407,7 @@ precision = 5
         @test strip_measurement_to_value(pred_edm) == strip_measurement_to_value(pred_edm_jk) == strip_measurement_to_value(pred_edm_h)
         @test edm_n1 != edm_n2 != edm_n3 != edm_n4
        
-        @test size(predict_dilation_derivative(edm, ps))[1] == 5
+        @test size(predict_dilation_derivative(edm, pressures_mpa))[1] == 7
         
         # dual mode dilation model
         dmmodel = DualModeModel(0.01, 0.01, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
@@ -661,7 +661,7 @@ precision = 5
         # no mobility factor implemented yet
         
         # Partial Immobilization 
-        path = joinpath(results_folder, "Partial Immobilization Model.csv")
+        path = joinpath(results_folder, "Partial Immobilization Model.xlsx")
         rm(path; force=true)
         model = DualModeModel(56.8, 7.4, 26.1; use_fugacity=true)
         permeabilities = [1221, 1091, 1038]
