@@ -53,11 +53,21 @@ function write_analysis(analysis::IsostericHeatAnalysis, workbook::XLSX.XLSXFile
     sheet[writer_row_position, writer_col_position] = "Conc (CC/CC)" 
     sheet[writer_row_position, writer_col_position + 1] = "ΔH_s (J/mol)" 
     sheet[writer_row_position, writer_col_position + 2] = "ΔH_s err (J/mol)" 
+    sheet[writer_row_position, writer_col_position + 3] = "ΔS_s (J/molK)" 
+    sheet[writer_row_position, writer_col_position + 4] = "ΔS_s err (J/molK)" 
+    sheet[writer_row_position, writer_col_position + 5] = "S0 (J/molK) (S0 = exp(ΔS_s/R))" 
+    sheet[writer_row_position, writer_col_position + 6] = "S0 err (J/molK)"
+
     writer_row_position += 1
     sheet[writer_row_position, writer_col_position, dim=1] = [measurement(conc).val for conc in analysis.sampled_concentrations]
     sheet[writer_row_position, writer_col_position + 1, dim=1] = [measurement(heat).val for heat in analysis.isosteric_heat_at_conc]
     sheet[writer_row_position, writer_col_position + 2, dim=1] = [measurement(heat).err for heat in analysis.isosteric_heat_at_conc]
 
+    sheet[writer_row_position, writer_col_position + 3, dim=1] = [measurement(entropy).val for entropy in analysis.isosteric_entropy_at_conc]
+    sheet[writer_row_position, writer_col_position + 4, dim=1] = [measurement(entropy).err for entropy in analysis.isosteric_entropy_at_conc]
+
+    sheet[writer_row_position, writer_col_position + 5, dim=1] = [measurement(factor).val for factor in analysis.pre_exponential_factors]
+    sheet[writer_row_position, writer_col_position + 6, dim=1] = [measurement(factor).err for factor in analysis.pre_exponential_factors]
 end
 
 # todo all of these "write analysis" functions, when given a filepath, could be combined

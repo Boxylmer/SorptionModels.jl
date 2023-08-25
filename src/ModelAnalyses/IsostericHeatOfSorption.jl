@@ -8,6 +8,8 @@ struct IsostericHeatAnalysis
     pressure_vectors # MPa
     ln_pressure_vectors  # ln(mpa)
     isosteric_heat_at_conc # J/mol
+    isosteric_entropy_at_conc # j/(mol*K)
+    pre_exponential_factors # (cc/cc) / MPa
 end
 
 """
@@ -59,17 +61,29 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData};
     # calculate the interpolated pressure curves and their logarithms (Base e)
     pressure_curves = [predict_pressure.(sorption_models, conc) for conc in sampled_concentrations]
     ln_pressure_curves = [log.(pressure_curve) for pressure_curve in pressure_curves]
+    
+
 
     # finally, actually get the slopes (linear fittings), and multiply by R to get the isosteric heats. 
     # If we're accounting for non-ideal terms, we multiply by Rz instead (where z is compressibility)
     isosteric_heat_at_conc = []
-    for ln_pressure_curve in ln_pressure_curves
-        slope, _ =  fit_linear_data(inverse_temps, ln_pressure_curve)
+    isosteric_entropy_at_conc = []
+    pre_exponential_factors = []
+
+
+    for (i, ln_pressure_curve) in enumerate(ln_pressure_curves)
+        slope, intercept =  fit_linear_data(inverse_temps, ln_pressure_curve)
         push!(isosteric_heat_at_conc, slope * MembraneBase.R_J_MOL_K)
+        
+        isosteric_entropy = MembraneBase.R_J_MOL_K * (log(sampled_concentrations[i]) - intercept)
+        push!(isosteric_entropy_at_conc, isosteric_entropy)
+
+        pre_exponential_factor = sampled_concentrations[i] * exp(-intercept)  # (cc/cc) / (MPa)
+        push!(pre_exponential_factors, pre_exponential_factor)
     end
 
     return IsostericHeatAnalysis(
         isotherms, sorption_models, sampled_concentrations,
         temperatures, inverse_temps, pressure_curves, ln_pressure_curves, 
-        isosteric_heat_at_conc)
+        isosteric_heat_at_conc, isosteric_entropy_at_conc, pre_exponential_factors)
 end
