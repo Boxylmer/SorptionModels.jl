@@ -1,7 +1,7 @@
 name = "SorptionModels"
 uuid = "44adabc6-386d-4db0-bb6e-0f7b06129544"
 authors = ["Will <sypheren@gmail.com> and contributors"]
-version = "0.1.50"
+version = "0.1.51"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
@@ -16,11 +16,13 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
-julia = "1"
 Measurements = "< 2.9"
+julia = "1"
 
 [extras]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "Plots", "BenchmarkTools"]

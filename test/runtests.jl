@@ -1,4 +1,3 @@
-using Revise
 using SorptionModels
 using Test
 using Measurements
