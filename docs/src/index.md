@@ -9,7 +9,7 @@ SorptionModels.jl provides a number of models and which describe solubility in p
 Most methods are designed to operate on **isotherms**. This is accessed, computationally speaking, through `IsothermData` structs, defined in MemrbaneBase. # todo link this here
 
 !!! tip 
-    Some models have convenience methods that circumvent the need to wrap data in an isotherm, but you are more likely to encounter user mistakes by doing so. For example, when fitting [Dual Mode](@ref) models for use in a [Partial Immobilization](@ref) analysis, you must be careful to ensure you're using fugacity instead of pressure. Ensuring that you're fitting with fugacities is as easy as setting the keyword `use_fugacity=true` when using IsothermStructs.
+    Some models have convenience methods that circumvent the need to wrap data in an isotherm, but you are more likely to encounter user mistakes by doing so. For example, when fitting [Dual Mode](@ref) models for use in a [Partial Immobilization](@ref) analysis, you must be careful to ensure you're using fugacity instead of pressure. Ensuring that you're fitting with fugacities is as easy as setting the keyword `use_fugacity=true` when using IsothermData structs.
 
 Models are broken down into three categories, each serving a particular range of purposes with some overlap:
 
