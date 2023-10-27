@@ -646,7 +646,7 @@ precision = 5
         results_folder = joinpath(@__DIR__, "writer_output")
 
         # VHDM 
-        path = joinpath(results_folder, "Vant Hoff Dual Mode Analysis.xlsx")
+        path = joinpath(results_folder, "Vant Hoff Dual Mode.xlsx")
         rm(path; force=true)
         write_analysis(VantHoffDualModeAnalysis(isotherms), path)
 
