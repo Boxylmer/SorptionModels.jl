@@ -50,6 +50,5 @@ function find_dilation_function_params(pressures_mpa, frac_dilations, func::Func
     end
 end
 
-# todo docs
 "Get the derivative of a dilation vs pressure curve at a given pressure."
 predict_dilation_derivative(dilation_model::DilationModel, pressures_mpa) = ForwardDiff.derivative.(x -> predict_dilation(dilation_model, x), pressures_mpa)

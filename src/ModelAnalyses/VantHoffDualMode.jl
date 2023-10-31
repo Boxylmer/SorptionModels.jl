@@ -1,4 +1,4 @@
-struct VantHoffDualModeAnalysis  # todo parameterization, this is really just a container that's called once (when optimized)
+struct VantHoffDualModeAnalysis 
     ch0_final
     b0_final
     kd0_final

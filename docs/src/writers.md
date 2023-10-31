@@ -1,4 +1,4 @@
-# Writers
+# Writer Methods
 
 ```@autodocs
 Modules = [SorptionModels]
@@ -12,7 +12,5 @@ Pages = [
     "Writers/WriteMobilityFactor.jl",
     "Writers/WriteThermoFactor.jl",
 ]
-
-- Mobility and Thermodynamic factors do not have writers (yet!)
-
 ```
+- Mobility and Thermodynamic factors do not have writers (yet!)
