@@ -10,7 +10,6 @@ function predict_dilation(model, _...)
     @error "Dilation not implemented for $t"
 end
 
-
 """
     fit_model(model, pressures_mpa, fractional_dilations, [uncertainty_method])
 
@@ -52,4 +51,5 @@ function find_dilation_function_params(pressures_mpa, frac_dilations, func::Func
 end
 
 # todo docs
+"Get the derivative of a dilation vs pressure curve at a given pressure."
 predict_dilation_derivative(dilation_model::DilationModel, pressures_mpa) = ForwardDiff.derivative.(x -> predict_dilation(dilation_model, x), pressures_mpa)

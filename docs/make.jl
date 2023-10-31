@@ -17,13 +17,13 @@ makedocs(;
             "Empirical Models" => "models/empirical_models.md",
             "Fundamental Models" => "models/fundamental_models.md",
             "Transient Models" => "models/transient_models.md",
+            "Dilation Models" => "models/dilation_models.md"
         ],
-        "Model Analyses" => [
-
-        ],
-        # "Internals" => "misc.md"
+        "Model Analyses" => "model analyses.md",
+        "Analysis Writers" => "writers.md",
+        
+        "Internals" => "internals.md"
     ],
-    checkdocs = :none,
 )
 
 deploydocs(;

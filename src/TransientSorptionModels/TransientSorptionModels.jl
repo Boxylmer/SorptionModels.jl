@@ -164,4 +164,4 @@ Get the diffusivity of the polymer described by the transient sorption model.
 function get_diffusivity(model::TransientSorptionModel, semi_thickness_cm::Number)
     return model.k_f * (2 * semi_thickness_cm)^2 / pi^2
 end
-get_diffusivity(model::TransientSorptionModel, semi_thickness_cm::Missing) = missing  # isn't this redundant?
+get_diffusivity(_::TransientSorptionModel, _::Missing) = missing  # isn't this redundant?

@@ -2,14 +2,20 @@ struct DGRPT end
 const default_dgrpt_taylor_expansion_order = 5  # todo change to 1 and runtests
 
 """
-    Requires that in the kijmatrix, the polymer is the first index. The remaining indexes must match `penetrants`.
+    DGRPTModel(bulk_model, polymer_model, polymer_dry_density)
 
+Create a DGRPT sorption model, using two equations of state, one representing the bulk phase and one representing the polymer phase. 
+
+Notes:
+- The `polymer_dry_density` should reflect the density of the pure polymer at STP. 
+- Requires that these models contain the polymer is the first index when referencing compositions and interaction parameters. The remaining indexes must match `penetrants` in the predictions functions.
+
+`B.D. Marshall, R. Mathias, R.P. Lively, B.A. McCool, Theoretically Self-Consistent Nonequilibrium Thermodynamics of Glassy Polymer Theory for the Solubility of Vapors and Liquids in Glassy Polymers, Ind. Eng. Chem. Res. 60 (2021) 13377–13387. https://doi.org/10.1021/acs.iecr.1c02194.`
 """
-
 struct DGRPTModel{BMT, POLYMT, PDT} <: SorptionModel
-    bulk_model::BMT                 # [ChemicalParameters]
-    polymer_model::POLYMT           # ChemicalParameters
-    polymer_dry_density::PDT        # number
+    bulk_model::BMT               
+    polymer_model::POLYMT         
+    polymer_dry_density::PDT      
 end
 
 function predict_concentration(

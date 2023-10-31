@@ -13,7 +13,12 @@ struct IsostericHeatAnalysis
 end
 
 """
-    (isotherms::AbstractVector{<:IsothermData}; model=DualMode(), num_points=25) 
+    IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; 
+        [model=DualMode()], 
+        [num_points=25],
+        [use_vant_hoff_constraints=false],
+        [gab_pressure_conversion_funcs=missing], 
+        [gab_activity_conversion_funcs=missing]) 
 
 Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
 - If the Dual Mode model is used, `use_vant_hoff_constraints` will constrain the dual mode fittings with respect to temperature. (see `VantHoffDualModeAnalysis`)

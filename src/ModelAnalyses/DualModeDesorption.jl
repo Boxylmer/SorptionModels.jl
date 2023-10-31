@@ -5,6 +5,27 @@ struct DualModeDesorption{SMT, DMT}
     isotherm::IsothermData
 end
 
+"""
+    DualModeDesorption(
+        isotherm::IsothermData; 
+        [use_fugacity=false], 
+        [uncertainty_method=nothing], 
+        [naive=false], 
+        [share_b=true], 
+        [verbose=false]
+    ) 
+
+Fit two DualMode models to an isotherm which has both sorbing and desorbing data points. 
+
+This function assumes that the isotherm has exactly one sorbing run followed by exactly one desorbing run. Problems may occur if the isotherm does multiple sorbing -> desorbing transitions.
+
+Optional Arguments:
+- use_fugacity: Default: false. Whether or not to fit the models using the `isotherm`s fugacity field rather than pressure. 
+- uncertainty_method: Default: nothing.  Supports `:JackKnife` uncertainty.
+- naive: Default: false. If true, will fit the two isotherms completely independently.
+- share_b: Default: true. Whether or not the sorbing and desorbing dual mode models will share an affinity parameter. This reduces the model to 5 total fitted parameters and is presumed to be more physically realistic.
+- verbose: Default: false. If true, will report warnings if some combination of the previous arguments are issue-prone. 
+"""
 function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertainty_method=nothing, naive=false, share_b=true, verbose=false)
     sorbing_isotherm = increasing_concentration(isotherm)
     desorbing_isotherm = remove_increasing_concentration_steps(isotherm)

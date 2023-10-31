@@ -25,11 +25,11 @@ predict_dilation(m::EmpiricalDilationModel, pressures_mpa) = dilation_empirical_
 Fit the dilation data to an empirical dilation model with no physical meaning. This model is intended to fit any dilation curve given enough parameters. 
 The user may specify up to 4 empirical paramteres. Loosely, the use of each parameter is as follows:
 - n_params = 1: Linear dilation
-- n_params = 2: Naieve dual mode like dilation
+- n_params = 2: Naive dual mode like dilation
 - n_params = 3: Dual mode like dilation
 - n_params = 4: Dual mode like dilation with concave down or tapering behavior permitted
 
-If using `uncertainty_method` (:JackKnife or :Hessian implemented), each extra parameter will *greatly* increase the resulting uncertainty, as this model is completely empirical.
+If using `uncertainty_method` (`:JackKnife` or `:Hessian` implemented), each extra parameter will *greatly* increase the resulting uncertainty, as this model is completely empirical.
 """
 function fit_model(::EmpiricalDilation, pressures_mpa, frac_dilations, uncertainty_method=nothing; n_params=3, kwargs...)
     start = ones(n_params)

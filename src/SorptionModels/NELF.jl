@@ -5,9 +5,16 @@ struct NELF end
 
 
 """
-    Requires that in the kijmatrix, the polymer is the first index. The remaining indexes must match `penetrants`.
-"""
+    NELFModel(bulk_model, polymer_model, polymer_dry_density)
 
+Create a NELF sorption model, using two equations of state, one representing the bulk phase and one representing the polymer phase. 
+
+Notes:
+- The `polymer_dry_density` should reflect the density of the pure polymer at STP. 
+- Requires that these models contain the polymer is the first index when referencing compositions and interaction parameters. The remaining indexes must match `penetrants` in the predictions functions.
+
+`F. Doghieri, G.C. Sarti, Nonequilibrium Lattice Fluids: A Predictive Model for the Solubility in Glassy Polymers, Macromolecules. 29 (1996) 7885–7896. https://doi.org/10.1021/ma951366c.`
+"""
 struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     bulk_model::BMT                 # EOS
     polymer_model::POLYMT           # EOS

@@ -1,8 +1,8 @@
 DEFAULT_PARTIAL_IMMOBILIZATION_ANALYSIS_NAME = "Partial Immobilization Analysis"
 
 """
-write_analysis(analysis::PartialImmobilizationModel, workbook::XLSX.XLSXFile; [name])
-write_analysis(analysis::PartialImmobilizationModel, filepath::AbstractString; [name])
+    write_analysis(analysis::PartialImmobilizationModel, workbook::XLSX.XLSXFile; [name])
+    write_analysis(analysis::PartialImmobilizationModel, filepath::AbstractString; [name])
 
 Write a partial immobilization `analysis` out to a .xlsx `workbook`` or an .xlsx `filepath`. If a worksheet `name` is not provided, default names are created.
 

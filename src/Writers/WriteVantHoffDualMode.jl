@@ -1,6 +1,6 @@
 """
-write_analysis(analysis::VantHoffDualModeAnalysis, workbook::XLSX.XLSXFile; [name])
-write_analysis(analysis::VantHoffDualModeAnalysis, filepath::AbstractString; [name])
+    write_analysis(analysis::VantHoffDualModeAnalysis, workbook::XLSX.XLSXFile; [name])
+    write_analysis(analysis::VantHoffDualModeAnalysis, filepath::AbstractString; [name])
 
 Write a Vant Hoff Dual Mode `analysis` out to a .xlsx `workbook`` or an .xlsx `filepath`. If a worksheet `name` is not provided, default names are created.
 

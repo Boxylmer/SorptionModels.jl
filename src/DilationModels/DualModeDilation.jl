@@ -21,7 +21,16 @@ predict_dilation(m::DualModeDilationModel, pressures_mpa) = dualmode_dilation_fu
     fit_model(::DualModeDilation, pressures_mpa, frac_dilations, uncertainty_method=nothing; kwargs...)
 
 Fit the dilation data to an dual mode dilation model, using a dual mode model previoulsy fit to concentration and pressure data. 
-# todo include model math here
+
+
+Dilation is described by two additional parameters, ``V_D`` and ``f`` using the following model:
+
+``{\\Delta}{V} / V_0 = V_D (k_D \\cdot p + \\frac{f C_{H}^{\'}bp}{1+bp})``
+- ``V_D`` represents the effective condensed penetrant molar volume.
+- ``f`` represents an empirical fit describing how much the langmuir mode participates in dilation.
+
+
+`J.D. Moon, M. Galizia, H. Borjigin, R. Liu, J.S. Riffle, B.D. Freeman, D.R. Paul, Water Vapor Sorption, Diffusion, and Dilation in Polybenzimidazoles, Macromolecules. 51 (2018) 7197–7208. https://doi.org/10.1021/acs.macromol.8b01659.`
 """
 function fit_model(::DualModeDilation, pressures_mpa, frac_dilations, model::DualModeModel, uncertainty_method=nothing; kwargs...)
     if model.use_fugacity

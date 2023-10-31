@@ -5,8 +5,8 @@ end
 IHAH = IsostericHeatAnalysisHelper
 
 """
-write_analysis(analysis::IsostericHeatAnalysis, workbook::XLSX.XLSXFile; [name])
-write_analysis(analysis::IsostericHeatAnalysis, filepath::AbstractString; [name])
+    write_analysis(analysis::IsostericHeatAnalysis, workbook::XLSX.XLSXFile; [name])
+    write_analysis(analysis::IsostericHeatAnalysis, filepath::AbstractString; [name])
 
 Write an isosteric heat `analysis` out to a .xlsx `workbook`` or an .xlsx `filepath`. If a worksheet `name` is not provided, default names are created.
 See [`IsostericHeatAnalysis`](@ref)

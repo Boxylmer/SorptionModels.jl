@@ -2,8 +2,8 @@
 DEFAULT_MOLAR_VOLUME_ANALYSIS_NAME = "Partial Molar Volume Analysis"
 
 """
-write_analysis(analysis::MolarVolumeAnalysis, workbook::XLSX.XLSXFile; [name])
-write_analysis(analysis::MolarVolumeAnalysis, filepath::AbstractString; [name])
+    write_analysis(analysis::MolarVolumeAnalysis, workbook::XLSX.XLSXFile; [name])
+    write_analysis(analysis::MolarVolumeAnalysis, filepath::AbstractString; [name])
 
 Write a molar volume `analysis` out to a .xlsx `workbook`` or an .xlsx `filepath`. If a worksheet `name` is not provided, default names are created.
 

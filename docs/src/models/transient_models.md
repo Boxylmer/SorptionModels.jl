@@ -1,6 +1,6 @@
 # Transient Sorption Models
-
-```@docs
-fit_transient_sorption_model
-
+All transient models share the following functionality
+```@autodocs
+Modules = [SorptionModels]
+Pages = ["TransientSorptionModels/TransientSorptionModels.jl"]
 ```

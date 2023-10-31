@@ -37,7 +37,7 @@ Obviously, all sorption models share the common aim to *predict penetrant-polyme
 All models are fit via `fit_model` and generate data through `predict_sorption`.
 Generally, you can hand an isotherm (from MembraneBase) and the right supplementary information (if needed) over to... 
 ```@docs
-SorptionModels.fit_model(model, ::SorptionModels.IsothermData)
+SorptionModels.fit_model(model::SorptionModels.SorptionModel, ::SorptionModels.IsothermData)
 ```
 ...then immediately get the fitted isotherm back through...
 ```@docs

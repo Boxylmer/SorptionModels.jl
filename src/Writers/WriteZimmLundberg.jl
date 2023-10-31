@@ -1,6 +1,6 @@
 """
-write_analysis(analysis::ZimmLundbergAnalysis, workbook::XLSX.XLSXFile; [name])
-write_analysis(analysis::ZimmLundbergAnalysis, filepath::AbstractString; [name])
+    write_analysis(analysis::ZimmLundbergAnalysis, workbook::XLSX.XLSXFile; [name])
+    write_analysis(analysis::ZimmLundbergAnalysis, filepath::AbstractString; [name])
 
 Write a Zimm Lundberg `analysis` out to a .xlsx `workbook`` or an .xlsx `filepath`. If a worksheet `name` is not provided, default names are created.
 
