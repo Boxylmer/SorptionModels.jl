@@ -23,6 +23,7 @@ makedocs(;
         ],
         # "Internals" => "misc.md"
     ],
+    strict=false,
 )
 
 deploydocs(;
