@@ -7,7 +7,7 @@ Predict fractional dilation with a dilation model. Predictions are generally ret
 """
 function predict_dilation(model, _...)
     t = typeof(model)
-    @error "Dilation not implemented for $t"
+    throw(ErrorException("Dilation not implemented for $t"))
 end
 
 """
@@ -21,7 +21,7 @@ Any keyword arguments get passed on to the specific model.
 """
 function fit_model(model::DilationModel, _...)
     t = typeof(model)
-    @error "Fitting not implemented for $t"
+    throw(ErrorException("Fitting not implemented for $t")) 
 end
 
 

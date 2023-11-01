@@ -410,15 +410,23 @@ precision = 5
         
         # dual mode dilation model
         dmmodel = DualModeModel(0.01, 0.01, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
+        dmmodel_throws = DualModeModel(0.01, 0.01, 7.8037/(16.698 * 0.101325) ± 0.05; use_fugacity=true) # cc/mpa
+        @test_throws ArgumentError fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel_throws)
         dmd = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel)
         dmd_jk = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :JackKnife)
         dmd_h = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :Hessian)
-
+        @test_throws ArgumentError fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :InvalidErrorProp)
         pred_dmd = predict_dilation(dmd, pressures_mpa)
         pred_dmd_jk = predict_dilation(dmd_jk, pressures_mpa)
         pred_dmd_h  = predict_dilation(dmd_h, pressures_mpa)
 
         @test strip_measurement_to_value(pred_dmd) == strip_measurement_to_value(pred_dmd_jk) == strip_measurement_to_value(pred_dmd_h)
+    
+        struct BadDilationModel <: SorptionModels.DilationModel end
+        unimplemented_model = BadDilationModel()
+        @test_throws ErrorException predict_dilation(unimplemented_model)
+        # @test_throws f
+        
     end
 
     isotherm_1 = IsothermData(;  # CH4 in TPBO-0.50 at 20C
@@ -561,6 +569,18 @@ precision = 5
                 partial_pressures_mpa = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031, 2.60974313, 1.199714642, 0.575992209, 0.30991402, 0.145032338],
                 concentrations_cc = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482, 111.9833899, 98.93545196, 81.21343867, 66.62816092, 50.92125421]
             )
+            isotherm_desorption_fugacity_bad = IsothermData(; 
+                fugacities_mpa = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031, 2.60974313],
+                concentrations_cc = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482, 111.9833899]
+            )
+            DualModeDesorption(isotherm_desorption_fugacity_bad; use_fugacity=true) # run with fugacity
+            @test_logs DualModeDesorption(isotherm_desorption_fugacity_bad; use_fugacity=true, verbose=true)
+            isotherm_very_bad = IsothermData(; 
+                partial_pressures_mpa = [0.241333352, 0.600763584, 1.04806673, 1.466095481, 1.951571285, 2.499847618, 3.142683031],
+                concentrations_cc = [41.48924079, 62.79313671, 77.9590348, 88.08019013, 96.61909374, 105.7659302, 114.9523482]
+            )
+            @test isnothing(DualModeDesorption(isotherm_very_bad))
+
             dmda = DualModeDesorption(isotherm_desorption)
             dmda_naive = DualModeDesorption(isotherm_desorption; naive=true)
             dmda_static_b = DualModeDesorption(isotherm_desorption; share_b=false)
@@ -568,6 +588,8 @@ precision = 5
             dmda_with_err = DualModeDesorption(isotherm_desorption; uncertainty_method=:JackKnife)
             dmda_naive_with_err = DualModeDesorption(isotherm_desorption; naive=true, uncertainty_method=:JackKnife)
             dmda_static_b_with_err = DualModeDesorption(isotherm_desorption; share_b=false, uncertainty_method=:JackKnife)
+
+            @test_throws ArgumentError DualModeDesorption(isotherm_desorption; uncertainty_method=:invalid)
 
             @test round(dmda_with_err.sorbing_model.ch.val; digits=1) == 71.3
             @test round(dmda_with_err.sorbing_model.ch.err; digits=1) == 2.6
@@ -584,7 +606,9 @@ precision = 5
             iso = IsothermData(partial_pressures_mpa = pres, concentrations_cc = conc)
             @test_nowarn DualModeDesorption(iso; uncertainty_method=:JackKnife)
 
-    
+
+            @test round(predict_concentration(dmda_naive_with_err, pres)[1][1].val) == 77
+            @test predict_concentration(dmda_naive_with_err, iso)[1][1] == predict_concentration(dmda_naive_with_err, partial_pressures(iso, component=1))[1][1]
             # direct_pressures = partial_pressures(isotherm_desorption; component=1)
             # direct_concentrations = concentration(isotherm_desorption; component=1)
             # predicted_pressures = 0:0.05:maximum(direct_pressures)

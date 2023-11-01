@@ -31,7 +31,7 @@ function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertai
     desorbing_isotherm = remove_increasing_concentration_steps(isotherm)
 
     if use_fugacity
-        max_p = maximum(fugacity(isotherm; component=1))
+        max_p = maximum(fugacities(isotherm; component=1))
     else
         max_p = maximum(partial_pressures(isotherm; component=1))
     end
@@ -55,7 +55,7 @@ function DualModeDesorption(isotherm::IsothermData; use_fugacity=false, uncertai
     concs = concentration(isotherm; component=1)
 
     if use_fugacity
-        pres = fugacity(isotherm; component=1)
+        pres = fugacities(isotherm; component=1)
     else
         pres = partial_pressures(isotherm; component=1)
     end
@@ -106,11 +106,7 @@ function make_dualmode_desorption_fitting_function(use_fugacity, share_b=true)::
 
         # split the isotherm into a sorption and desorption component
         sorbing_isotherm = increasing_concentration(iso)
-        desorbing_isotherm = remove_increasing_concentration_steps(iso)
-        if num_steps(sorbing_isotherm) <= 0 || num_steps(desorbing_isotherm) <= 0
-            throw(ErrorException("Isotherm either did not contain any sorption steps or did not contain any desorption steps."))
-        end
-        
+        desorbing_isotherm = remove_increasing_concentration_steps(iso)       
     
         # optimize the target
         if share_b
