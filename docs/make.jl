@@ -25,7 +25,6 @@ makedocs(;
     ],
 )
 
-
 deploydocs(;
     repo="github.com/Boxylmer/SorptionModels.jl.git",
     devbranch="master",
