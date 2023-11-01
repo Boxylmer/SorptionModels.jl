@@ -21,7 +21,6 @@ makedocs(;
         ],
         "Model Analyses" => "model analyses.md",
         "Analysis Writers" => "writers.md",
-        
         "Internals" => "internals.md"
     ],
 )
