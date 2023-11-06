@@ -505,6 +505,15 @@ precision = 5
             @test ish_analysis_but_with_vhdm.isosteric_heat_at_conc[4].val ≈ -18118.53623433742
         end
 
+        @testset "Webb Isosteric Heat Analysis" begin
+            eos_ch4 = PR("CH4")
+            eos_z(p, t) = compressibility_factor(eos_ch4, p, t)
+            wish_analysis_no_eos = SorptionModels.WebbIsostericHeatAnalysis(isotherms)
+            wish_analysis = SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z)
+            @show wish_analysis_no_eos.isosteric_heat_at_conc
+
+        end
+
         # Mobility Factor
         @testset "Mobility Factor and Thermo Factor" begin
             # water diffusion in TPBO-0.25 at 25C, taken from Box et al., in BH model 
@@ -682,6 +691,15 @@ precision = 5
         path = joinpath(results_folder, "Isosteric Heat Analysis.xlsx")
         rm(path; force=true)
         write_analysis(IsostericHeatAnalysis(isotherms), path)
+
+        # Webb Isosteric Heat
+        path = joinpath(results_folder, "Webb Isosteric Heat Analysis.xlsx")
+        rm(path; force=true)
+        eos_z(p, t) = compressibility_factor(PR("CH4"), p, t) 
+        write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z), path)
+        write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, (p, t) -> 1), path, name="ideal z")
+        
+
 
         # no thermodynamic factor implemented yet
 

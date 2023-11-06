@@ -75,6 +75,9 @@ module SorptionModels
     include(joinpath("ModelAnalyses", "IsostericHeatOfSorption.jl"))
     export IsostericHeatAnalysis
 
+    include(joinpath("ModelAnalyses", "WebbIsostericHeat.jl"))
+    # export TODO
+    
     include(joinpath("ModelAnalyses", "ThermoFactor.jl"))
     export ThermodynamicFactorAnalysis
 
