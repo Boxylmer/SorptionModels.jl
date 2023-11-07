@@ -493,7 +493,10 @@ precision = 5
             gab_pressure_conversion_funcs = [(p) -> p/pvap for pvap in g_isotherm_pvaps]
             gab_activity_conversion_funcs = [(a) -> a*pvap for pvap in g_isotherm_pvaps]
             
+            eosmodel(p, t) = compressibility_factor(PR("CH4"), p, t) 
+            unideal_ish_analysis = IsostericHeatAnalysis(isotherms, eosmodel) 
             ish_analysis = IsostericHeatAnalysis(isotherms)
+            @test unideal_ish_analysis.isosteric_heat_at_conc[2] ≠ ish_analysis.isosteric_heat_at_conc[2]
             ish_analysis_but_with_vhdm = IsostericHeatAnalysis(isotherms; use_vant_hoff_constraints=true)
             @test_throws ErrorException IsostericHeatAnalysis(isotherms; model=GAB())
             @test_nowarn ish_analysis_but_with_gab = IsostericHeatAnalysis(g_isotherms; model=GAB(), gab_pressure_conversion_funcs, gab_activity_conversion_funcs)
@@ -688,16 +691,15 @@ precision = 5
         write_analysis(VantHoffDualModeAnalysis(isotherms), path)
 
         # Isosteric Heat
-        path = joinpath(results_folder, "Isosteric Heat Analysis.xlsx")
-        rm(path; force=true)
-        write_analysis(IsostericHeatAnalysis(isotherms), path)
-
-        # Webb Isosteric Heat
-        path = joinpath(results_folder, "Webb Isosteric Heat Analysis.xlsx")
-        rm(path; force=true)
+        path = joinpath(results_folder, "Isosteric Heats.xlsx")
         eos_z(p, t) = compressibility_factor(PR("CH4"), p, t) 
-        write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z), path)
-        write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, (p, t) -> 1), path, name="ideal z")
+        rm(path; force=true)
+        write_analysis(IsostericHeatAnalysis(isotherms), path, name = "Ideal Koros")
+        write_analysis(IsostericHeatAnalysis(isotherms, eos_z), path, name = "PREoS Koros")
+        
+        # Webb Isosteric Heat
+        write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z), path, name = "Ideal Webb")
+        write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms), path, name="PREoS Webb")
         
 
 

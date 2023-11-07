@@ -9,6 +9,7 @@ Modules = [SorptionModels]
 Pages = [
     "ModelAnalyses/DualModeDesorption.jl",
     "ModelAnalyses/IsostericHeatOfSorption.jl",
+    "ModelAnalyses/WebbIsostericHeat.jl",
     "ModelAnalyses/MobilityFactor.jl",
     "ModelAnalyses/MolarVolume.jl",
     "ModelAnalyses/PartialImmobilization.jl",

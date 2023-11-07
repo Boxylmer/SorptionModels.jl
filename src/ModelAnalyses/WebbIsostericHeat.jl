@@ -19,7 +19,8 @@ end
         [use_vant_hoff_constraints=false]
     ) 
 
-Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
+Work in progress. Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration using a new derivation that utilizes compressability and molar volume rather than pressure.
+This derivation is worked out with entropies of sorption in mind, allowing for the calculation of the free energy of sorption given that the entropies are valid.  
 - `eosmodel`: A function that returns compressibility z when supplied a P (MPa) and T (K), i.e., z(P, T). When specified, will use this instead of assuming ideal behavior. 
 - If the Dual Mode model is used, `use_vant_hoff_constraints` will constrain the dual mode fittings with respect to temperature. (see `VantHoffDualModeAnalysis`)
 """
@@ -75,9 +76,6 @@ function WebbIsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eo
         for p_index in eachindex(pressure_curves)
     ]
 
-    for v in external_molar_volumes
-        println(v)
-    end
     # ln((cm3/mol / 1000cm3/L) / (L/mol)) = ln(L/mol / L/mol) -> no units
 
     # ln_inv_vol_curves = [(-MembraneBase.CC_PER_MOL_STP / 1000) ./ log.(mvs) for mvs in external_molar_volumes] 
@@ -95,6 +93,7 @@ function WebbIsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eo
         push!(isosteric_heat_at_conc, slope * MembraneBase.R_J_MOL_K)
         
         # Additionally, get the entropy of sorption (prototype, may be inaccurate)
+        
         isosteric_entropy = MembraneBase.R_J_MOL_K * (log(sampled_concentrations[i]) - intercept)
         push!(isosteric_entropy_at_conc, isosteric_entropy)
 

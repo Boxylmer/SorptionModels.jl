@@ -14,7 +14,7 @@ struct IsostericHeatAnalysis <: AbstractIsostericHeatAnalysis
 end
 
 """
-    IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; 
+    IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, [eosmodel=missing]; 
         [model=DualMode()], 
         [num_points=25],
         [use_vant_hoff_constraints=false],
@@ -22,15 +22,22 @@ end
         [gab_activity_conversion_funcs=missing]) 
 
 Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
+- `eosmodel`: A function that returns compressibility z when supplied a P (MPa) and T (K), i.e., z(P, T). When specified, will use this instead of assuming ideal behavior. 
 - If the Dual Mode model is used, `use_vant_hoff_constraints` will constrain the dual mode fittings with respect to temperature. (see `VantHoffDualModeAnalysis`)
 - If the GAB model is used, `gab_pressure_conversion_funcs` (converting pressure to activity) and `gab_activity_conversion_funcs` (convert activity to pressure) will need to be defined in the same order as the isotherms.
 """
-function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}; 
+function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmodel=missing; 
     model=DualMode(), num_points=25, 
     use_vant_hoff_constraints=false,
     gab_pressure_conversion_funcs=missing, 
     gab_activity_conversion_funcs=missing)
     
+    if ismissing(eosmodel)
+        z(p, t) = 1
+    else
+        z = eosmodel
+    end
+
     # first fit some models to each isotherm so that we can accurately interpolate
     if use_vant_hoff_constraints  && typeof(model) <: DualMode
         sorption_models = Vector(
@@ -75,11 +82,14 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData};
     pre_exponential_factors = []
 
 
+    all_z_values = [[z(pressure_curves[p_idx][t_idx], temperatures[t_idx]) for t_idx in eachindex(temperatures)] for p_idx in eachindex(pressure_curves)]
+    avg_z_values = sum.(all_z_values) ./ length.(all_z_values)
     for (i, ln_pressure_curve) in enumerate(ln_pressure_curves)
-        slope, intercept =  fit_linear_data(inverse_temps, ln_pressure_curve)
-        push!(isosteric_heat_at_conc, slope * MembraneBase.R_J_MOL_K)
+        slope, intercept = fit_linear_data(inverse_temps, ln_pressure_curve)
+        push!(isosteric_heat_at_conc, slope * avg_z_values[i] * MembraneBase.R_J_MOL_K)
         
         # Additionally, get the entropy of sorption (prototype, may be inaccurate)
+        # TODO does this need z as well?
         isosteric_entropy = MembraneBase.R_J_MOL_K * (log(sampled_concentrations[i]) - intercept)
         push!(isosteric_entropy_at_conc, isosteric_entropy)
 
