@@ -58,7 +58,21 @@ function write_analysis(analysis::AbstractIsostericHeatAnalysis, workbook::XLSX.
             sheet[writer_row_position + 1, writer_col_position + idx, dim=1] = [measurement.(vec_meas).val for vec_meas in vec] 
         end
     end
-   
+    
+    writer_row_position += num_isotherms + 2
+    sheet[writer_row_position, writer_col_position] = "PV/RT for each sampled point"
+    writer_row_position += 1
+    sheet[writer_row_position, writer_col_position] = "Sampled CC/CC"
+    sheet[writer_row_position, writer_col_position + 1, dim=2] = [measurement(conc).val for conc in analysis.sampled_concentrations]
+    writer_row_position +=1
+    sheet[writer_row_position, writer_col_position] = "T (K)"
+    sheet[writer_row_position + 1, writer_col_position, dim=1] = [measurement(temp).val for temp in analysis.temperatures]
+    
+    for (idx, vec) in enumerate(analysis.z_values)
+        sheet[writer_row_position, writer_col_position + idx] = "Z" 
+        sheet[writer_row_position + 1, writer_col_position + idx, dim=1] = [measurement.(vec_meas).val for vec_meas in vec] 
+    end
+
 
     # finally, show the found isosteric heats as a function of concentration
     writer_row_position += num_isotherms + 2

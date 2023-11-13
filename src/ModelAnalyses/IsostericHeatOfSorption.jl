@@ -11,6 +11,7 @@ struct IsostericHeatAnalysis <: AbstractIsostericHeatAnalysis
     isosteric_heat_at_conc # J/mol
     isosteric_entropy_at_conc # j/(mol*K)
     pre_exponential_factors # (cc/cc) / MPa
+    z_values
 end
 
 """
@@ -100,5 +101,6 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmod
     return IsostericHeatAnalysis(
         isotherms, sorption_models, sampled_concentrations,
         temperatures, inverse_temps, pressure_curves, ln_pressure_curves, 
-        isosteric_heat_at_conc, isosteric_entropy_at_conc, pre_exponential_factors)
+        isosteric_heat_at_conc, isosteric_entropy_at_conc, pre_exponential_factors,
+        all_z_values)
 end

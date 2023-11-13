@@ -1,4 +1,5 @@
 
+
 struct WebbIsostericHeatAnalysis <: AbstractIsostericHeatAnalysis
     isotherms
     sorption_models
@@ -10,6 +11,7 @@ struct WebbIsostericHeatAnalysis <: AbstractIsostericHeatAnalysis
     isosteric_heat_at_conc # J/mol
     isosteric_entropy_at_conc # j/(mol*K)
     pre_exponential_factors # (cc/cc) / MPa
+    z_values
 end
 
 """
@@ -104,5 +106,6 @@ function WebbIsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eo
     return WebbIsostericHeatAnalysis(
         isotherms, sorption_models, sampled_concentrations,
         temperatures, inverse_temps, pressure_curves, ln_inv_vol_curves, 
-        isosteric_heat_at_conc, isosteric_entropy_at_conc, pre_exponential_factors)
+        isosteric_heat_at_conc, isosteric_entropy_at_conc, pre_exponential_factors,
+        external_compressibilities)
 end

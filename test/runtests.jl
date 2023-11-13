@@ -513,7 +513,6 @@ precision = 5
             eos_z(p, t) = compressibility_factor(eos_ch4, p, t)
             wish_analysis_no_eos = SorptionModels.WebbIsostericHeatAnalysis(isotherms)
             wish_analysis = SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z)
-            @show wish_analysis_no_eos.isosteric_heat_at_conc
 
         end
 
@@ -541,7 +540,7 @@ precision = 5
             @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
             @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
         end
-
+        
         # Partial Immobilization Model
         @testset "Partial Immobilization Model" begin
             model = DualModeModel(56.8, 7.4, 26.1; use_fugacity=true)
