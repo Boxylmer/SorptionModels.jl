@@ -75,7 +75,7 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmod
     isotherm_concentration_vectors = [concentration(isotherm; component=1) for isotherm in isotherms]
     max_concentration = minimum([isotherm_concentration_vector[end] for isotherm_concentration_vector in isotherm_concentration_vectors])
     # and pick a set of concentrations to sample at below that maximum
-    sampled_concentrations = LinRange(1e-3, max_concentration, num_points)
+    sampled_concentrations = LinRange(1e-1, max_concentration, num_points)
     # calculate the interpolated pressure curves and their logarithms (Base e)
     pressure_curves = [predict_pressure.(sorption_models, conc) for conc in sampled_concentrations]
     ln_pressure_curves = [log.(pressure_curve) for pressure_curve in pressure_curves]

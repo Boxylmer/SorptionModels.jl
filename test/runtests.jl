@@ -509,8 +509,8 @@ precision = 5
             conc_no_constraint = ish_analysis.sampled_concentrations[4]
             conc_with_constraint = ish_analysis_but_with_vhdm.sampled_concentrations[4]
             @test conc_no_constraint == conc_with_constraint
-            @test ish_analysis.isosteric_heat_at_conc[4].val ≈ -18808.52702744859
-            @test ish_analysis_but_with_vhdm.isosteric_heat_at_conc[4].val ≈ -18118.53623433742
+            @test ish_analysis.isosteric_heat_at_conc[4].val ≈ -18815.424127650764
+            @test ish_analysis_but_with_vhdm.isosteric_heat_at_conc[4].val ≈ -18121.602388309566
         end
 
         @testset "Webb Isosteric Heat Analysis" begin
