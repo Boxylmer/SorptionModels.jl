@@ -20,18 +20,22 @@ end
         [num_points=25],
         [use_vant_hoff_constraints=false],
         [gab_pressure_conversion_funcs=missing], 
-        [gab_activity_conversion_funcs=missing]) 
+        [gab_activity_conversion_funcs=missing],
+        [linear_regression_error=true]) 
 
 Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vector of isotherms as a function of concentration.
 - `eosmodel`: A function that returns compressibility z when supplied a P (MPa) and T (K), i.e., z(P, T). When specified, will use this instead of assuming ideal behavior. 
 - If the Dual Mode model is used, `use_vant_hoff_constraints` will constrain the dual mode fittings with respect to temperature. (see `VantHoffDualModeAnalysis`)
 - If the GAB model is used, `gab_pressure_conversion_funcs` (converting pressure to activity) and `gab_activity_conversion_funcs` (convert activity to pressure) will need to be defined in the same order as the isotherms.
+- if `linear_regression_error` is true, each concentration will have uncertainties (Measurements.jl) calculated using the standard error of linear regression. If any inputs have uncertainty, downstream calculations' uncertainties will be used to weight the regression.  
 """
+
 function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmodel=missing; 
     model=DualMode(), num_points=25, 
     use_vant_hoff_constraints=false,
     gab_pressure_conversion_funcs=missing, 
-    gab_activity_conversion_funcs=missing)
+    gab_activity_conversion_funcs=missing,
+    linear_regression_error=true)
     
     if ismissing(eosmodel)
         z(p, t) = 1
@@ -76,17 +80,30 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmod
     pressure_curves = [predict_pressure.(sorption_models, conc) for conc in sampled_concentrations]
     ln_pressure_curves = [log.(pressure_curve) for pressure_curve in pressure_curves]
     
-    # finally, actually get the slopes (linear fittings), and multiply by R to get the isosteric heats. 
-    # If we're accounting for non-ideal terms, we multiply by Rz instead (where z is compressibility)
-    isosteric_heat_at_conc = []
-    isosteric_entropy_at_conc = []
-    pre_exponential_factors = []
-
-
+    
+    
+    
     all_z_values = [[z(pressure_curves[p_idx][t_idx], temperatures[t_idx]) for t_idx in eachindex(temperatures)] for p_idx in eachindex(pressure_curves)]
     avg_z_values = sum.(all_z_values) ./ length.(all_z_values)
+    
+    # finally, actually get the slopes (linear fittings), and multiply by R to get the isosteric heats. 
+    # If we're accounting for non-ideal terms, we multiply by Rz instead (where z is compressibility)
+    if linear_regression_error
+        VALTYPE = Measurement
+    else
+        VALTYPE = eltype(promote(all_z_values[1][1], sampled_concentrations[1]))
+    end
+
+    isosteric_heat_at_conc = VALTYPE[]
+    isosteric_entropy_at_conc = VALTYPE[]
+    pre_exponential_factors = VALTYPE[]
+    
     for (i, ln_pressure_curve) in enumerate(ln_pressure_curves)
         slope, intercept = fit_linear_data(inverse_temps, ln_pressure_curve)
+        if !linear_regression_error
+            slope = strip_measurement_to_value(slope)
+            intercept = strip_measurement_to_value(intercept)
+        end
         push!(isosteric_heat_at_conc, slope * avg_z_values[i] * MembraneBase.R_J_MOL_K)
         
         # Additionally, get the entropy of sorption (prototype, may be inaccurate)

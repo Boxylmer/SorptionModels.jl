@@ -496,6 +496,11 @@ precision = 5
             eosmodel(p, t) = compressibility_factor(PR("CH4"), p, t) 
             unideal_ish_analysis = IsostericHeatAnalysis(isotherms, eosmodel) 
             ish_analysis = IsostericHeatAnalysis(isotherms)
+
+            no_err_isos = strip_measurement_to_value.(isotherms)
+            no_err_isosteric_heat = IsostericHeatAnalysis(no_err_isos, linear_regression_error=false)
+            @test typeof(no_err_isosteric_heat.isosteric_heat_at_conc[1]) <: Float64
+            
             @test unideal_ish_analysis.isosteric_heat_at_conc[2] ≠ ish_analysis.isosteric_heat_at_conc[2]
             ish_analysis_but_with_vhdm = IsostericHeatAnalysis(isotherms; use_vant_hoff_constraints=true)
             @test_throws ErrorException IsostericHeatAnalysis(isotherms; model=GAB())
