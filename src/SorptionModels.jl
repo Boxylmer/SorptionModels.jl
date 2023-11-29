@@ -1,7 +1,6 @@
 module SorptionModels
 
     using MembraneBase
-    using MembraneEOS
     using ForwardDiff
     using Optim
     using Roots

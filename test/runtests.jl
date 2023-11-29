@@ -2,7 +2,6 @@ using SorptionModels
 using Test
 using Measurements
 using MembraneBase
-using MembraneEOS
 using Plots
 using BenchmarkTools
 
