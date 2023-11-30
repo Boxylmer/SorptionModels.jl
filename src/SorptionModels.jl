@@ -13,10 +13,6 @@ module SorptionModels
 
     # using Plots # for diagnostic methods todo remove this
 
-
-    include("ForwardDiffOverMeasurements.jl")
-
-
     # traditional sorption models
     include(joinpath("SorptionModels", "ModelMethods.jl"))
     export fit_model
