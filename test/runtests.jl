@@ -4,6 +4,7 @@ using Measurements
 using MembraneBase
 using Plots
 using BenchmarkTools
+using Clapeyron
 
 precision = 5
 
@@ -175,11 +176,11 @@ precision = 5
     end
 
     @testset "Fundamental Sorption Models" begin
-        using MembraneEOS
         polymer = "PC"
         penetrant = "CO2"
         kij = [0 -0.007; -0.007 0]
         bulk_phase_eos = SL([penetrant])
+        bulk_phase_eos = 
         polymer_phase_eos = SL([polymer, penetrant], kij)
         density = 1.197850471   #g/cm3    
         temperature = 308.15
@@ -492,8 +493,11 @@ precision = 5
             gab_pressure_conversion_funcs = [(p) -> p/pvap for pvap in g_isotherm_pvaps]
             gab_activity_conversion_funcs = [(a) -> a*pvap for pvap in g_isotherm_pvaps]
             
-            eosmodel(p, t) = compressibility_factor(PR("CH4"), p, t) 
-            unideal_ish_analysis = IsostericHeatAnalysis(isotherms, eosmodel) 
+            ch4_model = Clapeyron.PR("Methane")
+            eosmodel(p_mpa, t) = Clapeyron.compressibility_factor(ch4_model, p_mpa * MembraneBase.PA_PER_MPA, t) 
+            # Clapeyron.PR(components,userlocations = Dict(:Tc => [1,2],:Pc => [1,2], :Mw => [1,2], acentricfactor = [1,2]))
+          
+            unideal_ish_analysis = IsostericHeatAnalysis(isotherms, ch4_model) 
             ish_analysis = IsostericHeatAnalysis(isotherms)
 
             no_err_isos = strip_measurement_to_value.(isotherms)
@@ -513,10 +517,10 @@ precision = 5
         end
 
         @testset "Webb Isosteric Heat Analysis" begin
-            eos_ch4 = PR("CH4")
-            eos_z(p, t) = compressibility_factor(eos_ch4, p, t)
+            ch4_model = Clapeyron.PR("Methane")
+            eosmodel(p_mpa, t) = Clapeyron.compressibility_factor(ch4_model, p_mpa * MembraneBase.PA_PER_MPA, t) 
             wish_analysis_no_eos = SorptionModels.WebbIsostericHeatAnalysis(isotherms)
-            wish_analysis = SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z)
+            wish_analysis = SorptionModels.WebbIsostericHeatAnalysis(isotherms, eosmodel)
 
         end
 

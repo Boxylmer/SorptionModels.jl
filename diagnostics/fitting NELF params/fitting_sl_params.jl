@@ -1,6 +1,5 @@
 using Revise
 using SorptionModels
-using MembraneEOS
 using MembraneBase
 using Plots
 

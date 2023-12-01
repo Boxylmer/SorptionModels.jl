@@ -4,6 +4,7 @@ authors = ["Will <sypheren@gmail.com> and contributors"]
 version = "0.1.55"
 
 [deps]
+Clapeyron = "7c7805af-46cc-48c9-995b-ed0ed2dc909a"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 ForwardDiffOverMeasurements = "9eb8ae02-809e-4b16-afbc-1cadb820c769"
