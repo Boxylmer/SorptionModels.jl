@@ -11,6 +11,7 @@ module SorptionModels
     using XLSX
     using DelimitedFiles
 
+    using Clapeyron
     # using Plots # for diagnostic methods todo remove this
 
     # traditional sorption models

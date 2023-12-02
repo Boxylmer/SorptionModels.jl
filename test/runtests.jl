@@ -166,22 +166,38 @@ precision = 5
         recovered_pres = predict_pressure(gab_model_with_converters, given_conc)
         @test round(recovered_pres; digits=8) == round(given_pres; digits=8)
 
-
         # # methanol 25C was a weird case that fit with a naieve solution but not the "sophisticated" one. This should always work. 
         # acts = []
         # concs = []
         # meth_iso = IsothermData(; activities=acts, concentrations_cc=concs)
         # gabmodel = fit_model(GAB(), meth_iso)
-
     end
 
     @testset "Fundamental Sorption Models" begin
-        polymer = "PC"
-        penetrant = "CO2"
-        kij = [0 -0.007; -0.007 0]
-        bulk_phase_eos = SL([penetrant])
-        bulk_phase_eos = 
-        polymer_phase_eos = SL([polymer, penetrant], kij)
+        polymer = "PC" # T -> 522 K, P -> 534 MPa, rho -> 1.275 g/cm3
+        penetrant = "CO2"  # T -> 300 K, P -> 630 MPa rho -> 1.515 g/cm3
+        P★ = [534., 630.]
+        T★ = [522., 300.]
+        ρ★ = [1.275, 1.515]
+        mw = [100000, 44.01]
+        v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
+        ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
+        r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
+        model = Clapeyron.SL(
+            ["PC", "CO2"], 
+            userlocations = Dict(
+                :vol => v★.(P★, T★,), 
+                :segment => r.(P★, T★, ρ★, mw),
+                :epsilon => ϵ★.(T★), 
+                :Mw => mw,
+                :k => [0 -0.007; -0.007 0]
+            )
+        )
+        # kij = [0 -0.007; -0.007 0]
+        # bulk_phase_eos = SL([penetrant])
+        # polymer_phase_eos = SL([polymer, penetrant], kij)
+        polymer_phase_eos = model
+        bulk_phase_eos = Clapeyron.split_model(model, [2])[1]
         density = 1.197850471   #g/cm3    
         temperature = 308.15
         pressures = [0, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
