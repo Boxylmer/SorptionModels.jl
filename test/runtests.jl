@@ -174,15 +174,14 @@ precision = 5
     end
 
     @testset "Fundamental Sorption Models" begin
-        polymer = "PC" # T -> 522 K, P -> 534 MPa, rho -> 1.275 g/cm3
-        penetrant = "CO2"  # T -> 300 K, P -> 630 MPa rho -> 1.515 g/cm3
+        v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
+        ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
+        r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
+
         P★ = [534., 630.]
         T★ = [522., 300.]
         ρ★ = [1.275, 1.515]
         mw = [100000, 44.01]
-        v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
-        ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
-        r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
         model = Clapeyron.SL(
             ["PC", "CO2"], 
             userlocations = Dict(
@@ -210,7 +209,7 @@ precision = 5
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0]; ksw=[ksw])[1] for p in pressures]
         
         
-            penetrants = ["CO2", "CO2"]
+            penetrants = ["CO2", "CO2"]wawdsda
             kij_ternary = [0      -0.007 -0.007 ; 
                            -0.007 0      0.0    ; 
                            -0.007 0.0    0.0    ]
