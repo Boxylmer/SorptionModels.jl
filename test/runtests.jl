@@ -179,7 +179,7 @@ precision = 5
         r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
 
         P★ = [534., 630.]
-        T★ = [522., 300.]
+        T★ = [755., 300.]
         ρ★ = [1.275, 1.515]
         mw = [100000, 44.01]
         model = Clapeyron.SL(
@@ -204,12 +204,11 @@ precision = 5
         expected_concs_cc_cc = [0, 5.094493596, 8.910071012, 12.66689539, 16.17497812, 19.10613428, 21.05001223]
         
         # NELF    
-            ksw = 0.0102            # 1/MPa
+            ksw = 0.002            # 1/MPa
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0]; ksw=[ksw])[1] for p in pressures]
         
-        
-            penetrants = ["CO2", "CO2"]wawdsda
+            penetrants = ["CO2", "CO2"]
             kij_ternary = [0      -0.007 -0.007 ; 
                            -0.007 0      0.0    ; 
                            -0.007 0.0    0.0    ]

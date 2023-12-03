@@ -55,6 +55,7 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
             return concs_g_g
         elseif units==:cc
             concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, Clapeyron.mw(model.bulk_model))
+            @show polymer_phase_mass_fractions[2:end]
             return concs_cc_cc
         end
     catch e
@@ -73,7 +74,7 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
     pressure = pressure < minimum_val ? minimum_val : pressure    
     bulk_phase_mole_fractions = ((i) -> (i < minimum_val ? minimum_val : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
-    target_potentials = Clapeyron.chemical_potential_res(model.bulk_model, pressure, temperature, bulk_phase_mole_fractions)
+    target_potentials = Clapeyron.chemical_potential(model.bulk_model, pressure * MembraneBase.PA_PER_MPA, temperature, bulk_phase_mole_fractions)
     normalizer = (rss(zeros(length(bulk_phase_mole_fractions)), target_potentials))
 
     function error_target(penetrant_mass_fractions)
@@ -87,10 +88,10 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
         polymer_phase_mass_fractions = vcat(polymer_mass_fraction, penetrant_mass_fractions)
         polymer_phase_density_after_swelling = calculate_polymer_phase_density(model, pressure, bulk_phase_mole_fractions, polymer_phase_mass_fractions, ksw)
         polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
-        
 
         # you have to calculate this every time. There is no other option when doing multicomponent as the phase maximum density changes at any composition. 
         polymer_phase_volume_lower_bound = Clapeyron.lb_volume(model.polymer_model, polymer_phase_mole_fractions) # m3/mol
+        
         polymer_phase_density_upper_bound = molar_volume_to_density(polymer_phase_volume_lower_bound * 1000, polymer_phase_mole_fractions, Clapeyron.mw(model.polymer_model)) # m3/mol -> l/mol -> function -> g/cm3
 
         if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound 
@@ -99,24 +100,18 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
             return log1p(normalizer * polymer_phase_density_after_swelling) 
         end
 
-        # polymer_phase_activities = ρTω_chemical_potential(
-        #     model.polymer_model, 
-        #     polymer_phase_density_after_swelling, 
-        #     temperature, 
-        #     polymer_phase_mass_fractions)
-
         polymer_phase_molar_volume = density_to_molar_volume( # g / cm3 -> function -> l/mol -> m3/mol
             polymer_phase_density_after_swelling, 
             polymer_phase_mole_fractions, 
             Clapeyron.mw(model.polymer_model)) / 1000 
 
-        polymer_phase_activities = Clapeyron.VT_chemical_potential_res( # TODO rename to residual potential
+        polymer_phase_residual_potential = Clapeyron.VT_chemical_potential( 
             model.polymer_model, 
             polymer_phase_molar_volume, 
             temperature, 
             polymer_phase_mole_fractions)
 
-        residual_squared = log1p((rss(target_potentials, polymer_phase_activities[2:end])))
+        residual_squared = log1p((rss(target_potentials, polymer_phase_residual_potential[2:end])))
         return residual_squared
     end
     return error_target
