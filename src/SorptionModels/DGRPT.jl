@@ -60,7 +60,7 @@ function MembraneBase.polymer_density(model::DGRPTModel, temperature, pressure, 
 end
 
 function calculate_bulk_phase_chemical_potentials(model::DGRPTModel, temperature, pressure, bulk_phase_mole_fractions)
-    μ = chemical_potential(
+    μ = chemical_potential( # TODO
             model.bulk_model, 
             pressure, 
             temperature, 
@@ -69,7 +69,7 @@ function calculate_bulk_phase_chemical_potentials(model::DGRPTModel, temperature
 end
 
 function calculate_bulk_phase_activities(model::DGRPTModel, temperature, pressure, bulk_phase_mole_fractions)
-    a = activity(
+    a = activity( # TODO
             model.bulk_model, 
             pressure, 
             temperature, 
@@ -80,7 +80,7 @@ end
 function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
     
-    μ = ρTω_chemical_potential(
+    μ = ρTω_chemical_potential( # TODO
         model.polymer_model, 
         polymer_phase_density, 
         temperature, 
@@ -90,7 +90,7 @@ end
 
 function calculate_polymer_phase_activities(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
-    a = ρTω_activity(
+    a = ρTω_activity( # TODO
         model.polymer_model, 
         polymer_phase_density, 
         temperature, 
