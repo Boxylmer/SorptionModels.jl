@@ -196,7 +196,7 @@ precision = 5
         # bulk_phase_eos = SL([penetrant])
         # polymer_phase_eos = SL([polymer, penetrant], kij)
         polymer_phase_eos = model
-        bulk_phase_eos = Clapeyron.split_model(model, [2])[1]
+        bulk_phase_eos = Clapeyron.split_model(model, [2:length(model)])[1]
         density = 1.197850471   #g/cm3    
         temperature = 308.15
         pressures = [0, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
@@ -341,9 +341,9 @@ precision = 5
             ps = [0.1, 3.5]
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             
-            # nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in ps]
+            nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in ps]
             # nelf_densities = [calculate_swelled_polymer_density(nelfmodel, p, [1], [0]) for p in ps]
-            # dgrpt_concs_pure_co2_1_term = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=1)[1] for p in ps]
+            dgrpt_concs_pure_co2_1_term = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=1)[1] for p in ps]
             # dgrpt_dens_pure_co2_1_term = [polymer_density(dgrptmodel, temperature, p, [1]; taylor_series_order=1) for p in ps]
             # dgrpt_concs_pure_co2_2_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=2)[1] for p in ps]
             # dgrpt_concs_pure_co2_5_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=5)[1] for p in ps]
@@ -530,7 +530,7 @@ precision = 5
             eosmodel(p_mpa, t) = Clapeyron.compressibility_factor(ch4_model, p_mpa * MembraneBase.PA_PER_MPA, t) 
             # Clapeyron.PR(components,userlocations = Dict(:Tc => [1,2],:Pc => [1,2], :Mw => [1,2], acentricfactor = [1,2]))
           
-            unideal_ish_analysis = IsostericHeatAnalysis(isotherms, ch4_model) 
+            unideal_ish_analysis = IsostericHeatAnalysis(isotherms, eosmodel) 
             ish_analysis = IsostericHeatAnalysis(isotherms)
 
             no_err_isos = strip_measurement_to_value.(isotherms)
@@ -554,7 +554,6 @@ precision = 5
             eosmodel(p_mpa, t) = Clapeyron.compressibility_factor(ch4_model, p_mpa * MembraneBase.PA_PER_MPA, t) 
             wish_analysis_no_eos = SorptionModels.WebbIsostericHeatAnalysis(isotherms)
             wish_analysis = SorptionModels.WebbIsostericHeatAnalysis(isotherms, eosmodel)
-
         end
 
         # Mobility Factor
@@ -732,7 +731,7 @@ precision = 5
 
         # Isosteric Heat
         path = joinpath(results_folder, "Isosteric Heats.xlsx")
-        eos_z(p, t) = compressibility_factor(PR("CH4"), p, t) 
+        eos_z(p, t) = compressibility_factor(PR("Methane"), p * MembraneBase.MPA_PER_PA, t) 
         rm(path; force=true)
         write_analysis(IsostericHeatAnalysis(isotherms), path, name = "Ideal Koros")
         write_analysis(IsostericHeatAnalysis(isotherms, eos_z), path, name = "PREoS Koros")
@@ -840,8 +839,26 @@ precision = 5
         polymer = "PC"
         penetrant = "CO2"
         kij = [0 -0.007; -0.007 0]
-        bulk_phase_eos = SL([penetrant])
-        polymer_phase_eos = SL([polymer, penetrant], kij)
+
+        v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
+        ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
+        r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
+        P★ = [534., 630.]
+        T★ = [755., 300.]
+        ρ★ = [1.275, 1.515]
+        mw = [100000, 44.01]
+        polymer_phase_eos = Clapeyron.SL(
+            ["PC", "CO2"], 
+            userlocations = Dict(
+                :vol => v★.(P★, T★,), 
+                :segment => r.(P★, T★, ρ★, mw),
+                :epsilon => ϵ★.(T★), 
+                :Mw => mw,
+                :k => kij
+            )
+        )
+        # polymer_phase_eos = SL([polymer, penetrant], kij)
+        bulk_phase_eos = Clapeyron.split_model(polymer_phase_eos, [2:length(model)])
         density = 1.197850471   #g/cm3    
         temperature = 308.15
         dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)

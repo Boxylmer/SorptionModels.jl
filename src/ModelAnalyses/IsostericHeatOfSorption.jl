@@ -29,7 +29,6 @@ Calculate the isosteric heat of sorption (``\\Delta{H}_{sorption}``) from a vect
 - If the GAB model is used, `gab_pressure_conversion_funcs` (converting pressure to activity) and `gab_activity_conversion_funcs` (convert activity to pressure) will need to be defined in the same order as the isotherms.
 - if `linear_regression_error` is true, each concentration will have uncertainties (Measurements.jl) calculated using the standard error of linear regression. If any inputs have uncertainty, downstream calculations' uncertainties will be used to weight the regression.  
 """
-
 function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmodel=missing; 
     model=DualMode(), num_points=25, 
     use_vant_hoff_constraints=false,
@@ -38,7 +37,7 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmod
     linear_regression_error=true)
     
     if ismissing(eosmodel)
-        z(p, t) = 1
+        z(p, t) = 1  # TODO eventually mkae eosmodel just a clapeyron eos model :)
     else
         z = eosmodel
     end
@@ -79,9 +78,6 @@ function IsostericHeatAnalysis(isotherms::AbstractVector{<:IsothermData}, eosmod
     # calculate the interpolated pressure curves and their logarithms (Base e)
     pressure_curves = [predict_pressure.(sorption_models, conc) for conc in sampled_concentrations]
     ln_pressure_curves = [log.(pressure_curve) for pressure_curve in pressure_curves]
-    
-    
-    
     
     all_z_values = [[z(pressure_curves[p_idx][t_idx], temperatures[t_idx]) for t_idx in eachindex(temperatures)] for p_idx in eachindex(pressure_curves)]
     avg_z_values = sum.(all_z_values) ./ length.(all_z_values)

@@ -2,9 +2,10 @@ module SorptionModels
 
     using MembraneBase
     using ForwardDiff
+    using Measurements
+    using ForwardDiffOverMeasurements
     using Optim
     using Roots
-    using Measurements
     using StaticArrays
     using Polynomials
 
