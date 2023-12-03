@@ -55,7 +55,6 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
             return concs_g_g
         elseif units==:cc
             concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, Clapeyron.mw(model.bulk_model))
-            @show polymer_phase_mass_fractions[2:end]
             return concs_cc_cc
         end
     catch e
