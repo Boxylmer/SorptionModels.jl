@@ -145,6 +145,8 @@ function expected_polymer_chemical_potential(model::DGRPTModel, temperature, pol
 
     component_chemical_potential_expansions = 0
 
+
+    # TODO this can also just be a jacobian
     for pen_idx in eachindex(polymer_phase_mass_fractions[2:end])
         function polymer_chemical_potential_taylor_expansion(penetrant_mass_fraction)
             mass_fracs = vcat([1 - penetrant_mass_fraction], zeros(num_penetrants))
@@ -157,14 +159,16 @@ function expected_polymer_chemical_potential(model::DGRPTModel, temperature, pol
             return chem_pot
         end
 
-        penetrant_taylor_expansion_function = expand_taylor_higher_terms(
-            polymer_chemical_potential_taylor_expansion,
-            1e-6, expansion_order
-        )
-        evaluated_penetrant_taylor_expansion = penetrant_taylor_expansion_function(polymer_phase_mass_fractions[pen_idx + 1])
+        # penetrant_taylor_expansion_function = expand_taylor_higher_terms(
+        #     polymer_chemical_potential_taylor_expansion,
+        #     1e-6, expansion_order
+        # )
+        # evaluated_penetrant_taylor_expansion = penetrant_taylor_expansion_function(polymer_phase_mass_fractions[pen_idx + 1])
+        component_first_derivative = ForwardDiff.derivative(polymer_chemical_potential_taylor_expansion, 0)
+        evaluated_penetrant_taylor_expansion = component_first_derivative * polymer_phase_mass_fractions[pen_idx + 1]
         component_chemical_potential_expansions += evaluated_penetrant_taylor_expansion
     end
-    component_chemical_potential_expansions
+    # component_chemical_potential_expansions
     dry_μ = dry_polymer_chemical_potential(model, temperature, length(polymer_phase_mass_fractions))
 
     return dry_μ + sum(component_chemical_potential_expansions)
