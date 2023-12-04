@@ -68,15 +68,6 @@ function calculate_bulk_phase_chemical_potentials(model::DGRPTModel, temperature
     return μ
 end
 
-# function calculate_bulk_phase_activities(model::DGRPTModel, temperature, pressure, bulk_phase_mole_fractions)
-#     a = activity( # TODO
-#             model.bulk_model, 
-#             pressure, 
-#             temperature, 
-#             bulk_phase_mole_fractions)
-#     return a
-# end
-
 function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
     polymer_phase_mole_fractions = MembraneBase.mass_fractions_to_mole_fractions(
@@ -98,21 +89,11 @@ function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperat
     return μ
 end
 
-# function calculate_polymer_phase_activities(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
-#     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
-#     a = ρTω_activity( # TODO
-#         model.polymer_model, 
-#         polymer_phase_density, 
-#         temperature, 
-#         polymer_phase_mass_fractions)
-#     return a
-# end
 
 function solve_polymer_density(
     model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector; 
     initial_density=nothing, taylor_series_order=default_dgrpt_taylor_expansion_order, method=:roots)
 
-    # max_polymer_density = density_upper_bound(model.polymer_model, polymer_phase_mass_fractions) * polymer_phase_mass_fractions[1]
     polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
     polymer_phase_volume_lower_bound = Clapeyron.lb_volume(model.polymer_model, polymer_phase_mole_fractions) # m3/mol
     max_polymer_density = molar_volume_to_density(polymer_phase_volume_lower_bound * 1000, polymer_phase_mole_fractions, Clapeyron.mw(model.polymer_model)) # m3/mol -> l/mol -> function -> g/cm3
