@@ -191,12 +191,12 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
 - `custom_densities`: An array (matching the dimensions of the input isotherms) of densities to use instead of the ones in the isotherm data provided. 
 - `uncertainty_method`: Calculate the uncertainty of the parameters from the fitting. For NELF, the Hessian method is currently the only one implemented.
 """
-function fit_model(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
+function fit_model(::NELF, ::SanchezLacombe, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
     polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, verbose=true, initial_search_resolution=20,
     custom_densities::Union{Missing, AbstractArray}=missing, uncertainty_method=nothing)
     
     if verbose
-        println("Starting parameter generation for NELF fit")
+        println("Starting parameter generation for NELF fit with the Sanchez Lacombe EoS")
     end
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
@@ -331,7 +331,23 @@ end
 
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
     # classic infinite dilution parameter target
-    bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+
+    # bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
+    v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
+    ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
+    r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
+        
+    bulk_phase_models = [
+        SL(["pen"],
+            userlocations = Dict(
+                :vol => v★(params[1], params[2]), 
+                :segment => r(params...),
+                :epsilon => ϵ★(params[2]), 
+                :Mw => params[4],
+            )
+        )
+    for params in bulk_phase_characteristic_params]
+    
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
@@ -345,8 +361,10 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
             char_densities = [char_param_vec[3], bulk_phase_characteristic_params[i][3]]
             molecular_weights = [polymer_molecular_weight, bulk_phase_characteristic_params[i][4]]
 
-            polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
-            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
+            polymer_phase_model = SL( # TODO
+                char_pressures, char_temperatures, char_densities, molecular_weights
+            )
+            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i]) 
             pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] / infinite_dilution_pressure
             given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
         end

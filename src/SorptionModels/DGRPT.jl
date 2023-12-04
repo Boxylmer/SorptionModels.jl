@@ -48,7 +48,7 @@ function predict_concentration(
         concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
         return concs_g_g
     elseif units==:cc
-        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, molecular_weight(model.bulk_model))
+        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, Clapeyron.mw(model.bulk_model))
         return concs_cc_cc
     end
 end
@@ -90,14 +90,21 @@ function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperat
     return μ
 end
 
-
-function solve_polymer_density(
-    model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector; 
-    initial_density=nothing, taylor_series_order=default_dgrpt_taylor_expansion_order, method=:roots)
-
+function density_upper_bound(model::DGRPTModel, polymer_phase_mass_fractions)
     polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
     polymer_phase_volume_lower_bound = Clapeyron.lb_volume(model.polymer_model, polymer_phase_mole_fractions) # m3/mol
     max_polymer_density = molar_volume_to_density(polymer_phase_volume_lower_bound * 1000, polymer_phase_mole_fractions, Clapeyron.mw(model.polymer_model)) # m3/mol -> l/mol -> function -> g/cm3
+    return max_polymer_density
+end
+
+function solve_polymer_density(
+    model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector; 
+    initial_density=nothing, taylor_series_order=default_dgrpt_taylor_expansion_order, method=:optim)
+
+    # polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
+    # polymer_phase_volume_lower_bound = Clapeyron.lb_volume(model.polymer_model, polymer_phase_mole_fractions) # m3/mol
+    # max_polymer_density = molar_volume_to_density(polymer_phase_volume_lower_bound * 1000, polymer_phase_mole_fractions, Clapeyron.mw(model.polymer_model)) # m3/mol -> l/mol -> function -> g/cm3
+    max_polymer_density = density_upper_bound(model, polymer_phase_mass_fractions)
 
     if isnothing(initial_density)
         initial_density = model.polymer_dry_density * polymer_phase_mass_fractions[1]
@@ -131,7 +138,7 @@ function solve_polymer_density(
             Optim.Options(
                 allow_f_increases = false,
                 g_tol = 1e-8
-            ); )#autodiff=:forward)
+            ); autodiff=:forward)
         solved_density = Optim.minimizer(res)[1]
         return solved_density
     end
@@ -164,7 +171,7 @@ function expected_polymer_chemical_potential(model::DGRPTModel, temperature, pol
         #     1e-6, expansion_order
         # )
         # evaluated_penetrant_taylor_expansion = penetrant_taylor_expansion_function(polymer_phase_mass_fractions[pen_idx + 1])
-        component_first_derivative = ForwardDiff.derivative(polymer_chemical_potential_taylor_expansion, 0)
+        component_first_derivative = ForwardDiff.derivative(polymer_chemical_potential_taylor_expansion, 1e-6)
         evaluated_penetrant_taylor_expansion = component_first_derivative * polymer_phase_mass_fractions[pen_idx + 1]
         component_chemical_potential_expansions += evaluated_penetrant_taylor_expansion
     end
@@ -175,13 +182,20 @@ function expected_polymer_chemical_potential(model::DGRPTModel, temperature, pol
 end
 
 function dry_polymer_chemical_potential(model::DGRPTModel, temperature, num_components)
-    pseudo_mass_fracs = zeros(Float64, num_components)
-    pseudo_mass_fracs[1] = 1
-    μ = ρTω_chemical_potential(
+    pseudo_mole_fracs = zeros(Float64, num_components)
+    pseudo_mole_fracs[1] = 1
+    
+    polymer_molar_vol = MembraneBase.density_to_molar_volume(
+        model.polymer_dry_density,
+        pseudo_mole_fracs,
+        Clapeyron.mw(model.polymer_model)
+    ) / 1000 # l/mol -> m3/mol
+
+    μ = Clapeyron.VT_chemical_potential(
         model.polymer_model, 
-        model.polymer_dry_density, 
+        polymer_molar_vol, 
         temperature, 
-        pseudo_mass_fracs)
+        pseudo_mole_fracs)
     return μ[1]
 end
 
