@@ -1,5 +1,5 @@
 struct DGRPT end
-const default_dgrpt_taylor_expansion_order = 5  # todo change to 1 and runtests
+const default_dgrpt_taylor_expansion_order = 1  # todo change to 1 and runtests
 
 """
     DGRPTModel(bulk_model, polymer_model, polymer_dry_density)
@@ -81,10 +81,11 @@ function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperat
     ) / 1000 # l/mol -> m3/mol
 
     μ = Clapeyron.VT_chemical_potential( 
-    model.polymer_model, 
-    polymer_phase_molar_volume, 
-    temperature, 
-    polymer_phase_mole_fractions)
+        model.polymer_model, 
+        polymer_phase_molar_volume, 
+        temperature, 
+        polymer_phase_mole_fractions
+    )
 
     return μ
 end
@@ -130,7 +131,7 @@ function solve_polymer_density(
             Optim.Options(
                 allow_f_increases = false,
                 g_tol = 1e-8
-            ); autodiff=:forward)
+            ); )#autodiff=:forward)
         solved_density = Optim.minimizer(res)[1]
         return solved_density
     end
