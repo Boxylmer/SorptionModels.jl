@@ -54,23 +54,29 @@ function ρTw_chemical_potential(model,ρ,T,w)
 end
 
 """
-    ub_density(model,ρ,T,w)
+    ub_density(model,w,input = :molar)
 
 returns the upper bound density, in [g/cm3].
 it calls `Clapeyron.lb_volume`.
 inputs:
 - `model`: `Clapeyron.EoSModel`
 - `w`: vector of mass fractions [kg/kg]
+- `input` (optional): a symbol specifying if `x` is in molar or mass base
+
 
 returns:
  - `ub_rho` upper bound density [g/cm3]
 """
-function ub_density(model,w)
-    MW = Clapeyron.mw(model)
-    m = molar_mass(model,w,:weight)
-    n = MembraneBase.mass_fractions_to_mole_fractions(w,MW)
-    lb_v = Clapeyron.lb_volume(model,n) #m3/mol
-    ub_rho_SI = 1/lb_v
+function ub_density(model,x,input = :molar) 
+    if input in (:molar,:mol,:n)
+        MW = Clapeyron.mw(model)
+        n = MembraneBase.mass_fractions_to_mole_fractions(x,MW)
+        lb_v = Clapeyron.lb_volume(model,n) #m3/mol
+    else
+        lb_v = Clapeyron.lb_volume(model,x)
+    end
+    m = molar_mass(model,x,input)
+    ub_rho_SI = m/lb_v
     ub_rho = ub_rho_SI/1000 #(1 kg/m3 = 0.001 g/cm3)
     return ub_rho
 end

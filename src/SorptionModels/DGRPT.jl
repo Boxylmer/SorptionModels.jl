@@ -4,32 +4,32 @@ const default_dgrpt_taylor_expansion_order = 1  # todo change to 1 and runtests
 """
     DGRPTModel(bulk_model, polymer_model, polymer_dry_density)
 
-Create a DGRPT sorption model, using two equations of state, one representing the bulk phase and one representing the polymer phase. 
+Create a DGRPT sorption model, using two equations of state, one representing the bulk phase and one representing the polymer phase.
 
 Notes:
-- The `polymer_dry_density` should reflect the density of the pure polymer at STP. 
+- The `polymer_dry_density` should reflect the density of the pure polymer at STP.
 - Requires that these models contain the polymer is the first index when referencing compositions and interaction parameters. The remaining indexes must match `penetrants` in the predictions functions.
 
 `B.D. Marshall, R. Mathias, R.P. Lively, B.A. McCool, Theoretically Self-Consistent Nonequilibrium Thermodynamics of Glassy Polymer Theory for the Solubility of Vapors and Liquids in Glassy Polymers, Ind. Eng. Chem. Res. 60 (2021) 13377–13387. https://doi.org/10.1021/acs.iecr.1c02194.`
 """
 struct DGRPTModel{BMT, POLYMT, PDT} <: SorptionModel
-    bulk_model::BMT               
-    polymer_model::POLYMT         
-    polymer_dry_density::PDT      
+    bulk_model::BMT
+    polymer_model::POLYMT
+    polymer_dry_density::PDT
 end
 
 function predict_concentration(
-        model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions=[1]; 
-        taylor_series_order=default_dgrpt_taylor_expansion_order, units=:cc)
-        penetrant_mass_fraction_initial_guesses = ones(length(bulk_penetrant_mole_fractions)) * 1e-4
-    
+        model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions=[1];
+        taylor_series_order = default_dgrpt_taylor_expansion_order,units=:cc)
+
+    penetrant_mass_fraction_initial_guesses = ones(length(bulk_penetrant_mole_fractions)) * 1e-4
     # Optim.jl target
     mass_fraction_error = make_penetrant_mass_fraction_target(model, temperature, pressure, bulk_penetrant_mole_fractions; taylor_series_order)
     lower = ones(length(penetrant_mass_fraction_initial_guesses)) * 1e-6
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- 1e-3
     res = Optim.optimize(
-        mass_fraction_error, lower, upper, 
-        penetrant_mass_fraction_initial_guesses, 
+        mass_fraction_error, lower, upper,
+        penetrant_mass_fraction_initial_guesses,
         Fminbox(LBFGS()),
         # Fminbox(NelderMead()),
         Optim.Options(
@@ -59,46 +59,23 @@ function MembraneBase.polymer_density(model::DGRPTModel, temperature, pressure, 
     return polymer_density
 end
 
-function calculate_bulk_phase_chemical_potentials(model::DGRPTModel, temperature, pressure, bulk_phase_mole_fractions)
-    μ = Clapeyron.chemical_potential(
-            model.bulk_model, 
-            pressure * MembraneBase.PA_PER_MPA, 
-            temperature, 
-            bulk_phase_mole_fractions)
-    return μ
-end
-
 function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
-    polymer_phase_mole_fractions = MembraneBase.mass_fractions_to_mole_fractions(
-        polymer_phase_mass_fractions,
-        Clapeyron.mw(model.polymer_model)
-    )
-    polymer_phase_molar_volume = MembraneBase.density_to_molar_volume(
-        polymer_phase_density,
-        polymer_phase_mole_fractions,
-        Clapeyron.mw(model.polymer_model)
-    ) / 1000 # l/mol -> m3/mol
+    return ρTw_chemical_potential(model.polymer_model,polymer_phase_density,temperature,polymer_phase_mass_fractions)
+end
 
-    μ = Clapeyron.VT_chemical_potential( 
-        model.polymer_model, 
-        polymer_phase_molar_volume, 
-        temperature, 
-        polymer_phase_mole_fractions
-    )
-
-    return μ
+#specialization to just calculate the first chemical potential.
+function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions,i)
+    polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
+    return ρTw_chemical_potential_at_i(model.polymer_model,polymer_phase_density,temperature,polymer_phase_mass_fractions,1)
 end
 
 function density_upper_bound(model::DGRPTModel, polymer_phase_mass_fractions)
-    polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
-    polymer_phase_volume_lower_bound = Clapeyron.lb_volume(model.polymer_model, polymer_phase_mole_fractions) # m3/mol
-    max_polymer_density = molar_volume_to_density(polymer_phase_volume_lower_bound * 1000, polymer_phase_mole_fractions, Clapeyron.mw(model.polymer_model)) # m3/mol -> l/mol -> function -> g/cm3
-    return max_polymer_density
+    return ub_density(model.polymer_model,polymer_phase_mass_fractions)
 end
 
 function solve_polymer_density(
-    model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector; 
+    model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector;
     initial_density=nothing, taylor_series_order=default_dgrpt_taylor_expansion_order, method=:optim)
 
     # polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
@@ -109,7 +86,7 @@ function solve_polymer_density(
     if isnothing(initial_density)
         initial_density = model.polymer_dry_density * polymer_phase_mass_fractions[1]
         # sometimes the dry density is more dense than the theoretical maximum density of the polymer at that composition (e.g.,, in most liquids and swelling vapors)
-        if initial_density >= max_polymer_density  
+        if initial_density >= max_polymer_density
             initial_density = (max_polymer_density * 0.999)
         end
     end
@@ -133,8 +110,8 @@ function solve_polymer_density(
         # @show max_polymer_density
         res = Optim.optimize(
             optim_polymer_density_target, [eps()], [max_polymer_density -  eps()],
-            [initial_density], 
-            Fminbox(LBFGS()), 
+            [initial_density],
+            Fminbox(LBFGS()),
             Optim.Options(
                 allow_f_increases = false,
                 g_tol = 1e-8
@@ -157,12 +134,13 @@ function expected_polymer_chemical_potential(model::DGRPTModel, temperature, pol
     for pen_idx in eachindex(polymer_phase_mass_fractions[2:end])
         function polymer_chemical_potential_taylor_expansion(penetrant_mass_fraction)
             mass_fracs = vcat([1 - penetrant_mass_fraction], zeros(num_penetrants))
-            mass_fracs[pen_idx + 1] = penetrant_mass_fraction 
+            mass_fracs[pen_idx + 1] = penetrant_mass_fraction
             chem_pot = calculate_polymer_phase_chemical_potentials(
-                model, 
+                model,
                 temperature,
-                polymer_density, 
-                mass_fracs)[1]
+                polymer_density,
+                mass_fracs,
+                1) #returns just the first one
             return chem_pot
         end
 
@@ -176,74 +154,82 @@ function expected_polymer_chemical_potential(model::DGRPTModel, temperature, pol
         component_chemical_potential_expansions += evaluated_penetrant_taylor_expansion
     end
     # component_chemical_potential_expansions
-    dry_μ = dry_polymer_chemical_potential(model, temperature, length(polymer_phase_mass_fractions))
+    dry_μ = dry_polymer_chemical_potential(model, temperature)
 
     return dry_μ + sum(component_chemical_potential_expansions)
 end
 
-function dry_polymer_chemical_potential(model::DGRPTModel, temperature, num_components)
-    pseudo_mole_fracs = zeros(Float64, num_components)
-    pseudo_mole_fracs[1] = 1
-    
+function dry_polymer_chemical_potential(model::DGRPTModel, temperature)
+    #a [1.0,0.0,....,0.0] vector
+    num_components = length(model)
+    pseudo_mole_fracs = Clapeyron.FillArrays.OneElement(1.0, 1, num_components)
+
     polymer_molar_vol = MembraneBase.density_to_molar_volume(
         model.polymer_dry_density,
         pseudo_mole_fracs,
         Clapeyron.mw(model.polymer_model)
     ) / 1000 # l/mol -> m3/mol
 
-    μ = Clapeyron.VT_chemical_potential(
-        model.polymer_model, 
-        polymer_molar_vol, 
-        temperature, 
-        pseudo_mole_fracs)
-    return μ[1]
+    #chemical potential at the 1st position. without instantiating a new vector
+    μ = VT_chemical_potential_at_i(
+        model.polymer_model,
+        polymer_molar_vol,
+        temperature,
+        pseudo_mole_fracs,1)
+    return μ
 end
 
 # Target functions for optim and roots
 
 function make_penetrant_mass_fraction_target(
-    model::DGRPTModel, 
-    temperature::Number, 
-    pressure::Number, 
-    bulk_penetrant_mole_fractions::AbstractVector{<:Number}; 
+    model::DGRPTModel,
+    temperature::Number,
+    pressure::Number,
+    bulk_penetrant_mole_fractions::AbstractVector{<:Number};
     taylor_series_order=default_dgrpt_taylor_expansion_order)
-    
-    target_penetrant_activities = calculate_bulk_phase_chemical_potentials(model, temperature, pressure, bulk_penetrant_mole_fractions)
+
+    pressure_SI = pressure*MembraneBase.PA_PER_MPA
+    target_penetrant_activities =  Clapeyron.chemical_potential(
+                                    model.bulk_model,
+                                    pressure_SI,
+                                    temperature,
+                                    bulk_phase_mole_fractions)
+
     activity_scaling_factors = 1 ./ target_penetrant_activities
 
-    target = function error_function(penetrant_mass_fractions)
+    function error_function(penetrant_mass_fractions)
         polymer_mass_fraction = 1 - sum(penetrant_mass_fractions)
         polymer_phase_mass_fractions = vcat(polymer_mass_fraction, penetrant_mass_fractions)
         polymer_density = solve_polymer_density(model, temperature, polymer_phase_mass_fractions; taylor_series_order)
         polymer_phase_activities = calculate_polymer_phase_chemical_potentials(model, temperature, polymer_density, polymer_phase_mass_fractions)
-        residual_squared = rss(target_penetrant_activities .* activity_scaling_factors, polymer_phase_activities[2:end] .* activity_scaling_factors)    
-        
-        return residual_squared 
+        residual_squared = rss(target_penetrant_activities .* activity_scaling_factors, polymer_phase_activities[2:end] .* activity_scaling_factors)
+
+        return residual_squared
     end
 
-    return target
+    return error_function
 end
 
-function make_roots_polymer_density_target(model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector; 
+function make_roots_polymer_density_target(model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector;
     taylor_series_order=default_dgrpt_taylor_expansion_order)
-    
+
     scaling_factor = 1 / expected_polymer_chemical_potential(
         model, temperature, model.polymer_dry_density, polymer_phase_mass_fractions; expansion_order=taylor_series_order)
-    
+
     function roots_polymer_density_target(density)  # target for roots
         target_polymer_chemical_potential = expected_polymer_chemical_potential(
             model, temperature, density, polymer_phase_mass_fractions; expansion_order=taylor_series_order)
 
         polymer_chemical_potential = calculate_polymer_phase_chemical_potentials(
-            model, temperature, density, polymer_phase_mass_fractions)[1]
+            model, temperature, density, polymer_phase_mass_fractions, 1)
         return (target_polymer_chemical_potential - polymer_chemical_potential) * scaling_factor
     end
     return roots_polymer_density_target
 end
 
-function make_optim_polymer_density_target(model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector; 
+function make_optim_polymer_density_target(model::DGRPTModel, temperature::Number, polymer_phase_mass_fractions::AbstractVector;
     taylor_series_order=default_dgrpt_taylor_expansion_order)
-    
+
     scaling_factor = 1 / expected_polymer_chemical_potential(
         model, temperature, model.polymer_dry_density, polymer_phase_mass_fractions; expansion_order=taylor_series_order)
 
@@ -252,7 +238,7 @@ function make_optim_polymer_density_target(model::DGRPTModel, temperature::Numbe
             model, temperature, density[1], polymer_phase_mass_fractions; expansion_order=taylor_series_order)
 
         polymer_chemical_potential = calculate_polymer_phase_chemical_potentials(
-            model, temperature, density[1], polymer_phase_mass_fractions)[1]
+            model, temperature, density[1], polymer_phase_mass_fractions, 1)
         return ((target_polymer_chemical_potential - polymer_chemical_potential) * scaling_factor)^2
     end
     return optim_polymer_density_target
