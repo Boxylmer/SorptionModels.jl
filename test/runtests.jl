@@ -173,6 +173,13 @@ precision = 5
         # meth_iso = IsothermData(; activities=acts, concentrations_cc=concs)
         # gabmodel = fit_model(GAB(), meth_iso)
 
+    # Flory Huggins - Dual Mode
+    #   TPBO-1.00 with propanol at 25C
+    acts_3 = [0.01061664, 0.034878645, 0.06508188, 0.091689136, 0.126116896, 0.163921419]
+    concs_3 = [1.188187617 ± 0.013431227, 2.455888283 ± 0.027591385, 3.80430418 ± 0.042799107, 5.824894435 ± 0.06532282, 9.604100032 ± 0.107154714, 14.70392798 ± 0.163320976]
+    iso_3 = IsothermData(; activities=acts_3, concentrations_cc = concs_3)
+    fhdm = 
+    
     end
 
     @testset "Fundamental Sorption Models" begin
