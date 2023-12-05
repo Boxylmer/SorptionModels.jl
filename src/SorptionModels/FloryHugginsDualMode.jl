@@ -36,19 +36,20 @@ function estimate_volume_fraction(fhdm::FloryHugginsDualModeModel, concentration
     return vol_frac
 end
 
-function concentration_from_estimated_volume_fraction(fhdm::FloryHugginsDualModeModel, φ::number)
+function concentration_from_estimated_volume_fraction(fhdm::FloryHugginsDualModeModel, φ::Number)
     φ / ((1-φ) * fhdm.penetrant_molar_volume / MembraneBase.CC_PER_MOL_STP)
 end
 
-flory_huggins_activity(fhdm::FloryHugginsDualModeModel, φ::Number) = exp(log(1-φ) + φ + fhdm.chi * φ^2)
+flory_huggins_activity(fhdm::FloryHugginsDualModeModel, φ::Number) = φ * exp((1-φ) + fhdm.chi * (1-φ)^2)
 flory_huggins_φ(fhdm::FloryHugginsDualModeModel, activity::Number) = Roots.find_zero((φ) -> activity - flory_huggins_activity(fhdm, φ), (0, 1))
 
 
-function MembraneBase.rss(fhdm::FloryHugginsDualMode, isotherm::IsothermData)
-    if isotherm.num_components == 1
-        predictions = a_predict_concentration(fhdm, partial_pressures(isotherm, component=1))
-        return MembraneBase.rss(concentration(isotherm, component=1), predictions)
-    end
+function MembraneBase.rss(fhdm::FloryHugginsDualModeModel, isotherm::IsothermData)
+    predictions = [a_predict_concentration(fhdm, a) for a in activities(isotherm, component=1)]
+    return MembraneBase.rss(concentration(isotherm, component=1), predictions)
+    # # errs = ((concentration(isotherm, component=1) .-  predictions) ./ (concentration(isotherm, component=1) .+ 1e-16)).^2
+    # errs = (concentration(isotherm, component=1) .- predictions).^2
+    # return (sum(errs))
 end
 
 """
@@ -60,7 +61,7 @@ Options
 - `apply_weights` will use a weighted nonlinear regression method to solve the parameters, given that `Measurement` types are used somewhere in the data. 
 - `use_fugacity` will fit the model to fugacities instead of pressures (they should be present in the isotherm data).  
 """
-function fit_model(::FloryHugginsDualMode, isotherm::IsothermData, penetrant_partial_molar_volume; kwargs...) 
+function fit_model(::FloryHugginsDualMode, isotherm::IsothermData, penetrant_molar_volume; apply_weights=false, kwargs...) 
     # see if isotherm is only a single component
     if isotherm.num_components != 1
         throw(ErrorException("The isotherm given has more than one component, this function only works for pure isotherms"))
@@ -73,15 +74,16 @@ function fit_model(::FloryHugginsDualMode, isotherm::IsothermData, penetrant_par
     end
 
     target = function(ch_b_chi)
-        fhdm = FloryHugginsDualModeModel(ch_b_chi..., penetrant_partial_molar_volume)
+        fhdm = FloryHugginsDualModeModel(ch_b_chi..., penetrant_molar_volume)
         err = rss(fhdm, used_isotherm)
         if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
         return err
     end
-    lower = [0., 0., 0.]
-    upper = [Inf, Inf, Inf]
-    res = Optim.optimize(target, lower, upper, [0.5, 0.5, 0.5], Fminbox(BFGS()))
-    
+    # lower = [0., 0., -Inf]
+    # upper = [Inf, Inf, Inf]
+    # res = Optim.optimize(target, lower, upper, [1.0, 1.0, 0.], Fminbox(NelderMead()))
+
+    res = Optim.optimize(target, [1.0, 1.0, 1.0], NelderMead())
     # if !isnothing(uncertainty_method)
     #     ps = pressure_function(used_isotherm; component=1)
     #     cs = concentration(used_isotherm; component=1)
@@ -97,7 +99,7 @@ function fit_model(::FloryHugginsDualMode, isotherm::IsothermData, penetrant_par
     #     uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
     #     optimized_model = DualModeModel(uncertain_parameters...; use_fugacity)  
     # elseif isnothing(uncertainty_method)
-    optimized_model = DualModeModel(Optim.minimizer(res)...; use_fugacity)
+    optimized_model = FloryHugginsDualModeModel(Optim.minimizer(res)..., penetrant_molar_volume)
     # else
         # throw(ArgumentError("Invalid uncertainty_method: " * string(uncertainty_method)))
     # end

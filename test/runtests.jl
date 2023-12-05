@@ -178,8 +178,9 @@ precision = 5
     acts_3 = [0.01061664, 0.034878645, 0.06508188, 0.091689136, 0.126116896, 0.163921419]
     concs_3 = [1.188187617 ± 0.013431227, 2.455888283 ± 0.027591385, 3.80430418 ± 0.042799107, 5.824894435 ± 0.06532282, 9.604100032 ± 0.107154714, 14.70392798 ± 0.163320976]
     iso_3 = IsothermData(; activities=acts_3, concentrations_cc = concs_3)
-    fhdm = fit_model(SorptionModels.FloryHugginsDualMode(), iso_3, 74.7453)
-    
+    fhdm = fit_model(FloryHugginsDualMode(), iso_3, 74.7453)
+    pred = [a_predict_concentration(fhdm, a) for a in acts_3]
+
     end
 
     @testset "Fundamental Sorption Models" begin
@@ -202,9 +203,9 @@ precision = 5
         
         
             penetrants = ["CO2", "CO2"]
-            kij_ternary = [0      -0.007 -0.007 ; 
-                           -0.007 0      0.0    ; 
-                           -0.007 0.0    0.0    ]
+            kij_ternary = [0      -0.007 -0.007; 
+                           -0.007 0      0.0   ; 
+                           -0.007 0.0    0.0   ]
             ksw_ternary = [0.0102, 0.0]            # 1/MPa
             bulk_phase_eos_ternary = SL(penetrants)
             polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)

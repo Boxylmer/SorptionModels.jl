@@ -34,6 +34,9 @@ module SorptionModels
     export fit_gab_model
     export GAB, GABModel
 
+    include(joinpath("SorptionModels", "FloryHugginsDualMode.jl"))
+    export FloryHugginsDualMode, FloryHugginsDualModeModel
+    
     include(joinpath("SorptionModels", "NELF.jl"))
     export NELF, NELFModel
     export infinite_dilution_solubility_entropic, infinite_dilution_solubility_enthalpic
