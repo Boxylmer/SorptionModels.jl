@@ -73,7 +73,7 @@ function fit_model(::FloryHugginsDualMode, isotherm::IsothermData, penetrant_par
     end
 
     target = function(ch_b_chi)
-        fhdm = FloryHugginsDualModeModel(ch_b_chi..., penetrant_partial_molar_volume; use_fugacity)
+        fhdm = FloryHugginsDualModeModel(ch_b_chi..., penetrant_partial_molar_volume)
         err = rss(fhdm, used_isotherm)
         if typeof(err) <: Measurement err = err.val end  # handle measurement types (we don't need them where we're going!)
         return err
@@ -82,33 +82,25 @@ function fit_model(::FloryHugginsDualMode, isotherm::IsothermData, penetrant_par
     upper = [Inf, Inf, Inf]
     res = Optim.optimize(target, lower, upper, [0.5, 0.5, 0.5], Fminbox(BFGS()))
     
-    if use_fugacity
-        pressure_function = fugacities
-        resampled_fitting_function = DualModeHelperFunctions.resampled_set_fitting_wrapper_fugacity
-    else 
-        pressure_function = partial_pressures
-        resampled_fitting_function = DualModeHelperFunctions.resampled_set_fitting_wrapper_pressure
-    end
-    
-    if !isnothing(uncertainty_method)
-        ps = pressure_function(used_isotherm; component=1)
-        cs = concentration(used_isotherm; component=1)
-        data = collect(zip(ps, cs))
-    end
+    # if !isnothing(uncertainty_method)
+    #     ps = pressure_function(used_isotherm; component=1)
+    #     cs = concentration(used_isotherm; component=1)
+    #     data = collect(zip(ps, cs))
+    # end
 
-    if uncertainty_method == :JackKnife
-        corresponding_uncertainties = jackknife_uncertainty(resampled_fitting_function, data)
-        uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
-        optimized_model = DualModeModel(uncertain_parameters...; use_fugacity)
-    elseif uncertainty_method == :Bootstrap
-        corresponding_uncertainties = bootstrap_uncertainty(resampled_fitting_function, data)  
-        uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
-        optimized_model = DualModeModel(uncertain_parameters...; use_fugacity)  
-    elseif isnothing(uncertainty_method)
-        optimized_model = DualModeModel(Optim.minimizer(res)...; use_fugacity)
-    else
-        throw(ArgumentError("Invalid uncertainty_method: " * string(uncertainty_method)))
-    end
+    # if uncertainty_method == :JackKnife
+    #     corresponding_uncertainties = jackknife_uncertainty(resampled_fitting_function, data)
+    #     uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
+    #     optimized_model = DualModeModel(uncertain_parameters...; use_fugacity)
+    # elseif uncertainty_method == :Bootstrap
+    #     corresponding_uncertainties = bootstrap_uncertainty(resampled_fitting_function, data)  
+    #     uncertain_parameters = [Optim.minimizer(res)[i] ± corresponding_uncertainties[i] for i in 1:length(corresponding_uncertainties)]
+    #     optimized_model = DualModeModel(uncertain_parameters...; use_fugacity)  
+    # elseif isnothing(uncertainty_method)
+    optimized_model = DualModeModel(Optim.minimizer(res)...; use_fugacity)
+    # else
+        # throw(ArgumentError("Invalid uncertainty_method: " * string(uncertainty_method)))
+    # end
     return optimized_model
 end
 
