@@ -29,7 +29,7 @@ end
 
 #chemical potential in terms of mass density (g/cm3), mass fractions
 """
-    ρTw_chemical_potential(model,ρ,T,w)
+    ρTw_chemical_potential(model,ρ,T,w,input = :molar)
 
 returns the chemical potential of a mixture model.
 inputs:
@@ -37,15 +37,13 @@ inputs:
 - `ρ`: density [g/cm3]
 - `T`: temperature [K]
 - `w`: vector of mass fractions [kg/kg]
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `molar`
 
 returns:
  - `μ` vector of chemical potentials [J/mol]
 """
-function ρTw_chemical_potential(model,ρ,T,w)
-    #vector of molecular weights, g/mol
-    MW = Clapeyron.mw(model)
-    #mol fractions
-    n = MembraneBase.mass_fractions_to_mole_fractions(w,MW)
+function ρTw_chemical_potential(model,ρ,T,x,input = :molar)
+    n = __molar_fractions(model,x,input)
     m = molar_mass(model,n) #kg/mol
     #1 g/cm3 = 1000 kg/m3
     ρ_SI = ρ*1000
@@ -61,21 +59,15 @@ it calls `Clapeyron.lb_volume`.
 inputs:
 - `model`: `Clapeyron.EoSModel`
 - `w`: vector of mass fractions [kg/kg]
-- `input` (optional): a symbol specifying if `x` is in molar or mass base
-
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `molar`
 
 returns:
  - `ub_rho` upper bound density [g/cm3]
 """
 function ub_density(model,x,input = :molar) 
-    if input in (:molar,:mol,:n)
-        MW = Clapeyron.mw(model)
-        n = MembraneBase.mass_fractions_to_mole_fractions(x,MW)
-        lb_v = Clapeyron.lb_volume(model,n) #m3/mol
-    else
-        lb_v = Clapeyron.lb_volume(model,x)
-    end
-    m = molar_mass(model,x,input)
+    n = __molar_fractions(model,x,input)
+    lb_v = Clapeyron.lb_volume(model,n) #m3/mol
+    m = molar_mass(model,n)
     ub_rho_SI = m/lb_v
     ub_rho = ub_rho_SI/1000 #(1 kg/m3 = 0.001 g/cm3)
     return ub_rho
@@ -89,7 +81,7 @@ if `input == :molar`, then `x` is assumed to be molar fractions. if `input == :w
 inputs:
 - `model`: `Clapeyron.EoSModel`
 - `x`: vector of molar or mass compositions
-- `input` (optional): a symbol specifying if `x` is in molar or mass base
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `molar`
 
 returns:
  - `m`: molar mass [kg/mol]
@@ -112,7 +104,7 @@ function molar_mass(model::Clapeyron.EoSModel,x,input = :molar)
 end
 
 """
-    ρTw_chemical_potential_at_i(model,ρ,T,w,i)
+    ρTw_chemical_potential_at_i(model,ρ,T,w,i,input = :molar)
 
 returns the chemical potential of a mixture model at the index i.
 inputs:
@@ -121,17 +113,28 @@ inputs:
 - `T`: temperature [K]
 - `w`: vector of mass fractions [kg/kg]
 - `i`: index for requested chemical potential
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `molar`
+
 returns:
  - `μi` chemical potential at index i [J/mol]
 """
-function ρTw_chemical_potential_at_i(model,ρ,T,w,i)
+function ρTw_chemical_potential_at_i(model,ρ,T,w,i,input = :molar)
     #vector of molecular weights, g/mol
     MW = Clapeyron.mw(model)
     #mol fractions
-    n = MembraneBase.mass_fractions_to_mole_fractions(w,MW)
+    n = __molar_fractions(model,x,input)
     m = molar_mass(model,n) #kg/mol
     #1 g/cm3 = 1000 kg/m3
     ρ_SI = ρ*1000
     V = m/ρ_SI
     return VT_chemical_potential_at_i(model,V,T,n,i)
+end
+
+function __molar_fractions(model,x,input)
+    if input in (:molar,:mol,:n)
+        MW = Clapeyron.mw(model)
+        return MembraneBase.mass_fractions_to_mole_fractions(x,MW)
+    else
+        return x
+    end
 end

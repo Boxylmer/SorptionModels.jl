@@ -71,7 +71,7 @@ function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperat
 end
 
 function density_upper_bound(model::DGRPTModel, polymer_phase_mass_fractions)
-    return ub_density(model.polymer_model,polymer_phase_mass_fractions)
+    return ub_density(model.polymer_model,polymer_phase_mass_fractions,:weight)
 end
 
 function solve_polymer_density(
