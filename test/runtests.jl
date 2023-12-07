@@ -251,15 +251,16 @@ precision = 5
             char_ch4 = [250, 215, 0.500, 16.04]
             char_n2 = [160, 145, 0.943, 28.01]
 
-            # char_tpbo_valerio = [474, 900, 1.6624, 100000]
 
-            isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+            # test the polymer fitter with TPBO-0.25
+            char_co2 = [630, 300, 1.515, 44]
+            char_ch4 = [250, 215, 0.500, 16.04]
+            char_n2 = [160, 145, 0.943, 28.01]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-
+            isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             
 
-            # char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10) # TODO
-
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true; initial_search_resolution=10) 
             # just running to make sure it doesn't throw
             # TODO
             # char_tpbo25_with_errs_hessian = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, uncertainty_method=:Hessian)
@@ -376,9 +377,10 @@ precision = 5
             nelf_butane_preds = [predict_concentration(ptmsn_butane_nelf_model, 308.15, p, ksw=[1.1], units=:g)[1] for p in experimental_pressures_mpa]
             dgrpt_butane_preds = [predict_concentration(ptmsn_butane_dgrpt_model, 308.15, p, units=:g)[1] for p in experimental_pressures_mpa]
 
-            plt = scatter(experimental_activities, experimental_sorption_g_per_g)
-            plot!(plt, experimental_activities, nelf_butane_preds)
-            plot!(plt, experimental_activities, dgrpt_butane_preds) # TODO 
+            # plt = scatter(experimental_activities, experimental_sorption_g_per_g)
+            # plot!(plt, experimental_activities, nelf_butane_preds)
+            # plot!(plt, experimental_activities, dgrpt_butane_preds) # TODO 
+    end
 
     @testset "Transient Sorption Models" begin
         

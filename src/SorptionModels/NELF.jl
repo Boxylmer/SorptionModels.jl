@@ -2,7 +2,8 @@ const DEFAULT_NELF_INFINITE_DILUTION_PRESSURE = 1e-10 # ???
 const DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT = 100000
 
 struct NELF end
-
+# struct NELF{M} end
+# NELF() = NELF(:unspecified) # TODO
 
 """
     NELFModel(bulk_model, polymer_model, polymer_dry_density)
@@ -19,7 +20,6 @@ struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     bulk_model::BMT                 # EOS
     polymer_model::POLYMT           # EOS
     polymer_dry_density::PDT        # number
-    # ksw_values::KSWT                # vector of values
 end
 
 function NELFModel(polymer_phase_model, polymer_dry_density)
@@ -154,22 +154,35 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
 # Arguments
 - `model_choice`: MembraneEOS model to use
 - `isotherms`: `Vector` of `IsothermData` structs using the polymer in question. Temperature, pressure, density, and concentration must be provided.
-- `bulk_phase_characteristic_params`: Vector of pure characteristic parameter vectors following the same order as the isotherms. 
+- `bulk_phase_params`: Vector of pure characteristic parameter vectors following the same order as the isotherms. 
+  - Each parameter vector's units should be formatted as (P★, T★, ρ★, mw) in units of (mpa, K, g/cm3, g/mol).
   - E.g., for Sanchez Lacombe and two input isotherms, `bulk_phase_characteristic_params = [[p★_1, t★_1, ρ★_1, mw_1], [p★_2, t★_2, ρ★_2, mw_2]]`
 - `polymer_molecular_weight`: A known molecular weight for the polymer (otherwise a default, arbitrarily large value is assumed)
 - `custom_densities`: An array (matching the dimensions of the input isotherms) of densities to use instead of the ones in the isotherm data provided. 
 - `uncertainty_method`: Calculate the uncertainty of the parameters from the fitting. For NELF, the Hessian method is currently the only one implemented.
 """
-function fit_model(::NELF, ::SanchezLacombe, isotherms::AbstractVector{<:IsothermData}, bulk_phase_characteristic_params; 
-    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, verbose=true, initial_search_resolution=20,
-    custom_densities::Union{Missing, AbstractArray}=missing, uncertainty_method=nothing)
+function fit_model(::NELF,# TODO Docs update
+    isotherms::AbstractVector{<:IsothermData}, 
+    bulk_phase_params::AbstractVector; 
+    kij_fitting_method=:component, # :all and :none
+    polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, 
+    verbose=false, 
+    initial_search_resolution=20,
+    custom_densities::Union{Missing, AbstractArray}=missing, 
+    uncertainty_method=nothing)
     
     if verbose
         println("Starting parameter generation for NELF fit with the Sanchez Lacombe EoS")
     end
     # this function uses SL, which needs 4 params per component, one of which is already specified (MW)
 
-    error_function = _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight; nan_on_failure=false)
+    error_function = _make_nelf_model_parameter_target(
+        isotherms, 
+        bulk_phase_params, 
+        DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
+        polymer_molecular_weight; 
+        nan_on_failure=false)
+
     if ismissing(custom_densities)
         densities = polymer_density.(isotherms)
     else
@@ -180,11 +193,11 @@ function fit_model(::NELF, ::SanchezLacombe, isotherms::AbstractVector{<:Isother
     naive_lower = [50., 50., density_lower_bound]
     naive_upper = [2000., 2000., density_upper_bound]
     if verbose
-        println("Identified naive upper bounds of $naive_upper and lower bounds of $naive_lower for P, T and rho respectively.")
+        println("Identified naive lower bound of $naive_lower and upper bound of $naive_upper for P, T and rho respectively.")
     end
     min_results, min_args, lower, upper = scan_for_starting_point_and_bounds_3_dims(error_function, naive_lower, naive_upper, initial_search_resolution; verbose)
     if verbose
-        println("Found initial starting point at point $min_args, with an RSS of $min_results, bounded by a lower bounds of $lower and upper bounds of $upper. Starting optimization...")
+        println("Found initial starting point at point $min_args, with an RSS of $min_results, bounded by a lower bound of $lower and upper bound of $upper. Starting optimization...")
     end
     # @show min_args, lower, upper
     res = Optim.optimize(
@@ -219,10 +232,34 @@ function fit_model(::NELF, ::SanchezLacombe, isotherms::AbstractVector{<:Isother
     # work in progress
 end
 
+# TODO possibly move to model methods
+"Construct a two component SL EoSModel with params formatted as (P★, T★, ρ★, mw) in units of (mpa, K, g/cm3, g/mol)."
+function construct_binary_sl_eosmodel(polymer_params, bulk_params, kijval::Number)
+    v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
+    ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
+    r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
+
+    P★, T★, ρ★, mw = [[pol, bulk] for (pol, bulk) in zip(polymer_params, bulk_params)]
+    # @show P★, T★, ρ★, mw = collect(zip(polymer_params, bulk_params))
+
+    model = Clapeyron.SL(
+        ["Polymer", "Component"], 
+        userlocations = Dict(
+            :vol => v★.(P★, T★), 
+            :segment => r.(P★, T★, ρ★, mw),
+            :epsilon => ϵ★.(T★), 
+            :Mw => mw,
+            :k => [0 kijval; kijval 0]
+        )
+    )
+    return model
+end
+
 # todo this allocates like crazy when it really shouldn't. What's going on?
 """
     scan_for_starting_point_and_bounds_3_dims(target_function::Function, naive_lower::Vector{Float64}, naive_lower::Vector{Float64}, resolutions=missing; return_grid=false, verbose=true)
-Search for a vector of parameters, bounded by `naive_lower` and `naive_lower`, that is closest to minimizing a `target_function` by trying every possible value in a grid of `resolutions`. 
+
+    Search for a vector of parameters, bounded by `naive_lower` and `naive_lower`, that is closest to minimizing a `target_function` by trying every possible value in a grid of `resolutions`. 
 - `resolutions` can be a vector of the same length as the bounds and arguments to the `target_function`. If a single integer is passed, it will assume you want the same resolution on all input dimensions.
 - This search algorithm assumes that the target_function contains one obvious local minima, but is robust to `NaN`, `missing`, and `nothing` output from `target_function`.
 
@@ -293,30 +330,28 @@ function scan_for_starting_point_and_bounds_3_dims(target_function::Function, na
     return min_results, min_args, lower_bounds, upper_bounds
 end
 
-function _make_nelf_model_parameter_target(isotherms::AbstractVector{<:IsothermData}, bulk_phase_models::AbstractVector, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
+function _make_nelf_model_parameter_target(
+    isotherms::AbstractVector{<:IsothermData}, 
+    bulk_phase_param_vecs::AbstractVector, 
+    infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
+    polymer_molecular_weight=100000; 
+    nan_on_failure=false)
     # classic infinite dilution parameter target
 
-    v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
-    ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
-    r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
-        
-    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
+    dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms] 
+    # TODO don't restrict to dual mode type isotherms only, we probably want to just pick the first data point maybe? Maybe need a flag to define strategy
+    
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
 
     function error_function(char_param_vec)
         given_sol = zeros(length(isotherms))
         pred_sol = zeros(length(isotherms)) 
-        for i in eachindex(isotherms)
-            char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
-            char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]
-            char_densities = [char_param_vec[3], bulk_phase_characteristic_params[i][3]]
-            molecular_weights = [polymer_molecular_weight, bulk_phase_characteristic_params[i][4]]
+        for i in eachindex(isotherms, bulk_phase_param_vecs)
+            kij = 0 # TODO eventually we might solve this in parallel
+            polymer_phase_model = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], bulk_phase_param_vecs[i], kij) 
 
-            polymer_phase_model = SL( # TODO
-                char_pressures, char_temperatures, char_densities, molecular_weights
-            )
-            nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i]) 
+            nelf_model = NELFModel(polymer_phase_model, densities[i]) 
             pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] / infinite_dilution_pressure
             given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
         end
@@ -329,7 +364,7 @@ end
 
 """
     fit_kij(NELF(), isotherms, bulk_parameters, polymer_parameters; [interpolation_model]=DualMode(), [kij_fit_p_mpa]=1e-4)
-Find the best kij and ksw parameters for the NELF model according to the Sanchez Lacombe EOS. 
+Find the best kij and ksw parameters for the NELF model.  
 # Arguments
 - `isotherms`: `Vector` of `IsothermData` structs using the polymer in question with **only one kind of component**. Temperature, pressure, density, and concentration must be provided.
 - `bulk_parameters`: vector of the gas or vapor's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3, mw_g_mol]`.
@@ -353,10 +388,6 @@ function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_paramet
         return rss(exp_concs, pred_concs)
     end
     return Optim.minimizer(Optim.optimize(kij_error_function, [0.], BFGS()))
-end
-
-
-function fit_ksw(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_parameters::AbstractVector{<:Number}, polymer_parameters::AbstractVector{<:Number})
 end
 
 function fit_ksw(::NELF, isotherm::IsothermData, bulk_model, polymer_model)
