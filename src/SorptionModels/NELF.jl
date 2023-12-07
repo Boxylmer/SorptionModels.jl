@@ -203,12 +203,7 @@ function fit_model(::NELF, ::SanchezLacombe, isotherms::AbstractVector{<:Isother
 
     _minimizer = Optim.minimizer(res)
 
-    if uncertainty_method == :Bootstrap
-        # errors = bootstrap_uncertainty(
-        #     fitting_uncertainty_wrapper, dataset(_step_data); nsamples=num_uncertainty_resamples
-        # )
-        throw(ErrorException("Bootstrapping isn't working for this set of models just yet"))
-    elseif uncertainty_method == :jackKnife
+    if uncertainty_method == :jackKnife
         throw(ErrorException("Jackknifing isn't working for this set of models just yet"))
         errors = jackknife_uncertainty(fitting_uncertainty_wrapper, dataset(_step_data))
 
@@ -218,7 +213,7 @@ function fit_model(::NELF, ::SanchezLacombe, isotherms::AbstractVector{<:Isother
     elseif isnothing(uncertainty_method)
         minimizer = _minimizer
     else
-        throw(ArgumentError("Uncertainty method should be a symbol, e.g., :Hessian, :JackKnife, or :Bootstrap"))
+        throw(ArgumentError("Uncertainty method should be a symbol, e.g., :Hessian, or :JackKnife"))
     end
     return [minimizer..., polymer_molecular_weight]
     # work in progress
@@ -298,24 +293,13 @@ function scan_for_starting_point_and_bounds_3_dims(target_function::Function, na
     return min_results, min_args, lower_bounds, upper_bounds
 end
 
-function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
+function _make_nelf_model_parameter_target(isotherms::AbstractVector{<:IsothermData}, bulk_phase_models::AbstractVector, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
     # classic infinite dilution parameter target
 
     v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
     ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
     r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
         
-    bulk_phase_models = [
-        SL(["pen"],
-            userlocations = Dict(
-                :vol => v★(params[1], params[2]), 
-                :segment => r(params...),
-                :epsilon => ϵ★(params[2]), 
-                :Mw => params[4],
-            )
-        )
-    for params in bulk_phase_characteristic_params]
-    
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
@@ -338,7 +322,6 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
         end
         resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
         err = log1p(resid)
-        # @show char_param_vec, err
         return err
     end
     return error_function
