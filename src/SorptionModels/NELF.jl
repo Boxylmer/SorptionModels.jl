@@ -22,6 +22,11 @@ struct NELFModel{BMT, POLYMT, PDT} <: SorptionModel
     # ksw_values::KSWT                # vector of values
 end
 
+function NELFModel(polymer_phase_model, polymer_dry_density)
+    bulk_phase_model = Clapeyron.split_model(polymer_phase_model, [2:length(polymer_phase_model)])[1]
+    return NELFModel(bulk_phase_model, polymer_phase_model, polymer_dry_density)
+end
+
 function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions=[1]; ksw=nothing, units=:cc, nan_on_failure=false)
     minimum_val = 100 * eps()
     error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val, nan_on_failure)

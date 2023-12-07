@@ -17,19 +17,31 @@ Any keyword arguments get passed on to the specific model.
 function fit_model(model::SorptionModel, ::IsothermData) end
 
 #TODO: this could be useful in Clapeyron?
-function VT_chemical_potential_at_i(model,V,T,z = Clapeyron.SA[1.0],i)
+"""
+    VT_chemical_potential_at_i(model,V,T, [z = Clapeyron.SA[1.0]], [i=0])
+    - V in m3/mol
+    - T in K
+Acquire the chemical potential potential in J/mol of the system for component i. 
+"""
+function VT_chemical_potential_at_i(model,V,T,z = Clapeyron.SA[1.0], i=1)
     f(_z) = Clapeyron.eos(model,V,T,_z)
     return Clapeyron.Solvers.grad_at_i(f,z,i)
 end
 
-function VT_chemical_potential_res_at_i(model,V,T,z = Clapeyron.SA[1.0],i)
+"""
+    VT_chemical_potential_at_i(model,V,T, [z = Clapeyron.SA[1.0]], [i=0])
+    - V in m3/mol
+    - T in K
+Acquire the residual chemical potential potential in J/mol of the system for component i. 
+"""
+function VT_chemical_potential_res_at_i(model, V, T, z = Clapeyron.SA[1.0], i=1)
     f(_z) = Clapeyron.eos_res(model,V,T,_z)
     return Clapeyron.Solvers.grad_at_i(f,z,i)
 end
 
 #chemical potential in terms of mass density (g/cm3), mass fractions
 """
-    ρTw_chemical_potential(model,ρ,T,w,input = :molar)
+    ρTw_chemical_potential(model,ρ,T,w,input = :mass)
 
 returns the chemical potential of a mixture model.
 inputs:
@@ -37,13 +49,13 @@ inputs:
 - `ρ`: density [g/cm3]
 - `T`: temperature [K]
 - `w`: vector of mass fractions [kg/kg]
-- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `molar`
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `mass`
 
 returns:
  - `μ` vector of chemical potentials [J/mol]
 """
-function ρTw_chemical_potential(model,ρ,T,x,input = :molar)
-    n = __molar_fractions(model,x,input)
+function ρTw_chemical_potential(model,ρ,T,w,input = :mass)
+    n = __molar_fractions(model,w,input)
     m = molar_mass(model,n) #kg/mol
     #1 g/cm3 = 1000 kg/m3
     ρ_SI = ρ*1000
@@ -104,7 +116,7 @@ function molar_mass(model::Clapeyron.EoSModel,x,input = :molar)
 end
 
 """
-    ρTw_chemical_potential_at_i(model,ρ,T,w,i,input = :molar)
+    ρTw_chemical_potential_at_i(model,ρ,T,w,i,input = :mass)
 
 returns the chemical potential of a mixture model at the index i.
 inputs:
@@ -113,16 +125,14 @@ inputs:
 - `T`: temperature [K]
 - `w`: vector of mass fractions [kg/kg]
 - `i`: index for requested chemical potential
-- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `molar`
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `mass`
 
 returns:
  - `μi` chemical potential at index i [J/mol]
 """
-function ρTw_chemical_potential_at_i(model,ρ,T,w,i,input = :molar)
-    #vector of molecular weights, g/mol
-    MW = Clapeyron.mw(model)
+function ρTw_chemical_potential_at_i(model,ρ,T,w,i,input=:mass)
     #mol fractions
-    n = __molar_fractions(model,x,input)
+    n = __molar_fractions(model,w,input)
     m = molar_mass(model,n) #kg/mol
     #1 g/cm3 = 1000 kg/m3
     ρ_SI = ρ*1000
@@ -131,7 +141,7 @@ function ρTw_chemical_potential_at_i(model,ρ,T,w,i,input = :molar)
 end
 
 function __molar_fractions(model,x,input)
-    if input in (:molar,:mol,:n)
+    if !(input in (:molar,:mol,:n))
         MW = Clapeyron.mw(model)
         return MembraneBase.mass_fractions_to_mole_fractions(x,MW)
     else

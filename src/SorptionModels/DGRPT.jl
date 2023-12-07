@@ -18,6 +18,11 @@ struct DGRPTModel{BMT, POLYMT, PDT} <: SorptionModel
     polymer_dry_density::PDT
 end
 
+function DGRPTModel(polymer_phase_model::EoSModel, polymer_dry_density::Number)
+    bulk_phase_model = Clapeyron.split_model(polymer_phase_model, [2:length(polymer_phase_model)])[1]
+    return DGRPTModel(bulk_phase_model, polymer_phase_model, polymer_dry_density)
+end
+
 function predict_concentration(
         model::DGRPTModel, temperature, pressure, bulk_penetrant_mole_fractions=[1];
         taylor_series_order = default_dgrpt_taylor_expansion_order,units=:cc)
@@ -61,13 +66,13 @@ end
 
 function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
-    return ρTw_chemical_potential(model.polymer_model,polymer_phase_density,temperature,polymer_phase_mass_fractions)
+    return ρTw_chemical_potential(model.polymer_model,polymer_phase_density,temperature,polymer_phase_mass_fractions, :mass)
 end
 
 #specialization to just calculate the first chemical potential.
 function calculate_polymer_phase_chemical_potentials(model::DGRPTModel, temperature, polymer_density, polymer_phase_mass_fractions,i)
     polymer_phase_density = polymer_density / polymer_phase_mass_fractions[1]
-    return ρTw_chemical_potential_at_i(model.polymer_model,polymer_phase_density,temperature,polymer_phase_mass_fractions,1)
+    return ρTw_chemical_potential_at_i(model.polymer_model, polymer_phase_density, temperature, polymer_phase_mass_fractions, 1, :mass)
 end
 
 function density_upper_bound(model::DGRPTModel, polymer_phase_mass_fractions)
@@ -161,7 +166,7 @@ end
 
 function dry_polymer_chemical_potential(model::DGRPTModel, temperature)
     #a [1.0,0.0,....,0.0] vector
-    num_components = length(model)
+    num_components = length(model.polymer_model)
     pseudo_mole_fracs = Clapeyron.FillArrays.OneElement(1.0, 1, num_components)
 
     polymer_molar_vol = MembraneBase.density_to_molar_volume(
@@ -185,7 +190,7 @@ function make_penetrant_mass_fraction_target(
     model::DGRPTModel,
     temperature::Number,
     pressure::Number,
-    bulk_penetrant_mole_fractions::AbstractVector{<:Number};
+    bulk_phase_mole_fractions::AbstractVector{<:Number};
     taylor_series_order=default_dgrpt_taylor_expansion_order)
 
     pressure_SI = pressure*MembraneBase.PA_PER_MPA

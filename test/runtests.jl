@@ -207,7 +207,9 @@ precision = 5
             ksw = 0.002            # 1/MPa
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0]; ksw=[ksw])[1] for p in pressures]
-        
+            sse = sum((expected_concs_cc_cc .- nelf_concs_pure_co2).^2)
+            @test sse < 5 # this is horrible practice, please forgive me. I just want to make sure changes don't significantly alter the model's output. 
+
             penetrants = ["CO2", "CO2"]
             
             ksw_ternary = [0.0102, 0.0]            # 1/MPa
@@ -266,8 +268,6 @@ precision = 5
             # sinf_analytical = exp(ln_sinf)
             # sinf_numerical = infinite_dilution_solubility(nelfmodel, temperature)
             # @test round(sinf_analytical; sigdigits=2) == round(sinf_numerical; sigdigits=2)
-            
-            
             
             
             # dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
@@ -342,18 +342,36 @@ precision = 5
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in ps]
-            # nelf_densities = [calculate_swelled_polymer_density(nelfmodel, p, [1], [0]) for p in ps]
             dgrpt_concs_pure_co2_1_term = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=1)[1] for p in ps]
-            # dgrpt_dens_pure_co2_1_term = [polymer_density(dgrptmodel, temperature, p, [1]; taylor_series_order=1) for p in ps]
-            # dgrpt_concs_pure_co2_2_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=2)[1] for p in ps]
-            # dgrpt_concs_pure_co2_5_terms = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=5)[1] for p in ps]
-            # @show nelf_concs_pure_co2
-            # @show nelf_densities
-            # @show dgrpt_concs_pure_co2_1_term
-            # @show dgrpt_dens_pure_co2_1_term
-            # @show dgrpt_concs_pure_co2_2_terms
-            # @show dgrpt_concs_pure_co2_5_terms
-    end
+            @test (nelf_concs_pure_co2[1] - dgrpt_concs_pure_co2_1_term[1])^2 < 0.00002 # we should not see differences at low pressures
+            @test (nelf_concs_pure_co2[2] - dgrpt_concs_pure_co2_1_term[2])^2 > 100 # we should see differences at swelling pressures
+            
+            
+
+            # Now lets test predictions from the original DGRPT paper
+            polymer_phase_model = sPCSAFT(["C4","PTMSN"],
+                userlocations = (
+                    segment = [2.283,0.0356*100000], 
+                    Mw = [58.1222,100000],
+                    sigma = [3.734,3.335],
+                    epsilon = [225.57,195.88],
+                    epsilon_assoc = nothing, 
+                    bondvol = nothing, 
+                    k = [0 -0.0611; -0.0611 0]
+                )
+            )
+
+            ptmsn_dry_density_25c = 0.883 
+            ptmsn_butane_dgrpt_model = DGRPTModel(polymer_phase_model, ptmsn_dry_density_25c)
+            ptmsn_butane_nelf_model = NELFModel(polymer_phase_model, ptmsn_dry_density_25c)
+            experimental_activities = [0.016690042075736364, 0.04277699859747544, 0.07812061711079953, 0.10350631136044881, 0.13772791023842923, 0.17798036465638178, 0.22019635343618515, 0.2643758765778401]
+            experimental_sorption_g_per_g = [0.0433843384338434, 0.0678667866786678, 0.08622862286228627, 0.0975697569756975, 0.11071107110711065, 0.1245724572457246, 0.13843384338433845, 0.15175517551755177]
+            butane_psat_25c = 329132.07610504783 / 1e6
+            experimental_pressures_mpa = experimental_activities .* butane_psat_25c
+            nelf_preds = [predict_concentration(ptmsn_butane_nelf_model, 298.15, p, units=:g) for p in experimental_pressures_mpa]
+            predict_concentration(ptmsn_butane_dgrpt_model, 298.15, 0.05, units=:g)
+            pred_butane_concs = [predict_concentration(ptmsn_butane_dgrpt_model, 298.15, p, units=:g) for p in experimental_pressures_mpa]
+
 
     @testset "Transient Sorption Models" begin
         
