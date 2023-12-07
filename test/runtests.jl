@@ -212,9 +212,11 @@ precision = 5
 
             penetrants = ["CO2", "CO2"]
             
-            ksw_ternary = [0.0102, 0.0]            # 1/MPa
-            # bulk_phase_eos_ternary = SL(penetrants)
-            # polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)
+            concise_model = NELFModel(polymer_phase_eos, density)
+            @test predict_concentration(nelfmodel, temperature, 1) == predict_concentration(concise_model, temperature, 1)
+
+            # test a ternary system 
+            ksw_ternary = [0.0102, 0.0]  # 1/MPa
             kij_ternary = [ 0      -0.007 -0.007 ; 
                            -0.007 0      0.0    ; 
                            -0.007 0.0    0.0    ]
@@ -253,6 +255,9 @@ precision = 5
 
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
+
+            
+
             # char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10) # TODO
 
             # just running to make sure it doesn't throw
@@ -349,29 +354,31 @@ precision = 5
             
 
             # Now lets test predictions from the original DGRPT paper
-            polymer_phase_model = PCSAFT(["C4","PTMSN"],
+            polymer_phase_model = sPCSAFT(["PTMSN", "C4"],
                 userlocations = (
-                    segment = [2.283, 0.0356*100000], 
-                    Mw = [58.1222, 100000],
-                    sigma = [3.734, 3.335],
-                    epsilon = [225.57, 195.88],
+                    segment = [0.0356*100000, 2.283], 
+                    Mw = [100000, 58.1222],
+                    sigma = [3.335, 3.734],
+                    epsilon = [195.88, 225.57],
                     epsilon_assoc = nothing, 
                     bondvol = nothing, 
-                    k = [0 -0.0611; -0.0611 0]
+                    k = [0 -0.0058; -0.0058 0]
                 )
             )
 
             ptmsn_dry_density_25c = 0.883 
             ptmsn_butane_dgrpt_model = DGRPTModel(polymer_phase_model, ptmsn_dry_density_25c)
             ptmsn_butane_nelf_model = NELFModel(polymer_phase_model, ptmsn_dry_density_25c)
-            experimental_activities = [0.016690042075736364, 0.04277699859747544, 0.07812061711079953, 0.10350631136044881, 0.13772791023842923, 0.17798036465638178, 0.22019635343618515, 0.2643758765778401]
-            experimental_sorption_g_per_g = [0.0433843384338434, 0.0678667866786678, 0.08622862286228627, 0.0975697569756975, 0.11071107110711065, 0.1245724572457246, 0.13843384338433845, 0.15175517551755177]
-            butane_psat_25c = 329132.07610504783 / 1e6
-            experimental_pressures_mpa = experimental_activities .* butane_psat_25c
-            nelf_preds = [predict_concentration(ptmsn_butane_nelf_model, 298.15, p, units=:g) for p in experimental_pressures_mpa]
-            predict_concentration(ptmsn_butane_dgrpt_model, 298.15, 0.05, units=:g)
-            pred_butane_concs = [predict_concentration(ptmsn_butane_dgrpt_model, 298.15, p, units=:g) for p in experimental_pressures_mpa]
+            experimental_activities = [0, 0.016690042075736364, 0.04277699859747544, 0.07812061711079953, 0.10350631136044881, 0.13772791023842923, 0.17798036465638178, 0.22019635343618515, 0.2643758765778401]
+            experimental_sorption_g_per_g = [0, 0.0433843384338434, 0.0678667866786678, 0.08622862286228627, 0.0975697569756975, 0.11071107110711065, 0.1245724572457246, 0.13843384338433845, 0.15175517551755177]
+            butane_psat_35c = 329132.07610504783 / 1e6
+            experimental_pressures_mpa = experimental_activities .* butane_psat_35c
+            nelf_butane_preds = [predict_concentration(ptmsn_butane_nelf_model, 308.15, p, ksw=[1.1], units=:g)[1] for p in experimental_pressures_mpa]
+            dgrpt_butane_preds = [predict_concentration(ptmsn_butane_dgrpt_model, 308.15, p, units=:g)[1] for p in experimental_pressures_mpa]
 
+            plt = scatter(experimental_activities, experimental_sorption_g_per_g)
+            plot!(plt, experimental_activities, nelf_butane_preds)
+            plot!(plt, experimental_activities, dgrpt_butane_preds) # TODO 
 
     @testset "Transient Sorption Models" begin
         

@@ -64,6 +64,29 @@ function ρTw_chemical_potential(model,ρ,T,w,input = :mass)
 end
 
 """
+    ρTw_chemical_potential_res(model,ρ,T,w,input = :mass)
+
+returns the residual chemical potential of a mixture model.
+inputs:
+- `model`: `Clapeyron.EoSModel`
+- `ρ`: density [g/cm3]
+- `T`: temperature [K]
+- `w`: vector of mass fractions [kg/kg]
+- `input` (optional): a symbol specifying if `x` is in molar or mass base. Default: `mass`
+
+returns:
+ - `μ_res` vector of residual chemical potentials [J/mol]
+"""
+function ρTw_chemical_potential_res(model,ρ,T,w,input = :mass)
+    n = __molar_fractions(model,w,input)
+    m = molar_mass(model,n) #kg/mol
+    #1 g/cm3 = 1000 kg/m3
+    ρ_SI = ρ*1000
+    V = m/ρ_SI
+    return Clapeyron.VT_chemical_potential_res(model,V,T,n)
+end
+
+"""
     ub_density(model,w,input = :molar)
 
 returns the upper bound density, in [g/cm3].

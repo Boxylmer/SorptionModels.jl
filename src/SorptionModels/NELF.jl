@@ -79,6 +79,7 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
     bulk_phase_mole_fractions = ((i) -> (i < minimum_val ? minimum_val : i)).(bulk_phase_mole_fractions)  # Courtesy of Clementine (Julia Discord)
 
     target_potentials = Clapeyron.chemical_potential(model.bulk_model, pressure * MembraneBase.PA_PER_MPA, temperature, bulk_phase_mole_fractions)
+   
     normalizer = (rss(zeros(length(bulk_phase_mole_fractions)), target_potentials))
 
     function error_target(penetrant_mass_fractions)
@@ -94,6 +95,8 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
         polymer_phase_mole_fractions = mass_fractions_to_mole_fractions(polymer_phase_mass_fractions, Clapeyron.mw(model.polymer_model))
 
         # you have to calculate this every time. There is no other option when doing multicomponent as the phase maximum density changes at any composition.
+        
+        # TODO don't bother calculating mole frac and just calculate based on mass frac
         polymer_phase_density_upper_bound = ub_density(model.polymer_model,polymer_phase_mole_fractions,:molar) #g/cm3
 
         if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound 
@@ -108,7 +111,6 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
             temperature, 
             polymer_phase_mole_fractions,
             :molar)
-
         residual_squared = log1p((rss(target_potentials, polymer_phase_residual_potential[2:end])))
         return residual_squared
     end
@@ -299,7 +301,6 @@ end
 function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000; nan_on_failure=false)
     # classic infinite dilution parameter target
 
-    # bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
     v★(P★, T★,) = 8.31446261815324 * T★ / P★ / 1000000 # J / (mol*K) * K / mpa -> pa * m3 / (mol * mpa) ->  need to divide by 1000000 to get m3/mol
     ϵ★(T★) = 8.31446261815324 * T★ # J / (mol * K) * K -> J/mol 
     r(P★, T★, ρ★, mw) = mw * (P★ * 1000000) / (8.31446261815324 * T★ * (ρ★ / 1e-6)) # g/mol * mpa * 1000000 pa/mpa / ((j/mol*K) * K * g/(cm3 / 1e-6 m3/cm3)) -> unitless
