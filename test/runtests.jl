@@ -349,12 +349,12 @@ precision = 5
             
 
             # Now lets test predictions from the original DGRPT paper
-            polymer_phase_model = sPCSAFT(["C4","PTMSN"],
+            polymer_phase_model = PCSAFT(["C4","PTMSN"],
                 userlocations = (
-                    segment = [2.283,0.0356*100000], 
-                    Mw = [58.1222,100000],
-                    sigma = [3.734,3.335],
-                    epsilon = [225.57,195.88],
+                    segment = [2.283, 0.0356*100000], 
+                    Mw = [58.1222, 100000],
+                    sigma = [3.734, 3.335],
+                    epsilon = [225.57, 195.88],
                     epsilon_assoc = nothing, 
                     bondvol = nothing, 
                     k = [0 -0.0611; -0.0611 0]

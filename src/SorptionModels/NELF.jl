@@ -144,38 +144,6 @@ function infinite_dilution_solubility(model::NELFModel, temperature::Number; nan
     return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0], nan_on_failure)[1] / inf_dilution_p
 end
 
-# function infinite_dilution_solubility_entropic(model::NELFModel; polymer_index=1, penetrant_index=2)
-#     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
-#         slpolymerparams = model.polymer_model.components[polymer_index]
-#         slpenetrantparams = model.polymer_model.components[penetrant_index]
-#         r1 = MembraneEOS.sanchez_lacombe_ri0(slpenetrantparams)
-#         v1 = MembraneEOS.sanchez_lacombe_pure_characteristic_volume(slpenetrantparams)
-#         v2 = MembraneEOS.sanchez_lacombe_pure_characteristic_volume(slpolymerparams)
-#         ρ2★ = MembraneEOS.characteristic_density(slpolymerparams)
-#         ρ2 = model.polymer_dry_density
-#         comp = r1 * (((v1/v2 - 1) * ρ2★/ρ2 + 1) * log(1-ρ2/ρ2★) + (v1/v2 - 1))
-#         return comp
-#     else
-#     end
-# end 
-
-# function infinite_dilution_solubility_enthalpic(model::NELFModel, temperature::Number; polymer_index=1, penetrant_index=2)
-#     if typeof(model.polymer_model) <: MembraneEOS.SanchezLacombeModel
-#         slpolymerparams = model.polymer_model.components[polymer_index]
-#         slpenetrantparams = model.polymer_model.components[penetrant_index]
-#         r1 = MembraneEOS.sanchez_lacombe_ri0(slpenetrantparams)
-#         t1 = MembraneEOS.characteristic_temperature(slpenetrantparams)
-#         kij = model.polymer_model.kij[polymer_index, penetrant_index]
-#         p1 = MembraneEOS.characteristic_pressure(slpenetrantparams)
-#         p2 = MembraneEOS.characteristic_pressure(slpolymerparams)
-
-#         ρ2★ = MembraneEOS.characteristic_density(slpolymerparams)
-#         ρ2 = model.polymer_dry_density
-#         comp = r1 * (ρ2/ρ2★) * (t1/temperature) * (2/p1) * (1-kij) * sqrt(p1*p2)
-#         return comp
-#     else
-#     end
-# end
 
 # functions for fit data to NELF parameters
 """
@@ -374,46 +342,6 @@ function _make_nelf_model_parameter_target(isotherms, bulk_phase_characteristic_
     end
     return error_function
 end
-
-# function _make_nelf_model_parameter_target_2(isotherms, bulk_phase_characteristic_params, infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, polymer_molecular_weight=100000)
-#     bulk_phase_models = [SL(params...) for params in bulk_phase_characteristic_params]
-#     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
-#     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
-#     temperatures = temperature.(isotherms)
-
-#     function error_function(char_param_vec)
-#         given_sol_inf = zeros(length(isotherms))  # reused
-#         pred_sol_inf = zeros(length(isotherms))   # reused
-
-#         pred_errs = 0
-
-#         for i in eachindex(isotherms)
-#             char_pressures = [char_param_vec[1], bulk_phase_characteristic_params[i][1]]
-#             char_temperatures = [char_param_vec[2], bulk_phase_characteristic_params[i][2]]
-#             char_densities = [char_param_vec[3], bulk_phase_characteristic_params[i][3]]
-#             molecular_weights = [polymer_molecular_weight, bulk_phase_characteristic_params[i][4]]
-
-#             polymer_phase_model = SL(char_pressures, char_temperatures, char_densities, molecular_weights)
-#             nelf_model = NELFModel(bulk_phase_models[i], polymer_phase_model, densities[i])
-
-#             pressures = partial_pressures(isotherms[i]; component=1)
-#             if pressures[1] == 0; pressures = partial_pressures(isotherms[i]; component=1)[2:end]; end
-
-#             pred_sols = [predict_concentration(nelf_model, temperatures[i], p, [1]; ksw=[0])[1] / p for p in pressures]
-#             given_sols = [predict_concentration(dualmode_models[i]::DualModeModel, p) / p for p in pressures]
-#             pred_errs += log(rss(given_sols, pred_sols))
-
-#             pred_sol_inf[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0])[1] / infinite_dilution_pressure
-#             given_sol_inf[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
-#         end
-#         err_inf = log(rss(given_sol_inf, pred_sol_inf))
-        
-
-#         return err_inf + pred_errs
-#     end
-#     return error_function
-# end
-
 
 """
     fit_kij(NELF(), isotherms, bulk_parameters, polymer_parameters; [interpolation_model]=DualMode(), [kij_fit_p_mpa]=1e-4)
