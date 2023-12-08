@@ -352,8 +352,9 @@ function _make_nelf_model_parameter_target(
             polymer_phase_model = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], bulk_phase_param_vecs[i], kij) 
 
             nelf_model = NELFModel(polymer_phase_model, densities[i]) 
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] / infinite_dilution_pressure
-            given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
+            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] #/ infinite_dilution_pressure
+            # given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
+            given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure)
         end
         resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
         err = log1p(resid)

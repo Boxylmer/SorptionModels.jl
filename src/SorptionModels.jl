@@ -107,5 +107,5 @@ module SorptionModels
 
     # Diagnostic Methods
     include(joinpath("ModelDiagnostics", "NELFDiagnostics.jl"))
-    export nelf_characteristic_parameter_error_map
+    # export nelf_characteristic_parameter_error_map
 end

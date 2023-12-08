@@ -260,8 +260,9 @@ precision = 5
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             
 
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true; initial_search_resolution=10) 
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10) 
             # just running to make sure it doesn't throw
+            
             # TODO
             # char_tpbo25_with_errs_hessian = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, uncertainty_method=:Hessian)
             
@@ -850,17 +851,18 @@ precision = 5
         
         # NELF
         isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
+        
         char_co2 = [630, 300, 1.515, 44]
         char_ch4 = [250, 215, 0.500, 16.04]
         char_n2 = [160, 145, 0.943, 28.01]
         bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-        # error_plot = nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, verbose=false) # TODO This needs to pass
-        # for val in error_plot
-        #     if isnan(val)
-        #         @show "Something very bad happened in the NELF diagnostics"
-        #     end
-        # end
-        # savefig(error_plot, joinpath(results_folder, "TPBO_25 error map.png"))
+        error_plot = nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, verbose=false) 
+        for val in error_plot
+            if isnan(val)
+                @show "Something very bad happened in the NELF diagnostics"
+            end
+        end
+
     
         # DGRPT
         polymer = "PC"
