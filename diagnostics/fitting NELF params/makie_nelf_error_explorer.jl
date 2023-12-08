@@ -1,4 +1,5 @@
-using GLMakie
+# using Makie
+using GLMakie; GLMakie.activate!() #framerate=1.0, scalefactor=1.0)
 using SorptionModels
 using MembraneBase
 
