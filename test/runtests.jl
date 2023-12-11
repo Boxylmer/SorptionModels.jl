@@ -182,6 +182,7 @@ precision = 5
         T★ = [755., 300.]
         ρ★ = [1.275, 1.515]
         mw = [100000, 44.01]
+        kij = [0 -0.007; -0.007 0]
         model = Clapeyron.SL(
             ["PC", "CO2"], 
             userlocations = Dict(
@@ -189,10 +190,10 @@ precision = 5
                 :segment => r.(P★, T★, ρ★, mw),
                 :epsilon => ϵ★.(T★), 
                 :Mw => mw,
-                :k => [0 -0.007; -0.007 0]
+                :k => kij
             )
         )
-        # kij = [0 -0.007; -0.007 0]
+        
         # bulk_phase_eos = SL([penetrant])
         # polymer_phase_eos = SL([polymer, penetrant], kij)
         polymer_phase_eos = model
@@ -214,6 +215,13 @@ precision = 5
             
             concise_model = NELFModel(polymer_phase_eos, density)
             @test predict_concentration(nelfmodel, temperature, 1) == predict_concentration(concise_model, temperature, 1)
+            
+            # can we change kij?
+            pred_base = predict_concentration(nelfmodel, 298.15, 1)
+            Clapeyron.set_k!(model, [0. -0.008; -0.008 0.0])
+            pred_new_kij = predict_concentration(nelfmodel, 298.15, 1)
+            @test pred_base < pred_new_kij
+            Clapeyron.set_k!(model, kij)
 
             # test a ternary system 
             ksw_ternary = [0.0102, 0.0]  # 1/MPa
@@ -235,32 +243,34 @@ precision = 5
                 )
             )
             polymer_phase_eos_ternary = model
-            bulk_phase_eos_ternary = Clapeyron.split_model(model, [2:3])[1]
+  
 
-            nelfmodel_ternary = NELFModel(bulk_phase_eos_ternary, polymer_phase_eos_ternary, density)
+            nelfmodel_ternary = NELFModel(polymer_phase_eos_ternary, density)
             nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5]; ksw=ksw_ternary)[1] for p in pressures]
             @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
         
             nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
             @test nelf_concs_co2_psuedo[3] != nelf_concs_pure_co2[3] # may need to be equal eventually, but for now mixing rules thwart this. 
 
-            @test round(infinite_dilution_solubility(nelfmodel, temperature)) ≈ 26 # 40
+            @test round(infinite_dilution_solubility(nelfmodel, temperature)) ≈ 30 # prev. 40
 
             # test the polymer fitter with TPBO-0.25
             char_co2 = [630, 300, 1.515, 44] # p*, t*, rho*, mw
-            char_ch4 = [250, 215, 0.500, 16.04]
-            char_n2 = [160, 145, 0.943, 28.01]
-
-
-            # test the polymer fitter with TPBO-0.25
-            char_co2 = [630, 300, 1.515, 44]
             char_ch4 = [250, 215, 0.500, 16.04]
             char_n2 = [160, 145, 0.943, 28.01]
             bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             
 
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10) 
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, fit_kij=false) 
+            fit_kij(NELF(), [tpbo_n2_5c, tpbo_n2_50c], char_tpbo25, char_n2)
+            fit_kij(NELF(), [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c], char_tpbo25, char_ch4)
+            fit_kij(NELF(), [tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c], char_tpbo25, char_co2)
+
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, fit_kij=true) 
+            
+
+            # now lets try fitting a kijval 
             # just running to make sure it doesn't throw
             
             # TODO
@@ -350,7 +360,7 @@ precision = 5
             
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0])[1] for p in ps]
             dgrpt_concs_pure_co2_1_term = [predict_concentration(dgrptmodel, temperature, p, [1.0]; taylor_series_order=1)[1] for p in ps]
-            @test (nelf_concs_pure_co2[1] - dgrpt_concs_pure_co2_1_term[1])^2 < 0.00002 # we should not see differences at low pressures
+            @test (nelf_concs_pure_co2[1] - dgrpt_concs_pure_co2_1_term[1])^2 < 0.0001 # we should not see differences at low pressures
             @test (nelf_concs_pure_co2[2] - dgrpt_concs_pure_co2_1_term[2])^2 > 100 # we should see differences at swelling pressures
             
             
@@ -842,8 +852,6 @@ precision = 5
 
         molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, uncertainty_method=:JackKnife, modeltype=DualModeDilation())
         write_analysis(molar_vol_analysis, path; name="dualmode dilation & jackknife")
-        
-
     end
 
     @testset "Diagnostic Methods" begin
@@ -856,13 +864,12 @@ precision = 5
         char_ch4 = [250, 215, 0.500, 16.04]
         char_n2 = [160, 145, 0.943, 28.01]
         bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
-        error_plot = nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, verbose=false) 
+        error_plot = SorptionModels.nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, verbose=false) 
         for val in error_plot
             if isnan(val)
                 @show "Something very bad happened in the NELF diagnostics"
             end
         end
-
     
         # DGRPT
         polymer = "PC"

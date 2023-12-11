@@ -141,9 +141,10 @@ end
 Get infinite dilution solubility in **((CC/CC) / MPa)**
 """
 # todo how will we predict the infinite dilution solubility or reject multicomponent models?
-function infinite_dilution_solubility(model::NELFModel, temperature::Number; nan_on_failure=false)  # naieve
-    inf_dilution_p = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
-    return predict_concentration(model, temperature, inf_dilution_p, [1]; ksw=[0], nan_on_failure)[1] / inf_dilution_p
+function infinite_dilution_solubility(
+    model::NELFModel, temperature::Number; 
+    nan_on_failure=false, infinite_dilution_pressure = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE)  # naieve
+    return predict_concentration(model, temperature, infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] / infinite_dilution_pressure
 end
 
 
@@ -160,16 +161,17 @@ Find the EOS parameters of a polymer from a vector of `IsothermData`s using the 
 - `polymer_molecular_weight`: A known molecular weight for the polymer (otherwise a default, arbitrarily large value is assumed)
 - `custom_densities`: An array (matching the dimensions of the input isotherms) of densities to use instead of the ones in the isotherm data provided. 
 - `uncertainty_method`: Calculate the uncertainty of the parameters from the fitting. For NELF, the Hessian method is currently the only one implemented.
+- `kij_fitting_method`: :infinite_dilution, :all, :none
 """
 function fit_model(::NELF,# TODO Docs update
     isotherms::AbstractVector{<:IsothermData}, 
-    bulk_phase_params::AbstractVector; 
-    kij_fitting_method=:component, # :all and :none
+    bulk_phase_params::AbstractVector;
     polymer_molecular_weight=DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT, 
     verbose=false, 
     initial_search_resolution=20,
     custom_densities::Union{Missing, AbstractArray}=missing, 
-    uncertainty_method=nothing)
+    uncertainty_method=nothing, 
+    fit_kij=false)
     
     if verbose
         println("Starting parameter generation for NELF fit with the Sanchez Lacombe EoS")
@@ -181,7 +183,16 @@ function fit_model(::NELF,# TODO Docs update
         bulk_phase_params, 
         DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
         polymer_molecular_weight; 
-        nan_on_failure=false)
+        nan_on_failure=false, 
+        fit_kij)
+
+    preliminary_error_function = _make_nelf_model_parameter_target(
+        isotherms, 
+        bulk_phase_params, 
+        DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
+        polymer_molecular_weight; 
+        nan_on_failure=false, 
+        fit_kij=false)
 
     if ismissing(custom_densities)
         densities = polymer_density.(isotherms)
@@ -195,7 +206,7 @@ function fit_model(::NELF,# TODO Docs update
     if verbose
         println("Identified naive lower bound of $naive_lower and upper bound of $naive_upper for P, T and rho respectively.")
     end
-    min_results, min_args, lower, upper = scan_for_starting_point_and_bounds_3_dims(error_function, naive_lower, naive_upper, initial_search_resolution; verbose)
+    min_results, min_args, lower, upper = scan_for_starting_point_and_bounds_3_dims(preliminary_error_function, naive_lower, naive_upper, initial_search_resolution; verbose)
     if verbose
         println("Found initial starting point at point $min_args, with an RSS of $min_results, bounded by a lower bound of $lower and upper bound of $upper. Starting optimization...")
     end
@@ -335,7 +346,8 @@ function _make_nelf_model_parameter_target(
     bulk_phase_param_vecs::AbstractVector, 
     infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
     polymer_molecular_weight=100000; 
-    nan_on_failure=false)
+    nan_on_failure=false,
+    fit_kij=false) # :all and :none)
     # classic infinite dilution parameter target
 
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms] 
@@ -344,54 +356,108 @@ function _make_nelf_model_parameter_target(
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
 
-    function error_function(char_param_vec)
-        given_sol = zeros(length(isotherms))
-        pred_sol = zeros(length(isotherms)) 
-        for i in eachindex(isotherms, bulk_phase_param_vecs)
-            kij = 0 # TODO eventually we might solve this in parallel
-            polymer_phase_model = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], bulk_phase_param_vecs[i], kij) 
+    given_val = zeros(length(isotherms))
+    pred_val = zeros(length(isotherms)) 
 
-            nelf_model = NELFModel(polymer_phase_model, densities[i]) 
-            pred_sol[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] #/ infinite_dilution_pressure
-            # given_sol[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel)
-            given_sol[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure)
+    if !fit_kij # TODO the strategy below would make this faster (just don't fit kij)
+        function error_function_ideal_kij(char_param_vec::AbstractVector{<:Number})
+            for i in eachindex(isotherms, bulk_phase_param_vecs)
+                kij = 0
+                polymer_phase_model = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], bulk_phase_param_vecs[i], kij) 
+    
+                nelf_model = NELFModel(polymer_phase_model, densities[i]) 
+                pred_val[i] = infinite_dilution_solubility(nelf_model, temperatures[i]; infinite_dilution_pressure)
+                given_val[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel, infinite_dilution_pressure) 
+            end
+            resid = sum(((given_val .- pred_val) ./ given_val).^2)
+            err = log1p(resid)
+            return err
         end
-        resid = sum(((given_sol .- pred_sol) ./ given_sol).^2)
-        err = log1p(resid)
-        return err
+        return error_function_ideal_kij
+    else
+        index_map = map_equivalent_component_indices(bulk_phase_param_vecs)
+        # current_kij_values = Vector{Float64}(undef, length(index_map))
+        function error_function_fit_kij(char_param_vec::AbstractVector{<:Number})
+            for (component_parameters, param_indices) in index_map
+                relevant_isotherms = @view isotherms[param_indices]
+                relevant_interpolation_models = @view dualmode_models[param_indices]
+                eosmodel = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], component_parameters, 0.0)
+                nelf_model = NELFModel(eosmodel, densities[1]) # TODO this is just taking densities at point one, need to fix in future
+                fit_kij!(nelf_model, relevant_isotherms, relevant_interpolation_models; infinite_dilution_pressure)
+                
+                for parameter_idx in param_indices
+                    isotherm = isotherms[parameter_idx]
+                    p = MembraneBase.pressures(isotherm; component=1)[1]
+                    pred_val[parameter_idx] = predict_concentration(nelf_model, temperatures[parameter_idx], p, [1]; ksw=[0], nan_on_failure)[1] #/ infinite_dilution_pressure
+                    given_val[parameter_idx] = predict_concentration(dualmode_models[parameter_idx]::DualModeModel, p) 
+                    # @show pred_conc[parameter_idx]
+                    # @show given_conc[parameter_idx]
+                end
+            end
+            resid = sum(((given_val .- pred_val) ./ given_val).^2)
+            err = log1p(resid)
+            return err
+        end
+        return error_function_fit_kij
     end
-    return error_function
 end
 
-"""
+# TODO Docs
+""" 
     fit_kij(NELF(), isotherms, bulk_parameters, polymer_parameters; [interpolation_model]=DualMode(), [kij_fit_p_mpa]=1e-4)
-Find the best kij and ksw parameters for the NELF model.  
+Find the best kij parameter for one component in the NELF model.  
 # Arguments
 - `isotherms`: `Vector` of `IsothermData` structs using the polymer in question with **only one kind of component**. Temperature, pressure, density, and concentration must be provided.
 - `bulk_parameters`: vector of the gas or vapor's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3, mw_g_mol]`.
 - `polymer_parameters`: vector of the polymer's characteristic parameters, in the format of `[p★_mpa, t★_k, ρ★_g_cm3, mw_g_mol]`.
 """
-function fit_kij(::NELF, isotherms::AbstractVector{<:IsothermData}, bulk_parameters::AbstractVector{<:Number}, polymer_parameters::AbstractVector{<:Number}; 
-    interpolation_model=DualMode(), kij_fit_p_mpa=1e-4)
+function fit_kij(::NELF, isotherms::AbstractArray{<:IsothermData}, 
+        polymer_parameters::AbstractVector{<:Number},
+        bulk_parameters::AbstractVector{<:Number}; 
+        kwargs...
+    )
     
-    interpolation_models = [fit_model(interpolation_model, isotherm) for isotherm in isotherms]
-    bulk_model = SL(bulk_parameters...)
+    polymer_phase_model = construct_binary_sl_eosmodel(polymer_parameters, bulk_parameters, 0.0)
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
-    temperatures = temperature.(isotherms)
-    polymer_phase_parameters = [[j for j in i] for i in zip(polymer_parameters, bulk_parameters)]  # hacky way to make it a vector. This is slow and dumb.
-    function kij_error_function(kij)
-        kij_mat = [0 kij[1]; kij[1] 0]
-        ksw_vec = [0]
-        polymer_model = SL(polymer_phase_parameters..., kij_mat)
-        nelf_models = [NELFModel(bulk_model, polymer_model, densities[i]) for i in eachindex(isotherms)]
-        pred_concs = [predict_concentration(nelf_models[i], temperatures[i], kij_fit_p_mpa, [1]; ksw=ksw_vec)[1] for i in eachindex(isotherms)]
-        exp_concs = predict_concentration.(interpolation_models, kij_fit_p_mpa)
-        return rss(exp_concs, pred_concs)
+    # right now just warn the user if they're different
+    if !all((densities[1] == densities[i] for i in eachindex(1:length(densities))))
+        throw(ArgumentError("Isotherms had variable densities, this isn't currently handled!")) 
     end
-    return Optim.minimizer(Optim.optimize(kij_error_function, [0.], BFGS()))
+    
+    nelf_model = NELFModel(polymer_phase_model, densities[1])
+    fit_kij!(nelf_model, isotherms; kwargs...)
 end
 
-function fit_ksw(::NELF, isotherm::IsothermData, bulk_model, polymer_model)
+function fit_kij!(nelfmodel::NELFModel,
+        isotherms::AbstractArray{<:IsothermData}; 
+        interpolation_model=DualMode(), 
+        infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
+    )
+
+    interpolation_models = [fit_model(interpolation_model, isotherm) for isotherm in isotherms]
+   return fit_kij!(nelfmodel, isotherms, interpolation_models; infinite_dilution_pressure)
+end
+
+function fit_kij!(nelfmodel::NELFModel,
+        isotherms::AbstractArray{<:IsothermData},
+        interpolation_models::AbstractArray{<:SorptionModel}; 
+        infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE
+    )
+    temperatures = temperature.(isotherms)
+
+    function kij_error_function(kij)
+        kij_mat = [0 kij[1]; kij[1] 0]
+        Clapeyron.set_k!(nelfmodel.polymer_model, kij_mat)
+        pred_concs = [predict_concentration(nelfmodel, temperatures[i], infinite_dilution_pressure)[1] for i in eachindex(interpolation_models)] ./ infinite_dilution_pressure
+        exp_concs = predict_concentration.(interpolation_models, infinite_dilution_pressure) ./ infinite_dilution_pressure
+        err = rss(exp_concs, pred_concs)
+        return err
+    end
+
+    return Optim.minimizer(Optim.optimize(kij_error_function, [0.], BFGS()))[1]
+end
+
+function fit_ksw(::NELF, isotherm::IsothermData, polymer_model, bulk_model)
     density = polymer_density(isotherm)
     temp = temperature(isotherm)
     pressures_mpa = partial_pressures(isotherm; component=1)
@@ -409,3 +475,18 @@ function fit_ksw(::NELF, isotherm::IsothermData, bulk_model, polymer_model)
     @show minimizer = Optim.minimizer(res)
     return min(0.0, minimizer)
 end
+
+
+"Given a vector of eos parameters, return a set of vectors that contain the indices of identical parameters."
+function map_equivalent_component_indices(params::AbstractVector{<:AbstractVector{<:Number}})
+    index_map = Dict{Tuple, Vector{Int64}}()
+    for (i, param_vector) in enumerate(params)
+        param_tuple = tuple(param_vector...)
+        if !haskey(index_map, param_tuple)
+            index_map[param_tuple] = Vector{Int64}()
+        end 
+        push!(index_map[param_tuple], i)
+    end
+    index_map
+end
+

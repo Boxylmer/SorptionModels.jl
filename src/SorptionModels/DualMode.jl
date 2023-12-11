@@ -50,7 +50,7 @@ henry_mode_concentration(dm::DualModeModel, pressures_mpa::AbstractVector{<:Numb
     infinite_dilution_solubility(dm::DualModeModel)
 Get the infinite dilution solubility coefficient in (**(CC/CC) / MPa**))
 """
-infinite_dilution_solubility(dm::DualModeModel) = dm.kd + dm.ch*dm.b
+infinite_dilution_solubility(dm::DualModeModel, args...) = dm.kd + dm.ch*dm.b
 
 
 """

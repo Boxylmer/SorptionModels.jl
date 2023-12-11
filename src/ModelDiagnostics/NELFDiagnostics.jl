@@ -1,11 +1,11 @@
 
 function nelf_characteristic_parameter_error_map(isotherms, bulk_phase_char_params, added_text = ""; 
-    pstars=200:30:1200, tstars=200:30:1200, rhostars=missing, verbose=true, data_only=true, nan_on_failure=true)
+    pstars=200:30:1200, tstars=200:30:1200, rhostars=missing, verbose=true, data_only=true, nan_on_failure=true, fit_kij=false)
     
     if ismissing(rhostars)
         rhostars = maximum(polymer_density.(isotherms)) * 1.2
     end
-    target_func = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params; nan_on_failure)
+    target_func = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_phase_char_params; nan_on_failure, fit_kij)
     needed_iters = length(pstars) * length(tstars) * length(rhostars)
     
     # start possible factored code

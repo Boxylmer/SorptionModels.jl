@@ -1,9 +1,7 @@
-# using Makie
 using GLMakie; GLMakie.activate!() #framerate=1.0, scalefactor=1.0)
 using SorptionModels
 using MembraneBase
 
-GLMakie.activate!()
 
 START_SLICE = 1
 RECTANGLE_MARGIN = 0.01
@@ -65,9 +63,9 @@ function get_nelf_sinfs(nelf_params, bulk_phase_characteristic_params, isotherms
     return nelf_infinite_dilution_solubilities
 end
 
-function sanchez_lacome_parameter_fit_error_explorer(isotherms, isotherm_names, bulk_phase_params, pstars, tstars, rhostars; errgrid = missing)
+function sanchez_lacome_parameter_fit_error_explorer(isotherms, isotherm_names, bulk_phase_params, pstars, tstars, rhostars; errgrid = missing, fit_kij=false)
     if ismissing(errgrid)
-        errgrid, _, _ = SorptionModels.nelf_characteristic_parameter_error_map(isotherms, bulk_phase_params, rhostars=rhostars, pstars=pstars, tstars=tstars) 
+        errgrid, _, _ = SorptionModels.nelf_characteristic_parameter_error_map(isotherms, bulk_phase_params, rhostars=rhostars, pstars=pstars, tstars=tstars; fit_kij) 
     end
     data = log.(errgrid)
 
@@ -247,7 +245,7 @@ end
 
 
 # view parameter space navigator
-function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, iso_names)
+function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, iso_names; fit_kij=false)
     rhostars=1.6:0.03:1.85
     pstars=300:15:1200
     tstars=300:15:900
@@ -262,7 +260,7 @@ function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, 
             @error "NaNs found in grid!"
         end
     end
-    fig = sanchez_lacome_parameter_fit_error_explorer(isotherms, iso_names, bulk_phase_characteristic_params, pstars, tstars, rhostars, errgrid = @view errgrid[:, :, :])
+    fig = sanchez_lacome_parameter_fit_error_explorer(isotherms, iso_names, bulk_phase_characteristic_params, pstars, tstars, rhostars, errgrid = @view errgrid[:, :, :]; fit_kij)
     return fig
 end
 
@@ -323,4 +321,4 @@ bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char
 
 
 iso_names = ["ch4_5c", "ch4_20c", "ch4_35c", "co2_5c", "co2_20c", "co2_35c", "co2_50c", "n2_5c", "n2_50c"]
-parameter_space_navigator(isotherms, bulk_phase_char_params, iso_names)
+parameter_space_navigator(isotherms, bulk_phase_char_params, iso_names; fit_kij=true)

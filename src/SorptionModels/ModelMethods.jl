@@ -194,9 +194,9 @@ end
 
 function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLk0k1lMixingRule},k0)
     Clapeyron.check_arraysize(model,k0)
-    model.mixing.k0.values = k0
+    model.mixing.k0.values .= k0
     n = length(model)
-    model.mixing.k1.values = Clapeyron.FillArrays.Zeros(n,n)
+    model.mixing.k1.values .= Clapeyron.FillArrays.Zeros(n,n)
 end
 
 function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLKRule},k)
