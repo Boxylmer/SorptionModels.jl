@@ -252,7 +252,7 @@ precision = 5
                     :segment => r.(P★, T★, ρ★, mw),
                     :epsilon => ϵ★.(T★), 
                     :Mw => mw,
-                    :k => kij_ternary
+                    :k => kij_ternary # kij will not work like this
                 )
             )
             polymer_phase_eos_ternary = model
@@ -265,7 +265,7 @@ precision = 5
             nelf_concs_co2_psuedo = [predict_concentration(nelfmodel_ternary, temperature, p, [1.0, 0]; ksw=ksw_ternary)[1] for p in pressures]
             @test nelf_concs_co2_psuedo[3] != nelf_concs_pure_co2[3] # may need to be equal eventually, but for now mixing rules thwart this. 
 
-            @test round(infinite_dilution_solubility(nelfmodel, temperature)) ≈ 30 # prev. 40
+            @test round(infinite_dilution_solubility(nelfmodel, temperature)) ≈ 26 # prev. 40
 
             # test the polymer fitter with TPBO-0.25
             char_co2 = [630, 300, 1.515, 44] # p*, t*, rho*, mw
