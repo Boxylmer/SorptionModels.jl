@@ -278,9 +278,9 @@ end
 
 # view parameter space navigator
 function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, iso_names; adjust_kij=false)
-    rhostars=1.50:0.01:1.6
-    pstars=400:5:600
-    tstars=600:5:1200
+    rhostars=1.50:0.03:1.6
+    pstars=400:15:600
+    tstars=600:15:1200
 
     errgrid = SorptionModels.nelf_characteristic_parameter_error_map(
         isotherms, bulk_phase_characteristic_params, rhostars=rhostars, pstars=pstars, tstars=tstars; 

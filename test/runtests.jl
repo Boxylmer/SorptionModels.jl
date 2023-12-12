@@ -182,16 +182,16 @@ precision = 5
         T★ = [755., 300.]
         ρ★ = [1.275, 1.515]
         mw = [100000, 44.01]
-        kij = [0 -0.007; -0.007 0]
+        kij = [0 -0.0005; -0.0005 0]
         model = Clapeyron.SL(
             ["PC", "CO2"], 
             userlocations = Dict(
                 :vol => v★.(P★, T★,), 
                 :segment => r.(P★, T★, ρ★, mw),
                 :epsilon => ϵ★.(T★), 
-                :Mw => mw,
-                :k => kij
-            )
+                :Mw => mw
+            ),
+            mixing_userlocations = (;k0 = kij, k1 = [0 0; 0 0], l = [0 0; 0 0])
         )
         
         # bulk_phase_eos = SL([penetrant])
@@ -204,12 +204,15 @@ precision = 5
         expected_mass_fracs = [5.51E-06, 0.008294923, 0.014447025, 0.020467468, 0.026066798, 0.030734723, 0.033827052]
         expected_concs_cc_cc = [0, 5.094493596, 8.910071012, 12.66689539, 16.17497812, 19.10613428, 21.05001223]
         
+
+
+
         # NELF    
-            ksw = 0.002            # 1/MPa
+            ksw = 0.000            # 1/MPa
             nelfmodel = NELFModel(bulk_phase_eos, polymer_phase_eos, density)
             nelf_concs_pure_co2 = [predict_concentration(nelfmodel, temperature, p, [1.0]; ksw=[ksw])[1] for p in pressures]
             sse = sum((expected_concs_cc_cc .- nelf_concs_pure_co2).^2)
-            @test sse < 5 # this is horrible practice, please forgive me. I just want to make sure changes don't significantly alter the model's output. 
+            @test sse < 5 # this is horrible practice, forgive me. I just want to make sure changes don't significantly alter the model's output. 
 
             penetrants = ["CO2", "CO2"]
             
@@ -223,6 +226,16 @@ precision = 5
             @test pred_base < pred_new_kij
             Clapeyron.set_k!(model, kij)
 
+            # compare predictions made from a system using the convenience constructor
+            nelf_convenient = NELFModel(SorptionModels.construct_binary_sl_eosmodel([P★[1], T★[1], ρ★[1], mw[1]], [P★[2], T★[2], ρ★[2], mw[2]], kij[2]), density)
+            nelf_conc_convenience = [predict_concentration(nelf_convenient, temperature, p; ksw=[ksw])[1] for p in pressures]
+            @test nelf_conc_convenience == nelf_concs_pure_co2
+
+            nelf_convenient = NELFModel(SorptionModels.construct_binary_sl_eosmodel([P★[1], T★[1], ρ★[1], mw[1]], [P★[2], T★[2], ρ★[2], mw[2]], 0), density)
+            nelf_conc_convenience = [predict_concentration(nelf_convenient, temperature, p; ksw=[ksw])[1] for p in pressures]
+            @test nelf_conc_convenience != nelf_concs_pure_co2
+            
+            
             # test a ternary system 
             ksw_ternary = [0.0102, 0.0]  # 1/MPa
             kij_ternary = [ 0      -0.007 -0.007 ; 
@@ -265,10 +278,14 @@ precision = 5
             char_tpbo25 = fit_model(SorptionModels.NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, adjust_kij=false) 
             fit_kij(NELF(), [tpbo_n2_5c, tpbo_n2_50c], char_tpbo25, char_n2)
             fit_kij(NELF(), [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c], char_tpbo25, char_ch4)
-            fit_kij(NELF(), [tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c], char_tpbo25, char_co2)
-
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, adjust_kij=true) 
             
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, adjust_kij=true) 
+            co2_tpbo_kij = fit_kij(NELF(), [tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c], char_tpbo25, char_co2)
+
+            co2_tpbo25_nelf_fitted = NELFModel(SorptionModels.construct_binary_sl_eosmodel(char_tpbo25, char_co2, co2_tpbo_kij), polymer_density(isotherms[1]))
+            tpbo_co2_5c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 278.15, p, ksw=[0.03])[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
+            tpbo_co2_5c_exp = concentration(tpbo_co2_5c; component=1)
+
 
             # now lets try fitting a kijval 
             # just running to make sure it doesn't throw
