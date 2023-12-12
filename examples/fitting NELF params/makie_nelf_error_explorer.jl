@@ -1,5 +1,9 @@
-using GLMakie; GLMakie.activate!() #framerate=1.0, scalefactor=1.0)
+using Pkg
+Pkg.activate("examples")
+using Revise
+Pkg.develop(path=".")
 using SorptionModels
+using GLMakie; GLMakie.activate!()
 using MembraneBase
 
 
@@ -49,23 +53,42 @@ end
 function get_nelf_sinfs(nelf_params, bulk_phase_characteristic_params, isotherms)
     pol_densities = polymer_density.(isotherms)
 
-    # generate the equations of state necessary to predict properties
-    # bulk_phase_eos = [SL(params...) for params in bulk_phase_characteristic_params]
-    # polymer_phase_eos = [SL([[nelf_param, bulk_param] for (nelf_param, bulk_param) in zip(nelf_params, bulk_params)]...) for bulk_params in bulk_phase_characteristic_params]
-    
     polymer_phase_eos = [SorptionModels.construct_binary_sl_eosmodel(nelf_params, bulk_params, 0) for bulk_params in bulk_phase_characteristic_params]
 
     # generate the nelf models for each isotherm
     nelf_models = [NELFModel(polymer_phase, pol_dens) for (polymer_phase, pol_dens) in zip(polymer_phase_eos, pol_densities)]
-    
+
     # predict infinite dilution solubilities and parity them (dual mode is assumped to basically be an empirical representation of the isotherm)
     nelf_infinite_dilution_solubilities = [infinite_dilution_solubility(nelf_model, t)[1] for (nelf_model, t) in zip(nelf_models, temperature.(isotherms))]
     return nelf_infinite_dilution_solubilities
 end
 
-function sanchez_lacome_parameter_fit_error_explorer(isotherms, isotherm_names, bulk_phase_params, pstars, tstars, rhostars; errgrid = missing, fit_kij=false)
+function get_nelf_sinfs_with_adjusted_kij(nelf_params, bulk_phase_characteristic_params, isotherms, index_map, dualmode_models)
+    pol_densities = polymer_density.(isotherms)
+
+    # generate the nelf models for each isotherm
+    nelf_models = Vector{NELFModel}(undef, length(isotherms))
+
+    for (component_parameters, param_indices) in index_map
+        relevant_isotherms = @view isotherms[param_indices]
+        relevant_interpolation_models = @view dualmode_models[param_indices]
+        eosmodel = SorptionModels.construct_binary_sl_eosmodel(nelf_params, component_parameters, 0.0)
+
+        nelf_model = NELFModel(eosmodel, pol_densities[1])
+        SorptionModels.fit_kij!(nelf_model, relevant_isotherms, relevant_interpolation_models)
+        for param_index in param_indices
+            nelf_models[param_index] = nelf_model
+        end
+    end
+
+    # predict infinite dilution solubilities and parity them (dual mode is assumped to basically be an empirical representation of the isotherm)
+    nelf_infinite_dilution_solubilities = [infinite_dilution_solubility(nelf_model, t)[1] for (nelf_model, t) in zip(nelf_models, temperature.(isotherms))]
+    return nelf_infinite_dilution_solubilities
+end
+
+function sanchez_lacome_parameter_fit_error_explorer(isotherms, isotherm_names, bulk_phase_params, pstars, tstars, rhostars; errgrid = missing, adjust_kij=false)
     if ismissing(errgrid)
-        errgrid, _, _ = SorptionModels.nelf_characteristic_parameter_error_map(isotherms, bulk_phase_params, rhostars=rhostars, pstars=pstars, tstars=tstars; fit_kij) 
+        errgrid, _, _ = SorptionModels.nelf_characteristic_parameter_error_map(isotherms, bulk_phase_params, rhostars=rhostars, pstars=pstars, tstars=tstars; adjust_kij) 
     end
     data = log.(errgrid)
 
@@ -179,9 +202,18 @@ function sanchez_lacome_parameter_fit_error_explorer(isotherms, isotherm_names, 
         return "P⋆ = $p_value\nT⋆ = $t_value\nρ⋆ = $ρ_value"
     end
 
-    ln_nelf_sinf_values = lift(chosen_position) do pos
-        nelf_params = [pos..., 100000]
-        return log.(get_nelf_sinfs(nelf_params, bulk_phase_params, isotherms))
+    if adjust_kij
+        index_map = SorptionModels.map_equivalent_component_indices(bulk_phase_params)
+        dual_mode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
+        ln_nelf_sinf_values = lift(chosen_position) do pos
+            nelf_params = [pos..., 100000]
+            return log.(get_nelf_sinfs_with_adjusted_kij(nelf_params, bulk_phase_params, isotherms, index_map, dual_mode_models))
+        end
+    else
+        ln_nelf_sinf_values = lift(chosen_position) do pos
+            nelf_params = [pos..., 100000]
+            return log.(get_nelf_sinfs(nelf_params, bulk_phase_params, isotherms))
+        end
     end
 
     constant_ρ_data = lift(constant_ρ_slice, sl_ρ.value)
@@ -245,14 +277,14 @@ end
 
 
 # view parameter space navigator
-function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, iso_names; fit_kij=false)
-    rhostars=1.6:0.03:1.85
-    pstars=300:15:1200
-    tstars=300:15:900
+function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, iso_names; adjust_kij=false)
+    rhostars=1.50:0.01:1.6
+    pstars=400:5:600
+    tstars=600:5:1200
 
     errgrid = SorptionModels.nelf_characteristic_parameter_error_map(
         isotherms, bulk_phase_characteristic_params, rhostars=rhostars, pstars=pstars, tstars=tstars; 
-        nan_on_failure=true, verbose=true
+        verbose=true, adjust_kij
     )
 
     for item in errgrid
@@ -260,7 +292,7 @@ function parameter_space_navigator(isotherms, bulk_phase_characteristic_params, 
             @error "NaNs found in grid!"
         end
     end
-    fig = sanchez_lacome_parameter_fit_error_explorer(isotherms, iso_names, bulk_phase_characteristic_params, pstars, tstars, rhostars, errgrid = @view errgrid[:, :, :]; fit_kij)
+    fig = sanchez_lacome_parameter_fit_error_explorer(isotherms, iso_names, bulk_phase_characteristic_params, pstars, tstars, rhostars, errgrid = @view errgrid[:, :, :]; adjust_kij)
     return fig
 end
 
@@ -321,4 +353,4 @@ bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char
 
 
 iso_names = ["ch4_5c", "ch4_20c", "ch4_35c", "co2_5c", "co2_20c", "co2_35c", "co2_50c", "n2_5c", "n2_50c"]
-parameter_space_navigator(isotherms, bulk_phase_char_params, iso_names; fit_kij=true)
+parameter_space_navigator(isotherms, bulk_phase_char_params, iso_names; adjust_kij=true)

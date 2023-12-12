@@ -1,0 +1,5 @@
+[deps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+MembraneBase = "a9449b16-1c3f-48ab-aa2c-0b9c6d97beee"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SorptionModels = "44adabc6-386d-4db0-bb6e-0f7b06129544"

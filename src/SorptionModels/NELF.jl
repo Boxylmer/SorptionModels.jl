@@ -1,4 +1,4 @@
-const DEFAULT_NELF_INFINITE_DILUTION_PRESSURE = 1e-10 # ???
+const DEFAULT_NELF_INFINITE_DILUTION_PRESSURE = 1e-8 # ???
 const DEFAULT_NELF_POLYMER_MOLECULAR_WEIGHT = 100000
 
 struct NELF end
@@ -27,50 +27,41 @@ function NELFModel(polymer_phase_model, polymer_dry_density)
     return NELFModel(bulk_phase_model, polymer_phase_model, polymer_dry_density)
 end
 
-function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions=[1]; ksw=nothing, units=:cc, nan_on_failure=false)
+function predict_concentration(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions=[1]; ksw=nothing, units=:cc)
     minimum_val = 100 * eps()
-    error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val, nan_on_failure)
+    error_target = _make_nelf_model_mass_fraction_target(model, temperature, pressure, bulk_phase_mole_fractions; ksw, minimum_val)
 
     penetrant_mass_fraction_initial_guesses = ones(length(bulk_phase_mole_fractions)) * eps()
     lower = zeros(length(penetrant_mass_fraction_initial_guesses))
     upper = ones(length(penetrant_mass_fraction_initial_guesses)) .- eps()
-    
-    try
-        res = Optim.optimize(
-            error_target, 
-            lower, upper,
-            penetrant_mass_fraction_initial_guesses, 
-            # Fminbox(LBFGS()),
-            Fminbox(NelderMead()),
-            # Newton(),
-            # SAMIN(),
-            Optim.Options(
-            allow_f_increases = false,
-            # x_tol = 1e-9,
-            # g_tol = 1e-7
-            ); autodiff=:forward)
 
-        penetrant_mass_fractions = Optim.minimizer(res)
-        polymer_phase_mass_fractions = vcat(1 - sum(penetrant_mass_fractions), penetrant_mass_fractions)
+    res = Optim.optimize(
+        error_target, 
+        lower, upper,
+        penetrant_mass_fraction_initial_guesses, 
+        Fminbox(NelderMead()),
+        Optim.Options(
+        allow_f_increases = false,
+        ); autodiff=:forward
+    )
 
-        if units==:frac
-            return polymer_phase_mass_fractions[2:end]
-        elseif units==:g
-            concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
-            return concs_g_g
-        elseif units==:cc
-            concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, Clapeyron.mw(model.bulk_model))
-            return concs_cc_cc
-        end
-    catch e
-        if nan_on_failure
-            return NaN
-        end
-        rethrow(e)
+    penetrant_mass_fractions = Optim.minimizer(res)
+    polymer_phase_mass_fractions = vcat(1 - sum(penetrant_mass_fractions), penetrant_mass_fractions)
+
+    if units==:frac
+        return polymer_phase_mass_fractions[2:end]
+    elseif units==:g
+        concs_g_g = polymer_phase_mass_fractions_to_gpen_per_gpol(polymer_phase_mass_fractions)
+        return concs_g_g
+    elseif units==:cc
+        concs_cc_cc = polymer_phase_mass_fractions_to_ccpen_per_ccpol(polymer_phase_mass_fractions, model.polymer_dry_density, Clapeyron.mw(model.bulk_model))
+        return concs_cc_cc
+    else
+        throw(ArgumentError("Units not supported: " * string(units)))
     end
 end
 
-function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, minimum_val=100*eps(), nan_on_failure=false)
+function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Number, pressure::Number, bulk_phase_mole_fractions; ksw=nothing, minimum_val=100*eps())
     if isnothing(ksw)
         ksw = zeros(length(bulk_phase_mole_fractions))
     end
@@ -84,11 +75,6 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
 
     function error_target(penetrant_mass_fractions)
         polymer_mass_fraction = 1 - sum(penetrant_mass_fractions)
-        if polymer_mass_fraction <= 0 || polymer_mass_fraction > 1
-            @warn "Polymer mass fraction was not valid, returning very large error value: " * string(polymer_mass_fraction)
-            if nan_on_failure; return NaN; end
-            return log1p(normalizer * abs(polymer_mass_fraction))
-        end
 
         polymer_phase_mass_fractions = vcat(polymer_mass_fraction, penetrant_mass_fractions)
         polymer_phase_density_after_swelling = calculate_polymer_phase_density(model, pressure, bulk_phase_mole_fractions, polymer_phase_mass_fractions, ksw)
@@ -99,10 +85,9 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
         # TODO don't bother calculating mole frac and just calculate based on mass frac
         polymer_phase_density_upper_bound = ub_density(model.polymer_model,polymer_phase_mole_fractions,:molar) #g/cm3
 
-        if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound 
-            # return log1p(normalizer)
-            if nan_on_failure; return NaN; end
-            return log1p(normalizer * polymer_phase_density_after_swelling) 
+        if polymer_phase_density_after_swelling > polymer_phase_density_upper_bound
+            return NaN 
+            # return log1p(normalizer * polymer_phase_density_after_swelling) 
         end
 
         polymer_phase_residual_potential = ρTw_chemical_potential( 
@@ -143,8 +128,8 @@ Get infinite dilution solubility in **((CC/CC) / MPa)**
 # todo how will we predict the infinite dilution solubility or reject multicomponent models?
 function infinite_dilution_solubility(
     model::NELFModel, temperature::Number; 
-    nan_on_failure=false, infinite_dilution_pressure = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE)  # naieve
-    return predict_concentration(model, temperature, infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] / infinite_dilution_pressure
+    infinite_dilution_pressure = DEFAULT_NELF_INFINITE_DILUTION_PRESSURE)  # naieve
+    return predict_concentration(model, temperature, infinite_dilution_pressure, [1]; ksw=[0])[1] / infinite_dilution_pressure
 end
 
 
@@ -171,7 +156,7 @@ function fit_model(::NELF,# TODO Docs update
     initial_search_resolution=20,
     custom_densities::Union{Missing, AbstractArray}=missing, 
     uncertainty_method=nothing, 
-    fit_kij=false)
+    adjust_kij=false)
     
     if verbose
         println("Starting parameter generation for NELF fit with the Sanchez Lacombe EoS")
@@ -183,16 +168,14 @@ function fit_model(::NELF,# TODO Docs update
         bulk_phase_params, 
         DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
         polymer_molecular_weight; 
-        nan_on_failure=false, 
-        fit_kij)
+        adjust_kij)
 
     preliminary_error_function = _make_nelf_model_parameter_target(
         isotherms, 
         bulk_phase_params, 
         DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
-        polymer_molecular_weight; 
-        nan_on_failure=false, 
-        fit_kij=false)
+        polymer_molecular_weight;
+        adjust_kij=false)
 
     if ismissing(custom_densities)
         densities = polymer_density.(isotherms)
@@ -219,11 +202,6 @@ function fit_model(::NELF,# TODO Docs update
         NelderMead(), 
         # Fminbox(LBFGS()), 
         Optim.Options(; allow_f_increases = false))
-    # res = Optim.optimize(
-    #     error_function, lower, upper, 
-    #     [100, 100, density_lower_bound * 1.2], 
-    #     SAMIN(; rt = 0.02), 
-    #     Optim.Options(iterations=10^6))
 
     _minimizer = Optim.minimizer(res)
 
@@ -345,29 +323,35 @@ function _make_nelf_model_parameter_target(
     isotherms::AbstractVector{<:IsothermData}, 
     bulk_phase_param_vecs::AbstractVector, 
     infinite_dilution_pressure=DEFAULT_NELF_INFINITE_DILUTION_PRESSURE, 
-    polymer_molecular_weight=100000; 
-    nan_on_failure=false,
-    fit_kij=false) # :all and :none)
-    # classic infinite dilution parameter target
-
+    polymer_molecular_weight=100000;
+    adjust_kij=false) 
     dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms] 
     # TODO don't restrict to dual mode type isotherms only, we probably want to just pick the first data point maybe? Maybe need a flag to define strategy
     
     densities = polymer_density.(isotherms) # get each isotherm's density in case the user accounted for polymers from different batches
     temperatures = temperature.(isotherms)
 
-    given_val = zeros(length(isotherms))
-    pred_val = zeros(length(isotherms)) 
-
-    if !fit_kij # TODO the strategy below would make this faster (just don't fit kij)
+    
+    if !adjust_kij # TODO the strategy below would make this faster (just don't fit kij)
         function error_function_ideal_kij(char_param_vec::AbstractVector{<:Number})
+            given_val = zeros(length(isotherms))
+            pred_val = zeros(length(isotherms)) 
             for i in eachindex(isotherms, bulk_phase_param_vecs)
                 kij = 0
                 polymer_phase_model = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], bulk_phase_param_vecs[i], kij) 
     
                 nelf_model = NELFModel(polymer_phase_model, densities[i]) 
-                pred_val[i] = infinite_dilution_solubility(nelf_model, temperatures[i]; infinite_dilution_pressure)
-                given_val[i] = infinite_dilution_solubility(dualmode_models[i]::DualModeModel, infinite_dilution_pressure) 
+                pred_val[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure)[1]
+                given_val[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure) 
+                if isnan(pred_val[i])
+                    println("Nan found")
+                end
+               
+                # working version
+                # pred_val[i] = predict_concentration(nelf_model, temperatures[i], infinite_dilution_pressure, [1]; ksw=[0], nan_on_failure)[1] #/ infinite_dilution_pressure
+                # given_val[i] = predict_concentration(dualmode_models[i]::DualModeModel, infinite_dilution_pressure)
+                
+               
             end
             resid = sum(((given_val .- pred_val) ./ given_val).^2)
             err = log1p(resid)
@@ -378,20 +362,20 @@ function _make_nelf_model_parameter_target(
         index_map = map_equivalent_component_indices(bulk_phase_param_vecs)
         # current_kij_values = Vector{Float64}(undef, length(index_map))
         function error_function_fit_kij(char_param_vec::AbstractVector{<:Number})
+            given_val = zeros(length(isotherms))
+            pred_val = zeros(length(isotherms)) 
             for (component_parameters, param_indices) in index_map
                 relevant_isotherms = @view isotherms[param_indices]
                 relevant_interpolation_models = @view dualmode_models[param_indices]
                 eosmodel = construct_binary_sl_eosmodel([char_param_vec..., polymer_molecular_weight], component_parameters, 0.0)
                 nelf_model = NELFModel(eosmodel, densities[1]) # TODO this is just taking densities at point one, need to fix in future
                 fit_kij!(nelf_model, relevant_isotherms, relevant_interpolation_models; infinite_dilution_pressure)
-                
+
                 for parameter_idx in param_indices
                     isotherm = isotherms[parameter_idx]
-                    p = MembraneBase.pressures(isotherm; component=1)[1]
-                    pred_val[parameter_idx] = predict_concentration(nelf_model, temperatures[parameter_idx], p, [1]; ksw=[0], nan_on_failure)[1] #/ infinite_dilution_pressure
+                    p = MembraneBase.pressures(isotherm; component=1)[findfirst(x -> x != 0, MembraneBase.pressures(isotherm; component=1))]
+                    pred_val[parameter_idx] = predict_concentration(nelf_model, temperatures[parameter_idx], p)[1] 
                     given_val[parameter_idx] = predict_concentration(dualmode_models[parameter_idx]::DualModeModel, p) 
-                    # @show pred_conc[parameter_idx]
-                    # @show given_conc[parameter_idx]
                 end
             end
             resid = sum(((given_val .- pred_val) ./ given_val).^2)
@@ -453,8 +437,7 @@ function fit_kij!(nelfmodel::NELFModel,
         err = rss(exp_concs, pred_concs)
         return err
     end
-
-    return Optim.minimizer(Optim.optimize(kij_error_function, [0.], BFGS()))[1]
+    return Optim.minimizer(Optim.optimize(kij_error_function, [0.], NelderMead()))[1]
 end
 
 function fit_ksw(::NELF, isotherm::IsothermData, polymer_model, bulk_model)

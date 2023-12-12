@@ -262,12 +262,12 @@ precision = 5
             isotherms = [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c, tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c, tpbo_n2_5c, tpbo_n2_50c]
             
 
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, fit_kij=false) 
+            char_tpbo25 = fit_model(SorptionModels.NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, adjust_kij=false) 
             fit_kij(NELF(), [tpbo_n2_5c, tpbo_n2_50c], char_tpbo25, char_n2)
             fit_kij(NELF(), [tpbo_ch4_5c, tpbo_ch4_20c, tpbo_ch4_35c], char_tpbo25, char_ch4)
             fit_kij(NELF(), [tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c], char_tpbo25, char_co2)
 
-            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, fit_kij=true) 
+            char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=false; initial_search_resolution=10, adjust_kij=true) 
             
 
             # now lets try fitting a kijval 
