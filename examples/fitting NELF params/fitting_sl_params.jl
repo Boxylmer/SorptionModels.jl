@@ -55,11 +55,11 @@ dualmode_models = [fit_model(DualMode(), isotherm) for isotherm in isotherms]
 function plot_dualmode_sinf(isotherm::IsothermData, isotherm_dualmode_exp_comparison=plot())
     isotherm_dualmode = fit_model(DualMode(), isotherm)
     isotherm_pressures = partial_pressures(isotherm; component=1)
-    scatter!(isotherm_dualmode_exp_comparison, isotherm_pressures, concentration(isotherm; component=1), )#label="exp")
+    Plots.scatter!(isotherm_dualmode_exp_comparison, isotherm_pressures, concentration(isotherm; component=1), )#label="exp")
     isotherm_max_p = maximum(isotherm_pressures)
     isotherm_pred_pressures = 0:0.005:isotherm_max_p
     isotherm_dualmode_pred = predict_concentration(isotherm_dualmode, isotherm_pred_pressures)
-    plot!(isotherm_dualmode_exp_comparison, isotherm_pred_pressures, isotherm_dualmode_pred, )#label ="dualmode")
+    Plots.plot!(isotherm_dualmode_exp_comparison, isotherm_pred_pressures, isotherm_dualmode_pred, )#label ="dualmode")
 
     isotherm_sinf_empirical_pressure = 1e-5
     isotherm_sinf = predict_concentration(isotherm_dualmode, isotherm_sinf_empirical_pressure) / isotherm_sinf_empirical_pressure
@@ -67,7 +67,7 @@ function plot_dualmode_sinf(isotherm::IsothermData, isotherm_dualmode_exp_compar
 
     isotherm_sinf_pressures = [0, isotherm_max_p / 2]
     isotherm_sinf_concs = (isotherm_sinf .* isotherm_sinf_pressures)
-    plot!(isotherm_dualmode_exp_comparison, isotherm_sinf_pressures, isotherm_sinf_concs, ) # label="infinite dilution slope")
+    Plots.plot!(isotherm_dualmode_exp_comparison, isotherm_sinf_pressures, isotherm_sinf_concs, ) # label="infinite dilution slope")
 end
 plot_dualmode_sinf!(myplot, isotherm) = plot_dualmode_sinf(isotherm, myplot)
 function plot_dualmode_sinf(isotherms::AbstractVector)
@@ -91,41 +91,50 @@ tpbo_co2_35c_exp = concentration(tpbo_co2_35c; component=1)
 tpbo_co2_20c_exp = concentration(tpbo_co2_20c; component=1)
 tpbo_co2_5c_exp = concentration(tpbo_co2_5c; component=1)
 
-co2_bulk_phase = SL(char_co2...)
 bulk_phase_char_params = [char_ch4, char_ch4, char_ch4, char_co2, char_co2, char_co2, char_co2, char_n2, char_n2]
+char_tpbo25_valerio = [474, 900, 1.6624, 100000]
+char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params, verbose=true; initial_search_resolution=10, adjust_kij=true) 
 
-char_tpbo_valerio = [474, 900, 1.6624, 100000]
-co2_tpbo25_phase_valerio = SL([474, 630], [900, 300], [1.6624, 1.515], [100000, 44], [0 0; 0 0])
-co2_tpbo25_nelf_valerio = NELFModel(co2_bulk_phase, co2_tpbo25_phase_valerio, tpbo_25_density)
-tpbo_co2_50c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
-tpbo_co2_35c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 308.15, p)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
-tpbo_co2_20c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
-tpbo_co2_5c_valerio = [predict_concentration(co2_tpbo25_nelf_valerio, 278.15, p)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
+co2_tpbo25_phase_valerio = SorptionModels.construct_binary_sl_eosmodel(char_tpbo25_valerio, char_co2, 0)
+co2_tpbo25_nelf_valerio = NELFModel(co2_tpbo25_phase_valerio, tpbo_25_density)
+co2_tpbo25_phase = SorptionModels.construct_binary_sl_eosmodel(char_tpbo25, char_co2, 0)
+co2_tpbo25_nelf_fitted = NELFModel(co2_tpbo25_phase, tpbo_25_density)
+co2_tpbo25_kij = SorptionModels.fit_kij!(co2_tpbo25_nelf_fitted, [tpbo_co2_5c, tpbo_co2_20c, tpbo_co2_35c, tpbo_co2_50c])
+
+pred_tpbo_co2_50c = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
+pred_tpbo_co2_35c = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
+pred_tpbo_co2_20c = [predict_concentration(co2_tpbo25_nelf_fitted, 293.15, p)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
+pred_tpbo_co2_5c = [predict_concentration(co2_tpbo25_nelf_fitted, 278.15, p)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
+
+
+
 
 #fit char params
-char_tpbo25 = fit_model(NELF(), isotherms, bulk_phase_char_params)
-@show char_tpbo25
 kij_test =  0.00
 ksw_test = [0.00]
-co2_tpbo25_phase_fitted = SL([char_tpbo25[1], char_co2[1]], [char_tpbo25[2], char_co2[2]], [char_tpbo25[3], char_co2[3]], [char_tpbo25[4], char_co2[4]], [0 kij_test; kij_test 0])
-ch4_tpbo25_phase_fitted = SL([char_tpbo25[1], char_ch4[1]], [char_tpbo25[2], char_ch4[2]], [char_tpbo25[3], char_ch4[3]], [char_tpbo25[4], char_ch4[4]], [0 0; 0 0])
 
-co2_tpbo25_nelf_fitted = NELFModel(co2_bulk_phase, co2_tpbo25_phase_fitted, tpbo_25_density)
 tpbo_co2_50c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 323.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_50c; component=1)]
 tpbo_co2_35c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 308.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_35c; component=1)]
 tpbo_co2_20c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 293.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_20c; component=1)]
 tpbo_co2_5c_fitted = [predict_concentration(co2_tpbo25_nelf_fitted, 278.15, p; ksw=ksw_test)[1] for p in partial_pressures(tpbo_co2_5c; component=1)]
 
-tpbo_co2_50c_plot = plot(partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_valerio, label="valerio 50C", legend=:topleft)
+tpbo_co2_50c_plot = plot()
+# plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_valerio, label="valerio 50C", legend=:topleft)
 plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_fitted, label="fitted 50C")
 plot!(tpbo_co2_50c_plot, partial_pressures(tpbo_co2_50c; component=1), tpbo_co2_50c_exp, label="exp 50C")
-tpbo_co2_35c_plot = plot(partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_valerio, label="valerio 35C", legend=:topleft)
+
+tpbo_co2_35c_plot = plot()
+# plot!(tpbo_co2_35c_plot, partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_valerio, label="valerio 35C", legend=:topleft)
 plot!(tpbo_co2_35c_plot, partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_fitted, label="fitted 35C")
 plot!(tpbo_co2_35c_plot, partial_pressures(tpbo_co2_35c; component=1), tpbo_co2_35c_exp, label="exp 35C")
-tpbo_co2_20c_plot = plot(partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_valerio, label="valerio 20C", legend=:topleft)
+
+tpbo_co2_20c_plot = plot()
+# plot!(tpbo_co2_20c_plot, partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_valerio, label="valerio 20C", legend=:topleft)
 plot!(tpbo_co2_20c_plot, partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_fitted, label="fitted 20C")
 plot!(tpbo_co2_20c_plot, partial_pressures(tpbo_co2_20c; component=1), tpbo_co2_20c_exp, label="exp 20C")
-tpbo_co2_5c_plot = plot(partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_valerio, label="valerio 5C", legend=:topleft)
+
+tpbo_co2_5c_plot = plot()
+# plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_valerio, label="valerio 5C", legend=:topleft)
 plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_fitted, label="fitted 5C")
 plot!(tpbo_co2_5c_plot, partial_pressures(tpbo_co2_5c; component=1), tpbo_co2_5c_exp, label="exp 5C")
 tpbo_co2_plot = plot(tpbo_co2_50c_plot, tpbo_co2_35c_plot, tpbo_co2_20c_plot, tpbo_co2_5c_plot, layout=(2, 2))
@@ -145,7 +154,7 @@ error_target = SorptionModels._make_nelf_model_parameter_target(isotherms, bulk_
 error_target_2 = SorptionModels._make_nelf_model_parameter_target_2(isotherms, bulk_phase_char_params, inf_dil_pres)
 error_target_3 = SorptionModels._make_nelf_model_parameter_target_3(isotherms, bulk_phase_char_params, inf_dil_pres)
 # @show error_target(char_tpbo25)
-# @show error_target(char_tpbo_valerio)
+# @show error_target(char_tpbo25_valerio)
 mw = 1e6
 
 
