@@ -12,7 +12,7 @@ BerensHopfenbergSorptionModel(mf, kf, mr, kr) = BerensHopfenbergSorptionModel(mf
 
 function linearize_model(model::BerensHopfenbergSorptionModel)
     if model.is_model_linearized
-        throw(ErrorException("Nope"))
+        throw(ErrorException("Model is already linearized."))
         return model
     else
         return BerensHopfenbergSorptionModel(model.m_f, log(model.k_f), model.m_r, log(model.k_r), true)
@@ -23,7 +23,7 @@ function unlinearize_model(model::BerensHopfenbergSorptionModel)
     if model.is_model_linearized
         return BerensHopfenbergSorptionModel(model.m_f, exp(model.k_f), model.m_r, exp(model.k_r), false)
     else
-        throw(ErrorException("Nope"))
+        throw(ErrorException("Model was not linearized."))
         return model
     end
 end
@@ -34,7 +34,6 @@ function predict_sorption(sorptionmodel::BerensHopfenbergSorptionModel, time_sec
     else
         _sorptionmodel = sorptionmodel
     end
-    # summation = sum([1/(2*n+1)^2 * exp(-(2*n+1)^2 * sorptionmodel.k_f * time_seconds) for n in 0:(iters)])
     summation = 0
     @inbounds for n in 0:iters
         summation += 1/(2*n+1)^2 * exp(-(2*n+1)^2 * _sorptionmodel.k_f * time_seconds)

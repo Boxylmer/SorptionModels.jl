@@ -346,10 +346,10 @@ precision = 5
         
         
         # testing fitting without errors (no true tests)
-        exp_data = TransientStepData(
-            [1.,       2,       3,        4,       5,      6,      7,      8,      9,      10,    15,    20,    25,    30,    40,   50,    70,   90,     100], 
-            [0.00194, 0.00515, 0.009107, 0.01359, 0.0184, 0.0237, 0.0291, 0.0348, 0.0407, 0.046, 0.077, 0.109, 0.141, 0.171, 0.22, 0.278, 0.36, 0.4364, 0.4671]            
-        )
+        time_data   =        [1.,       2,       3,        4,       5,      6,      7,      8,      9,      10,    15,    20,    25,    30,    40,   50,    70,   90,     100] 
+        transient_sorption = [0.00194, 0.00515, 0.009107, 0.01359, 0.0184, 0.0237, 0.0291, 0.0348, 0.0407, 0.046, 0.077, 0.109, 0.141, 0.171, 0.22, 0.278, 0.36, 0.4364, 0.4671]   
+        exp_data = TransientStepData(time_data, transient_sorption)
+
         fick_model_fit = fit_transient_sorption_model(exp_data, FickianSorption())
         
         bh_model_fit = fit_transient_sorption_model(exp_data, BerensHopfenbergSorption())
@@ -372,6 +372,10 @@ precision = 5
         @test fick_d_with_err.val ≈ fick_d.val
         # @test fick_d_with_err.err ≈ 7.950417186869458e-8 # errors are random due to low sample size
         
+        shifted_exp_data = TransientStepData(time_data .+ 20., transient_sorption)
+        sbh_model_fit = fit_transient_sorption_model(shifted_exp_data, ModifiedBerensHopfenbergSorption())
+        sbh_prediction_vector = predict_sorption(sbh_model_fit, shifted_exp_data.time)
+
 
         # benchmarks and allocating
         #10,546,944

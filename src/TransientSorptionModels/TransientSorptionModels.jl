@@ -91,6 +91,16 @@ function fit_transient_sorption_model(
             initial_bh_fit = linearize_model(fit_transient_sorption_model(_step_data, BerensHopfenbergSorption(), interpolation_method=nothing, uncertainty_method=nothing))
             initial_params = [initial_bh_fit.m_f, initial_bh_fit.k_f, initial_bh_fit.m_r, initial_bh_fit.k_r, 1.]
         end
+    elseif typeof(model_choice) <: ShiftedBerensHopfenbergSorption
+        ub = [1.1, log(1.), 1., log(1.), log(10), Inf]
+        lb = [0., -50., 0., -50., -30., -Inf]
+        println("called")
+        # initial_params = [0.9, -3, 0.1, -10, -5]
+        model = ShiftedBerensHopfenbergSorptionModel
+        if isnothing(custom_initial_params)
+            initial_bh_fit = linearize_model(fit_transient_sorption_model(_step_data, BerensHopfenbergSorption(), interpolation_method=nothing, uncertainty_method=nothing))
+            initial_params = [initial_bh_fit.m_f, initial_bh_fit.k_f, initial_bh_fit.m_r, initial_bh_fit.k_r, 1.]
+        end
     else
         throw(ArgumentError("Specified model symbol not found, try \":BerensHopfenbergSorptionModel\"?"))   
     end
@@ -136,8 +146,10 @@ function fit_transient_sorption_model(
 
     elseif uncertainty_method == :Hessian
         throw(ErrorException("Inverse Hessian error estimation isn't working for this set of models just yet"))
+        
     elseif isnothing(uncertainty_method)
         errors = nothing
+
     else
         throw(ArgumentError("Uncertainty method should be a symbol, e.g., :JackKnife or :Bootstrap"))
     end

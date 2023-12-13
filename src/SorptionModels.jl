@@ -60,8 +60,9 @@ module SorptionModels
     export BerensHopfenbergSorption, BerensHopfenbergSorptionModel
     include(joinpath("TransientSorptionModels", "ModifiedBerensHopfenbergSorption.jl"))
     export ModifiedBerensHopfenbergSorption, ModifiedBerensHopfenbergSorptionModel
-
-
+    include(joinpath("TransientSorptionModels", "ShiftedBerensHopfenbergSorption.jl"))
+    export ShiftedBerensHopfenbergSorption, ShiftedBerensHopfenbergSorptionModel
+ 
     # dilation models
     include(joinpath("DilationModels", "DilationModels.jl"))
     export predict_dilation
