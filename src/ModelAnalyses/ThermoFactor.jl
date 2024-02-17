@@ -12,6 +12,8 @@ Extract the thermodynamic factors of an isotherm's steps.
 
 # Arguments
 - `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be used.
+
+Isotherms in this function will need penetrant mass fractions and activities.
 """
 
 function ThermodynamicFactorAnalysis(isotherm::IsothermData)

@@ -1,4 +1,5 @@
 test/writer_output/*.xlsx
 /Manifest.toml
 docs/build
+docs/Manifest.toml
 test/writer_output/*
