@@ -12,11 +12,11 @@ function Base.show(io::IO, obj::FloryHugginsDualModeModel)
     print(io, "Flory Huggins Dual Mode: CH' = $ch, b = $b, χ = $kd")
 end
 
-"""
-    infinite_dilution_solubility(dm::FloryHugginsDualModeModel)
-Get the infinite dilution solubility coefficient in (**(CC/CC)**) (activity is unitless)
-"""
-infinite_dilution_solubility(dm::FloryHugginsDualModeModel) = nothing # TODO
+# """
+#     infinite_dilution_solubility(dm::FloryHugginsDualModeModel)
+# Get the infinite dilution solubility coefficient in (**(CC/CC)**) (activity is unitless)
+# """
+# infinite_dilution_solubility(dm::FloryHugginsDualModeModel) = nothing # TODO
 
 
 """

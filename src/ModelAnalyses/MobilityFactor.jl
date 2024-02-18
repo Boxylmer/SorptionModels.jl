@@ -2,7 +2,6 @@ struct MobilityFactorAnalysis
     # will use this to hold resulting parameters from the deconvolution
     lna
     lnw
-    slopes
     kinetic_factors
     thermodynamic_factors
 end
@@ -23,7 +22,7 @@ function MobilityFactorAnalysis(isotherm::IsothermData, transient_sorption_model
 end
 
 """
-    (isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
+    MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
 
 Deconvolute an isotherm and already-known diffusivity values into their kinetic and thermodynamic components.
 
@@ -34,6 +33,7 @@ Deconvolute an isotherm and already-known diffusivity values into their kinetic 
 function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
     @assert num_steps(isotherm) >= length(diffusivities)
     tfa = ThermodynamicFactorAnalysis(isotherm)
-    kinetic_factors = tfa.slopes[1:length(diffusivities)].*diffusivities 
-    return MobilityFactorAnalysis(tfa.lna, tfa.lnw, tfa.slopes, kinetic_factors, tfa.thermodynamic_factors)
+    kinetic_factors = diffusivities ./ tfa.thermodynamic_factors
+    return MobilityFactorAnalysis(tfa.lna, tfa.lnw, kinetic_factors, tfa.thermodynamic_factors)
 end
+
