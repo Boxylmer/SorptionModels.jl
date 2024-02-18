@@ -85,7 +85,3 @@ function ThermodynamicFactorAnalysis(
     # single component
     return ThermodynamicFactorAnalysis(lna, lnw, α)
 end
-
-function testfunction()
-    println("pass")
-end
