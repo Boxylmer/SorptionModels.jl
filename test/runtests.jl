@@ -173,7 +173,8 @@ precision = 5
         # meth_iso = IsothermData(; activities=acts, concentrations_cc=concs)
         # gabmodel = fit_model(GAB(), meth_iso)
 
-    # Flory Huggins - Dual Mode
+    
+        # Flory Huggins - Dual Mode
     #   TPBO-1.00 with propanol at 25C
     acts_3 = [0.01061664, 0.034878645, 0.06508188, 0.091689136, 0.126116896, 0.163921419]
     concs_3 = [1.188187617 ± 0.013431227, 2.455888283 ± 0.027591385, 3.80430418 ± 0.042799107, 5.824894435 ± 0.06532282, 9.604100032 ± 0.107154714, 14.70392798 ± 0.163320976]
@@ -556,6 +557,10 @@ precision = 5
             @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.117024704029978e-7
             @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
             @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
+
+
+            # TODO now test with actual acitivity functions (the method which does not use activity approximations)
+
         end
         
         # Partial Immobilization Model
@@ -717,11 +722,11 @@ precision = 5
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z), path, name = "Ideal Webb")
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms), path, name="PREoS Webb")
         
-
-
+        
         # no thermodynamic factor implemented yet
 
         # no mobility factor implemented yet
+
         
         # Partial Immobilization 
         path = joinpath(results_folder, "Partial Immobilization Model.xlsx")

@@ -1,9 +1,7 @@
 struct MobilityFactorAnalysis
     # will use this to hold resulting parameters from the deconvolution
-    lna
-    lnw
+    thermo_factor_analysis
     kinetic_factors
-    thermodynamic_factors
 end
 
 """
@@ -34,6 +32,6 @@ function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractV
     @assert num_steps(isotherm) >= length(diffusivities)
     tfa = ThermodynamicFactorAnalysis(isotherm)
     kinetic_factors = diffusivities ./ tfa.thermodynamic_factors
-    return MobilityFactorAnalysis(tfa.lna, tfa.lnw, kinetic_factors, tfa.thermodynamic_factors)
+    return MobilityFactorAnalysis(tfa, kinetic_factors)
 end
 
