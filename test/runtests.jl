@@ -555,8 +555,8 @@ precision = 5
             mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
             therm_fact_analysis = ThermodynamicFactorAnalysis(iso)
             @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.117024704029978e-7
-            @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
-            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
+            @test mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
+            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3]
 
 
             # TODO now test with actual acitivity functions (the method which does not use activity approximations)
@@ -722,7 +722,7 @@ precision = 5
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z), path, name = "Ideal Webb")
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms), path, name="PREoS Webb")
         
-        
+
         # no thermodynamic factor implemented yet
 
         # no mobility factor implemented yet
