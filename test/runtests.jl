@@ -6,6 +6,7 @@ using MembraneEOS
 using Plots
 using BenchmarkTools
 
+
 precision = 5
 
 @testset "SorptionModels.jl" begin
@@ -555,12 +556,50 @@ precision = 5
             mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
             therm_fact_analysis = ThermodynamicFactorAnalysis(iso)
             @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.117024704029978e-7
-            @test mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
-            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3]
+            @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
+            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
 
 
             # TODO now test with actual acitivity functions (the method which does not use activity approximations)
 
+            using Clapeyron
+
+            R = 8.314
+            T_ref = 273.15
+            Saturation_p_ref = saturation_pressure(model1,T_ref)[1]
+            Current_pressures = 101325
+            Current_T = 308.15
+            mu_ref = chemical_potential(model1,Saturation_p_ref,T_ref,[1])[1]
+            model1 = PR([penetrant])
+
+            function penetrant_activity(penetrant, T, p)
+                
+                mu2 = chemical_potential(model1,p,T,[1])[1]
+                a = exp((mu2-mu_ref)/(R*T))
+                return a
+            end
+
+penetrant_activity("Carbon Dioxide", 308.15, 101325)
+            
+            CPIM_CH4_ISOTHERM = IsothermData(
+                partial_pressures_mpa=[0.309802563, 0.710304653, 1.222477562, 1.832018444, 2.840712537],
+                concentrations_cc = [8.147067101, 14.38986172, 20.52870123, 25.0722395, 32.85525989],
+                rho_pol_g_cm3 = 1.285,
+                pen_mws_g_mol = 16.043)
+            
+            CPIM_CH4_DM = fit_model(DualMode(),CPIM_CH4_ISOTHERM; uncertainty_method = :JackKnife)
+            CPIM_CH4_TFA = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM,CPIM_CH4_DM,)
+
+            CPIM_CO2_ISOTHERM = []
+
+            MW_CH4 = 16.043
+            MW_CO2 = 44.009
+
+            pengrob_CH4 = Clapeyron.PR["Methane"]
+            pengrob_CO2 = Clapeyron.PR["Carbon Dioxide"]
+
+
+            
         end
         
         # Partial Immobilization Model
@@ -722,7 +761,7 @@ precision = 5
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z), path, name = "Ideal Webb")
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms), path, name="PREoS Webb")
         
-
+        
         # no thermodynamic factor implemented yet
 
         # no mobility factor implemented yet
