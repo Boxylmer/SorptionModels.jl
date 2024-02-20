@@ -5,6 +5,7 @@ Modules = [SorptionModels]
 Pages = [
     "Writers/WriteDualModeDesorption.jl",
     "Writers/WriteIsostericHeat.jl",
+    "WriteMobilityOrThermoFactor.jl",
     "Writers/WriteMolarVolume.jl",
     "Writers/WritePartialImmobilization.jl",
     "Writers/WriteVantHoffDualMode.jl", 
@@ -13,4 +14,3 @@ Pages = [
     "Writers/WriteThermoFactor.jl",
 ]
 ```
-- Mobility and Thermodynamic factors do not have writers (yet!)
