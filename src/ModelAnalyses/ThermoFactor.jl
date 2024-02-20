@@ -42,7 +42,7 @@ Extract the thermodynamic factors of an isotherm's steps.
 - `sorptionmodel::SorptionModel`: SorptionModel that supports `predict_pressure`.
 - `activity_function::Function`: Function which takes a pressure in MPa and returns an activity. 
 
-Isotherms in this function will need polymer density, penetrant molecular weight.
+Isotherms in this function will need pressures, concentrations, polymer density, and penetrant molecular weight.
 """
 function ThermodynamicFactorAnalysis(
     isotherm::IsothermData, 
