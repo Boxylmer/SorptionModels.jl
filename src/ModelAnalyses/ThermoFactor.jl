@@ -52,11 +52,11 @@ function ThermodynamicFactorAnalysis(
     if isnothing(polymer_density(isotherm))
         throw(MissingException("Isotherm did not have polymer density."))
     end
-    if isnothing(penetrant_molecular_weight(isotherm))
+    if isnothing(molecular_weights(isotherm))
         throw(MissingException("Isotherm did not have any molecular weights."))
     end
     ρ_pol = polymer_density(isotherm)
-    mw_pen = penetrant_molecular_weight(isotherm)
+    mw_pen = molecular_weights(isotherm)[1]
     pressures = partial_pressures(isotherm; component=1)
     return ThermodynamicFactorAnalysis(pressures, ρ_pol, mw_pen, sorptionmodel, activity_function)
 end
@@ -87,7 +87,7 @@ function ThermodynamicFactorAnalysis(
     ln_w(pressure_mpa) = log(
         ccpen_per_ccpol_to_mass_fractions(
             predict_concentration(sorptionmodel, pressure_mpa), ρ_pol, [mw_pen]
-        )
+        )[2]
     )
 
     dlna_dp = ForwardDiff.derivative.(ln_a, pressures)
@@ -95,8 +95,8 @@ function ThermodynamicFactorAnalysis(
 
     α = dlna_dp ./ dlnw_dp
 
-    lna = ln_a(pressures)
-    lnw = ln_w(pressures)
+    lna = ln_a.(pressures)
+    lnw = ln_w.(pressures)
 
     return ThermodynamicFactorAnalysis(lna, lnw, α)
 end

@@ -16,22 +16,60 @@ Deconvolute a vector of fitted transient sorption models, the corresponding equi
 """
 function MobilityFactorAnalysis(isotherm::IsothermData, transient_sorption_models::AbstractVector{<:TransientSorptionModel}, semi_thickness_cm::Number)
     diffusivity_vector = get_diffusivity.(transient_sorption_models, semi_thickness_cm)
-    return MobilityFactorAnalysis(isotherm, diffusivity_vector)
+    return MobilityFactorAnalysis(diffusivity_vector, isotherm)
 end
 
 """
-    MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
+    MobilityFactorAnalysis(diffusivities::AbstractVector{<:Number}, thermo_args...)
 
 Deconvolute an isotherm and already-known diffusivity values into their kinetic and thermodynamic components.
 
 # Arguments
-- `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be deconvoluted.
-* `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
+- `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
+- `thermo_args...`: Arguments that would noramlly be passed to the `ThermodynamicFactorAnalysis`
+
+See `ThermodynamicFactorAnalysis`(@ref)
 """
-function MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
-    @assert num_steps(isotherm) >= length(diffusivities)
-    tfa = ThermodynamicFactorAnalysis(isotherm)
+function MobilityFactorAnalysis(diffusivities::AbstractVector{<:Number}, thermo_args...)
+    tfa = ThermodynamicFactorAnalysis(thermo_args...)
+    return MobilityFactorAnalysis(diffusivities, tfa)
+end
+
+
+"""
+    MobilityFactorAnalysis(diffusivities::AbstractVector{<:Number}, tfa::ThermodynamicFactorAnalysis)
+
+Deconvolute an isotherm and already-known diffusivity values into their kinetic and thermodynamic components.
+
+# Arguments
+- `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
+- `tfa::ThermodynamicFactorAnalysis`: Already evaluated `ThermodynamicFactorAnalysis`
+
+See `ThermodynamicFactorAnalysis`(@ref)
+"""
+function MobilityFactorAnalysis(diffusivities::AbstractVector{<:Number}, tfa::ThermodynamicFactorAnalysis)
     kinetic_factors = diffusivities ./ tfa.thermodynamic_factors
+    @assert length(tfa.thermodynamic_factors) == length(diffusivities)
     return MobilityFactorAnalysis(tfa, kinetic_factors)
 end
+
+
+
+# """
+#     MobilityFactorAnalysis(isotherm::IsothermData, diffusivities::AbstractVector{<:Number})
+
+# Deconvolute an isotherm and already-known diffusivity values into their kinetic and thermodynamic components.
+
+# # Arguments
+# - `diffusivities::AbstractVector{<:Number}`: Vector of diffusivity values in ``cm^2/s``  
+# - `thermo_args`: Args that would 
+# Isotherms in this function will need all things required in the base `ThermodynamicFactorAnalysis`(@ref)
+# """
+# function MobilityFactorAnalysis(diffusivities::AbstractVector{<:Number}, thermo_args...)
+#     @assert num_steps(isotherm) >= length(diffusivities)
+#     tfa = ThermodynamicFactorAnalysis(thermo_args...)
+#     kinetic_factors = diffusivities ./ tfa.thermodynamic_factors
+#     return MobilityFactorAnalysis(tfa, kinetic_factors)
+# end
+
 

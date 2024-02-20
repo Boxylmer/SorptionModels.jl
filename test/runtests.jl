@@ -5,6 +5,7 @@ using MembraneBase
 using MembraneEOS
 using Plots
 using BenchmarkTools
+using Clapeyron
 
 
 precision = 5
@@ -190,8 +191,8 @@ precision = 5
         polymer = "PC"
         penetrant = "CO2"
         kij = [0 -0.007; -0.007 0]
-        bulk_phase_eos = SL([penetrant])
-        polymer_phase_eos = SL([polymer, penetrant], kij)
+        bulk_phase_eos = MembraneEOS.SL([penetrant])
+        polymer_phase_eos = MembraneEOS.SL([polymer, penetrant], kij)
         density = 1.197850471   #g/cm3    
         temperature = 308.15
         pressures = [0, 0.18, 0.38, 0.64, 0.94, 1.23, 1.44]
@@ -209,8 +210,8 @@ precision = 5
                            -0.007 0      0.0   ; 
                            -0.007 0.0    0.0   ]
             ksw_ternary = [0.0102, 0.0]            # 1/MPa
-            bulk_phase_eos_ternary = SL(penetrants)
-            polymer_phase_eos_ternary = SL([polymer, penetrants...], kij_ternary)
+            bulk_phase_eos_ternary = MembraneEOS.SL(penetrants)
+            polymer_phase_eos_ternary = MembraneEOS.SL([polymer, penetrants...], kij_ternary)
             nelfmodel_ternary = NELFModel(bulk_phase_eos_ternary, polymer_phase_eos_ternary, density)
             nelf_concs_co2_mix = [predict_concentration(nelfmodel_ternary, temperature, p, [0.5, 0.5]; ksw=ksw_ternary)[1] for p in pressures]
             @test nelf_concs_co2_mix[3] != nelf_concs_pure_co2[3]
@@ -507,7 +508,7 @@ precision = 5
             gab_pressure_conversion_funcs = [(p) -> p/pvap for pvap in g_isotherm_pvaps]
             gab_activity_conversion_funcs = [(a) -> a*pvap for pvap in g_isotherm_pvaps]
             
-            eosmodel(p, t) = compressibility_factor(PR("CH4"), p, t) 
+            eosmodel(p, t) = MembraneEOS.compressibility_factor(MembraneEOS.PR("CH4"), p, t) 
             unideal_ish_analysis = IsostericHeatAnalysis(isotherms, eosmodel) 
             ish_analysis = IsostericHeatAnalysis(isotherms)
 
@@ -528,8 +529,8 @@ precision = 5
         end
 
         @testset "Webb Isosteric Heat Analysis" begin
-            eos_ch4 = PR("CH4")
-            eos_z(p, t) = compressibility_factor(eos_ch4, p, t)
+            eos_ch4 = MembraneEOS.PR("CH4")
+            eos_z(p, t) = MembraneEOS.compressibility_factor(eos_ch4, p, t)
             wish_analysis_no_eos = SorptionModels.WebbIsostericHeatAnalysis(isotherms)
             wish_analysis = SorptionModels.WebbIsostericHeatAnalysis(isotherms, eos_z)
 
@@ -553,34 +554,28 @@ precision = 5
                 rho_pol_g_cm3=1.393 ± 0.002, 
                 pen_mws_g_mol=18.01528
             )
-            mob_fact_analysis = MobilityFactorAnalysis(iso, dif)
+            mob_fact_analysis = MobilityFactorAnalysis(dif, iso)
             therm_fact_analysis = ThermodynamicFactorAnalysis(iso)
             @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.117024704029978e-7
-            @test mob_fact_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
-            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermodynamic_factors[3]
+            @test mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
+            @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3]
 
 
-            # TODO now test with actual acitivity functions (the method which does not use activity approximations)
+            # now test with actual acitivity functions (the method which does not use activity approximations)
+            function penetrant_activity(
+                    p_mpa::Number; 
+                    T_ref = 160.15, 
+                    model=Clapeyron.PR(["Methane"])
+                )
 
-            using Clapeyron
-
-            R = 8.314
-            T_ref = 273.15
-            Saturation_p_ref = saturation_pressure(model1,T_ref)[1]
-            Current_pressures = 101325
-            Current_T = 308.15
-            mu_ref = chemical_potential(model1,Saturation_p_ref,T_ref,[1])[1]
-            model1 = PR([penetrant])
-
-            function penetrant_activity(penetrant, T, p)
-                
-                mu2 = chemical_potential(model1,p,T,[1])[1]
-                a = exp((mu2-mu_ref)/(R*T))
+                Saturation_p_ref = saturation_pressure(model, T_ref)[1]
+                mu_ref = Clapeyron.chemical_potential(model, Saturation_p_ref, T_ref)[1]
+                p = p_mpa * 1e6
+                mu2 = Clapeyron.chemical_potential(model, p, 308.15)[1]
+                a = exp((mu2-mu_ref)/(8.314*308.15))
                 return a
             end
 
-penetrant_activity("Carbon Dioxide", 308.15, 101325)
-            
             CPIM_CH4_ISOTHERM = IsothermData(
                 partial_pressures_mpa=[0.309802563, 0.710304653, 1.222477562, 1.832018444, 2.840712537],
                 concentrations_cc = [8.147067101, 14.38986172, 20.52870123, 25.0722395, 32.85525989],
@@ -588,16 +583,21 @@ penetrant_activity("Carbon Dioxide", 308.15, 101325)
                 pen_mws_g_mol = 16.043)
             
             CPIM_CH4_DM = fit_model(DualMode(),CPIM_CH4_ISOTHERM; uncertainty_method = :JackKnife)
-            CPIM_CH4_TFA = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM,CPIM_CH4_DM,)
+            CPIM_CH4_TFA_1 = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 160.15))
+            CPIM_CH4_TFA_2 = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 180.15))
 
-            CPIM_CO2_ISOTHERM = []
+            @test CPIM_CH4_TFA_1.thermodynamic_factors[2] == CPIM_CH4_TFA_2.thermodynamic_factors[2]
+            @test CPIM_CH4_TFA_1.lna[2] != CPIM_CH4_TFA_2.lna[2]
+            @test CPIM_CH4_TFA_1.lnw[2] == CPIM_CH4_TFA_2.lnw[2]
 
-            MW_CH4 = 16.043
-            MW_CO2 = 44.009
-
-            pengrob_CH4 = Clapeyron.PR["Methane"]
-            pengrob_CO2 = Clapeyron.PR["Carbon Dioxide"]
-
+            
+            # mobility factor analysis (direct method) 
+            CPIM_CH4_Diffusivities = [6.00E-08, 7.21E-08, 8.27E-08, 9.68E-08]
+            CPIM_CH4_D_Pressures = [0.108381747, 0.352283335, 0.632820204, 0.995498696]
+            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
+            
+            CPIM_CH4_Diffusivities = [6.00E-08 ± 1.93E-08, 7.21E-08 ± 2.07E-08, 8.27E-08 ± 2.18E-08, 9.68E-08 ± 2.37E-08] # now do it with uncertainty!
+            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
 
             
         end
@@ -752,7 +752,7 @@ penetrant_activity("Carbon Dioxide", 308.15, 101325)
 
         # Isosteric Heat
         path = joinpath(results_folder, "Isosteric Heats.xlsx")
-        eos_z(p, t) = compressibility_factor(PR("CH4"), p, t) 
+        eos_z(p, t) = MembraneEOS.compressibility_factor(MembraneEOS.PR("CH4"), p, t) 
         rm(path; force=true)
         write_analysis(IsostericHeatAnalysis(isotherms), path, name = "Ideal Koros")
         write_analysis(IsostericHeatAnalysis(isotherms, eos_z), path, name = "PREoS Koros")
@@ -762,9 +762,51 @@ penetrant_activity("Carbon Dioxide", 308.15, 101325)
         write_analysis(SorptionModels.WebbIsostericHeatAnalysis(isotherms), path, name="PREoS Webb")
         
         
-        # no thermodynamic factor implemented yet
+        # Thermo and Mobility Factor 
+        path = joinpath(results_folder, "Thermo and Mobility Factors.xlsx")
+        rm(path; force=true)
+        
+        function penetrant_activity(
+                p_mpa::Number; 
+                T_ref = 273.15, 
+                model=Clapeyron.PR(["Carbon Dioxide"])
+            )
 
-        # no mobility factor implemented yet
+            Saturation_p_ref = saturation_pressure(model, T_ref)[1]
+            mu_ref = Clapeyron.chemical_potential(model, Saturation_p_ref, T_ref)[1]
+            p = p_mpa * 1e6
+            mu2 = Clapeyron.chemical_potential(model, p, 308.15)[1]
+            a = exp((mu2-mu_ref)/(8.314*308.15))
+            return a
+        end
+
+        CPIM_CO2_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.240184901, 0.501416337, 0.866695667, 1.329706241, 1.827098882, 2.444419399, 3.264830659],
+            concentrations_cc = [25.11294301, 37.01179749, 49.13345434, 62.09369168, 73.92173216, 85.89637635, 102.769912],
+            rho_pol_g_cm3 = 1.285,
+            pen_mws_g_mol = 44.009)
+        
+        CPIM_CO2_DM = fit_model(DualMode(), CPIM_CO2_ISOTHERM; uncertainty_method = :JackKnife)
+        CPIM_CO2_TFA_CONTINUOUS = ThermodynamicFactorAnalysis(CPIM_CO2_ISOTHERM, CPIM_CO2_DM, x -> penetrant_activity(x))
+        
+        CPIM_CO2_Diffusivities = [2.51E-07 ± 1.56E-08, 2.64E-07 ± 1.54E-08, 2.87E-07 ± 1.54E-08, 3.21E-07 ± 1.56E-08, 3.35E-07 ± 1.57E-08, 4.33E-07 ± 1.66E-08, 6.06E-07 ± 1.97E-08, 7.57E-07 ± 2.31E-08, 9.18E-07 ± 2.70E-08, 1.11E-06 ± 3.19E-08, 1.23E-06 ± 3.51E-08, 1.35E-06 ± 3.82E-08]
+        CPIM_CO2_D_Pressures = [0.02, 0.04, 0.07, 0.11, 0.13, 0.29, 0.63, 1.01, 1.46, 2.18, 2.55, 3.01]
+
+        CPIM_CO2_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CO2_Diffusivities, CPIM_CO2_D_Pressures, 1.285, 44.009, CPIM_CO2_DM, penetrant_activity)
+        
+        write_analysis(CPIM_CO2_L_ANALYSIS, path, name="CPIM_CO2_L_ANALYSIS")
+        
+        CPIM_CO2_T_ANALYSIS = ThermodynamicFactorAnalysis(
+            collect(
+                range(
+                    0.001, 
+                    maximum(partial_pressures(CPIM_CO2_ISOTHERM, component=1)), 
+                    step=0.02
+                )
+            ), 
+            1.285, 44.009, CPIM_CO2_DM, penetrant_activity)
+        write_analysis(CPIM_CO2_T_ANALYSIS, path, name="CPIM_CO2_T_ANALYSIS")
+       
 
         
         # Partial Immobilization 
@@ -860,8 +902,8 @@ penetrant_activity("Carbon Dioxide", 308.15, 101325)
         polymer = "PC"
         penetrant = "CO2"
         kij = [0 -0.007; -0.007 0]
-        bulk_phase_eos = SL([penetrant])
-        polymer_phase_eos = SL([polymer, penetrant], kij)
+        bulk_phase_eos = MembraneEOS.SL([penetrant])
+        polymer_phase_eos = MembraneEOS.SL([polymer, penetrant], kij)
         density = 1.197850471   #g/cm3    
         temperature = 308.15
         dgrptmodel = DGRPTModel(bulk_phase_eos, polymer_phase_eos, density)

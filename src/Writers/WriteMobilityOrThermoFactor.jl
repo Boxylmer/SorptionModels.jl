@@ -12,7 +12,11 @@ Write a ThermoFactorAnalysis or MobilityFactorAnalysis (which contains a thermod
 See [`ThermodynamicFactorAnalysis`](@ref) and [`MobilityFactorAnalysis`](@ref)
 """
 function write_analysis(analysis::ThermodynamicFactorAnalysis, workbook::XLSX.XLSXFile; name=DEFAULT_MOBILITY_THERMO_FACTOR_ANALYSIS_NAME)
-    sheet = XLSX.addsheet!(workbook, name)
+    if name in XLSX.sheetnames(workbook)
+        sheet = workbook[name]
+    else
+        sheet = XLSX.addsheet!(workbook, name)
+    end
     wrp = 1  # writer row position
     wcp = 1  # writer col position
 
@@ -55,7 +59,7 @@ end
 function write_analysis(analysis::MobilityFactorAnalysis, workbook::XLSX.XLSXFile; name=DEFAULT_MOBILITY_THERMO_FACTOR_ANALYSIS_NAME)
     sheet = XLSX.addsheet!(workbook, name)
     wrp = 1  # writer row position
-    wcp = write_analysis(analysis.tfa, workbook; name)  # writer col position
+    wcp = write_analysis(analysis.thermo_factor_analysis, workbook; name)  # writer col position
 
     function write_vector_of_maybe_measurements(row, col, vec; write_errors=true)
         sheet[row, col, dim=1] = strip_measurement_to_value(vec)
@@ -75,11 +79,10 @@ function write_analysis(analysis::MobilityFactorAnalysis, workbook::XLSX.XLSXFil
 
     wrp += 1
     
-    write_vector_of_maybe_measurements(wrp, wcp + 1, kinetic_factors)
-    write_vector_of_maybe_measurements(wrp, wcp + 3, kinetic_factors .* tfa.thermodynamic_factors)
+    write_vector_of_maybe_measurements(wrp, wcp + 1, analysis.kinetic_factors)
+    write_vector_of_maybe_measurements(wrp, wcp + 3, analysis.kinetic_factors .* analysis.thermo_factor_analysis.thermodynamic_factors)
     
 end
-
 
 function write_analysis(analysis::Union{ThermodynamicFactorAnalysis, MobilityFactorAnalysis}, filepath::AbstractString; name=DEFAULT_MOBILITY_THERMO_FACTOR_ANALYSIS_NAME)
     if !isfile(filepath)
