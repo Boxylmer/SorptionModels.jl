@@ -35,25 +35,31 @@ function write_analysis(analysis::ThermodynamicFactorAnalysis, workbook::XLSX.XL
     
     sheet[wrp, wcp + 1]  = "activity"
     sheet[wrp, wcp + 2]  = "activity σ"
-    sheet[wrp, wcp + 3]  = "ln(a)"
-    sheet[wrp, wcp + 4]  = "ln(a) σ"
-    sheet[wrp, wcp + 5]  = "mass fraction (ω)"
-    sheet[wrp, wcp + 6]  = "ω σ"
-    sheet[wrp, wcp + 7]  = "ln(ω)"
-    sheet[wrp, wcp + 8]  = "ln(ω) σ"
-    sheet[wrp, wcp + 9]  = "Thermodynamic Factor (α)"
-    sheet[wrp, wcp + 10] = "α σ"
+    sheet[wrp, wcp + 3]   = "pressures"
+    sheet[wrp, wcp + 4]   = "pressures σ"
+    sheet[wrp, wcp + 5]   = "concentrations (cc/cc)"
+    sheet[wrp, wcp + 6]   = "concentrations σ"
+    sheet[wrp, wcp + 7]  = "ln(a)"
+    sheet[wrp, wcp + 8]  = "ln(a) σ"
+    sheet[wrp, wcp + 9]  = "mass fraction (ω)"
+    sheet[wrp, wcp + 10]  = "ω σ"
+    sheet[wrp, wcp + 11]  = "ln(ω)"
+    sheet[wrp, wcp + 12]  = "ln(ω) σ"
+    sheet[wrp, wcp + 13]  = "Thermodynamic Factor (α)"
+    sheet[wrp, wcp + 14] = "α σ"
     
     wrp += 1
     
     sheet[wrp, wcp, dim=1] = collect(1:length(analysis.thermodynamic_factors))
     
     write_vector_of_maybe_measurements(wrp, wcp + 1, exp.(analysis.lna))
-    write_vector_of_maybe_measurements(wrp, wcp + 3, analysis.lna)
-    write_vector_of_maybe_measurements(wrp, wcp + 5, exp.(analysis.lnw))
-    write_vector_of_maybe_measurements(wrp, wcp + 7, analysis.lnw)
-    write_vector_of_maybe_measurements(wrp, wcp + 9, analysis.thermodynamic_factors)
-    return 11 # replace with whatever the next wcp should be (the mobility factor analysis will take off from there)
+    write_vector_of_maybe_measurements(wrp, wcp + 3, analysis.pressures)
+    write_vector_of_maybe_measurements(wrp, wcp + 5, analysis.concentrations)
+    write_vector_of_maybe_measurements(wrp, wcp + 7, analysis.lna)
+    write_vector_of_maybe_measurements(wrp, wcp + 9, exp.(analysis.lnw))
+    write_vector_of_maybe_measurements(wrp, wcp + 11, analysis.lnw)
+    write_vector_of_maybe_measurements(wrp, wcp + 13, analysis.thermodynamic_factors)
+    return 15 # replace with whatever the next wcp should be (the mobility factor analysis will take off from there)
 end
 
 function write_analysis(analysis::MobilityFactorAnalysis, workbook::XLSX.XLSXFile; name=DEFAULT_MOBILITY_THERMO_FACTOR_ANALYSIS_NAME)

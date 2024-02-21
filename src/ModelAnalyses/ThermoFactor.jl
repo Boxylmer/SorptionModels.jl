@@ -1,5 +1,7 @@
 struct ThermodynamicFactorAnalysis
     # will use this to hold resulting parameters from the deconvolution
+    pressures
+    concentrations
     lna
     lnw
     thermodynamic_factors
@@ -30,7 +32,13 @@ function ThermodynamicFactorAnalysis(isotherm::IsothermData)
     lnw = log.(penetrant_mass_fracs)
     slopes = estimate_slope_by_adjacent_points((lna), (lnw))
     thermo_factors = 1 ./ slopes
-    return ThermodynamicFactorAnalysis(lna, lnw, thermo_factors)
+    pressures = partial_pressures(isotherm; component=1)
+    if isnothing(pressures)
+        fill!(similar(thermo_factors,String),"N/A")
+    end
+
+    concs = concentration(isotherm; component = 1)
+    return ThermodynamicFactorAnalysis(pressures,concs,lna, lnw, thermo_factors)
 end
 
 """
@@ -58,6 +66,7 @@ function ThermodynamicFactorAnalysis(
     ρ_pol = polymer_density(isotherm)
     mw_pen = molecular_weights(isotherm)[1]
     pressures = partial_pressures(isotherm; component=1)
+    
     return ThermodynamicFactorAnalysis(pressures, ρ_pol, mw_pen, sorptionmodel, activity_function)
 end
 
@@ -98,5 +107,8 @@ function ThermodynamicFactorAnalysis(
     lna = ln_a.(pressures)
     lnw = ln_w.(pressures)
 
-    return ThermodynamicFactorAnalysis(lna, lnw, α)
+    
+    concs =  predict_concentration(sorptionmodel, pressures)
+
+    return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, α)
 end

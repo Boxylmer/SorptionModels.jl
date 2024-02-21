@@ -581,7 +581,8 @@ precision = 5
                 concentrations_cc = [8.147067101, 14.38986172, 20.52870123, 25.0722395, 32.85525989],
                 rho_pol_g_cm3 = 1.285,
                 pen_mws_g_mol = 16.043)
-            
+
+        
             CPIM_CH4_DM = fit_model(DualMode(),CPIM_CH4_ISOTHERM; uncertainty_method = :JackKnife)
             CPIM_CH4_TFA_1 = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 160.15))
             CPIM_CH4_TFA_2 = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 180.15))
@@ -779,6 +780,15 @@ precision = 5
             a = exp((mu2-mu_ref)/(8.314*308.15))
             return a
         end
+        
+        function CO2_activity(p_MPa::Number)
+            return penetrant_activity(p_MPa;T_ref = 273.15, model = Clapeyron.PR(["Carbon Dioxide"]))
+        end
+
+        function CH4_activity(p_MPa::Number)
+            return penetrant_activity(p_MPa;T_ref = 190, model = Clapeyron.PR(["Methane"]))
+        end
+
 
         CPIM_CO2_ISOTHERM = IsothermData(
             partial_pressures_mpa=[0.240184901, 0.501416337, 0.866695667, 1.329706241, 1.827098882, 2.444419399, 3.264830659],
@@ -786,29 +796,150 @@ precision = 5
             rho_pol_g_cm3 = 1.285,
             pen_mws_g_mol = 44.009)
         
-        CPIM_CO2_DM = fit_model(DualMode(), CPIM_CO2_ISOTHERM; uncertainty_method = :JackKnife)
-        CPIM_CO2_TFA_CONTINUOUS = ThermodynamicFactorAnalysis(CPIM_CO2_ISOTHERM, CPIM_CO2_DM, x -> penetrant_activity(x))
+        CPIMTT_CO2_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.089419,0.208500733,0.381096791,0.66765144,0.9988614,1.323492497,1.712143839,2.194768515,2.920514824],
+            concentrations_cc = [19.89688159, 32.61725119, 44.14091129, 57.54009015, 68.05782353, 78.86482977, 87.59592028, 98.03122486, 118.3535831],
+            rho_pol_g_cm3 = 1.244,
+            pen_mws_g_mol = 44.009)
+
+
+        CPIMPPN30_CO2_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.118208205, 0.331927, 0.566462925, 0.960060366, 1.553171425, 2.310882721, 3.088287685],
+            concentrations_cc = [32.11227008, 52.99161609, 67.14573414, 86.1474714, 105.8245687, 126.4041892, 145.6850161],
+            rho_pol_g_cm3 = 1.267,
+            pen_mws_g_mol = 44.009)
+
+
+        CPIMPPN30TT_CO2_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.120226367, 0.244413063, 0.516538011, 0.832279192, 1.171062322, 1.562821945, 2.264679544, 2.933247504],
+            concentrations_cc = [36.97127597, 51.61972017, 69.91224668, 83.88229439, 95.89679652, 106.2911621, 124.0630625, 141.289821],
+            rho_pol_g_cm3 = 1.244,
+            pen_mws_g_mol = 44.009)
+
+        CPIM_CH4_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.309802563, 0.710304653, 1.222477562, 1.832018444, 2.840712537],
+            concentrations_cc = [8.147067101, 14.38986172, 20.52870123, 25.0722395, 32.85525989],
+            rho_pol_g_cm3 = 1.285,
+            pen_mws_g_mol = 16.043)
         
+        CPIMTT_CH4_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.198645721, 0.490266238, 0.850357598, 1.254338173, 1.855273956, 2.797127243],
+            concentrations_cc = [8.012342679, 15.46066477, 21.34320201, 26.24145938, 32.14977817, 40.19937276],
+            rho_pol_g_cm3 = 1.244,
+            pen_mws_g_mol = 16.043)
+
+
+        CPIMPPN30_CH4_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.198068441, 0.483778326, 0.843047932, 1.267734027, 1.772969874, 2.781367538],
+            concentrations_cc = [12.11826566, 22.30897037, 30.19814698, 37.13549362, 43.8071852, 53.25404289],
+            rho_pol_g_cm3 = 1.267,
+            pen_mws_g_mol = 16.043)
+
+
+        CPIMPPN30TT_CH4_ISOTHERM = IsothermData(
+            partial_pressures_mpa=[0.253240639, 0.526341973, 0.849600237, 1.231708745, 1.737795787, 2.592937412],
+            concentrations_cc = [17.1136849, 26.44644374, 33.71549609, 40.0423849, 46.45976185, 55.27945851],
+            rho_pol_g_cm3 = 1.244,
+            pen_mws_g_mol = 16.043)
+
+        
+
+        CPIMs_CO2_Isotherms_Names = ["CPIM_CO2_ISOTHERM", "CPIMTT_CO2_ISOTHERM","CPIMPPN30_CO2_ISOTHERM","CPIMPPN30TT_CO2_ISOTHERM"]
+        CPIMs_CH4_Isotherms_Names = ["CPIM_CH4_ISOTHERM","CPIMTT_CH4_ISOTHERM","CPIMPPN30_CH4_ISOTHERM","CPIMPPN30TT_CH4_ISOTHERM"]
+
+        CPIMs_CO2_Isotherms = [CPIM_CO2_ISOTHERM, CPIMTT_CO2_ISOTHERM,CPIMPPN30_CO2_ISOTHERM,CPIMPPN30TT_CO2_ISOTHERM]
+        CPIMs_CH4_Isotherms = [CPIM_CH4_ISOTHERM,CPIMTT_CH4_ISOTHERM,CPIMPPN30_CH4_ISOTHERM,CPIMPPN30TT_CH4_ISOTHERM]
+
+        model_types = [DualMode() for _ in 1:length(CPIMs_CO2_Isotherms)]
+
+        CPIM_CH4_DMs = fit_model.(model_types, CPIMs_CH4_Isotherms; uncertainty_method = :JackKnife)
+        CPIM_CO2_DMs = fit_model.(model_types, CPIMs_CO2_Isotherms; uncertainty_method = :JackKnife)
+
+        CPIM_CO2_DM = fit_model(DualMode(), CPIM_CO2_ISOTHERM; uncertainty_method = :JackKnife)
+        
+        
+        CPIM_CO2_TFA_CONTINUOUS = ThermodynamicFactorAnalysis(CPIM_CO2_ISOTHERM, CPIM_CO2_DM, x -> CO2_activity(x))
+        CPIMs_CO2_TFA_CONTINUOUS = ThermodynamicFactorAnalysis.(CPIMs_CO2_Isotherms, CPIM_CO2_DMs,x->CO2_activity(x))
+        CPIMs_CH4_TFA_CONTINUOUS = ThermodynamicFactorAnalysis.(CPIMs_CH4_Isotherms, CPIM_CH4_DMs, x->CH4_activity(x))
+        
+        
+        [write_analysis(CPIMs_CO2_TFA_CONTINUOUS[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names,CPIMs_CO2_TFA_CONTINUOUS)]
+
+        [write_analysis(CPIMs_CH4_TFA_CONTINUOUS[i],path, name = CPIMs_CH4_Isotherms_Names[i])  for i in eachindex(CPIMs_CH4_Isotherms_Names,CPIMs_CH4_TFA_CONTINUOUS)]
+
+
+        # begin diffusivities
         CPIM_CO2_Diffusivities = [2.51E-07 ± 1.56E-08, 2.64E-07 ± 1.54E-08, 2.87E-07 ± 1.54E-08, 3.21E-07 ± 1.56E-08, 3.35E-07 ± 1.57E-08, 4.33E-07 ± 1.66E-08, 6.06E-07 ± 1.97E-08, 7.57E-07 ± 2.31E-08, 9.18E-07 ± 2.70E-08, 1.11E-06 ± 3.19E-08, 1.23E-06 ± 3.51E-08, 1.35E-06 ± 3.82E-08]
         CPIM_CO2_D_Pressures = [0.02, 0.04, 0.07, 0.11, 0.13, 0.29, 0.63, 1.01, 1.46, 2.18, 2.55, 3.01]
 
-        CPIM_CO2_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CO2_Diffusivities, CPIM_CO2_D_Pressures, 1.285, 44.009, CPIM_CO2_DM, penetrant_activity)
+        CPIMTT_CO2_Diffusivities =[1.23E-07, 1.62E-07, 2.42E-07, 2.92E-07, 3.99E-07, 4.86E-07, 5.39E-07, 6.01E-07, 6.61E-07, 6.92E-07, 7.40E-07, 7.56E-07, 7.95E-07]
+        CPIMTT_CO2_D_Pressures = [0.026108491, 0.096498915, 0.329691673, 0.51115978, 1.013709993, 1.533341029, 2.053176956, 2.474938589, 3.074988743, 3.544684124, 4.049162551, 4.528244384, 5.018626422]
+
+        CPIMPPN30_CO2_Diffusivities = [5.70E-08, 6.28E-08, 7.51E-08]
+        CPIMPPN30_CO2_D_Pressures = [0.10575012, 0.149904497, 0.236765912]
+
+        CPIMPPN30TT_CO2_Diffusivities = [2.56E-07, 2.67E-07, 2.84E-07, 3.15E-07, 3.35E-07, 3.70E-07, 5.83E-07, 7.91E-07, 9.96E-07, 1.17E-06, 1.31E-06, 1.36E-06, 1.45E-06, 1.57E-06, 1.67E-06, 1.70E-06]
+        CPIMPPN30TT_CO2_D_Pressures = [0.023958397, 0.051496768, 0.071641224, 0.098420661, 0.122264797, 0.171305182, 0.493184625, 0.897479829, 1.488763245, 2.030096644, 2.46419457, 2.96169734, 3.431452286, 4.017734468, 4.553939642, 5.012233393]
+
+        CPIM_CH4_Diffusivities = [6.00E-08, 7.21E-08, 8.27E-08, 9.68E-08]
+        CPIM_CH4_D_Pressures = [0.108381747, 0.352283335, 0.632820204, 0.995498696]
+
+        CPIMTT_CH4_Diffusivities =[0.106659394, 0.348679577, 0.681648981, 1.020196443, 1.520182062]
+        CPIMTT_CH4_D_Pressures = [3.65E-08, 5.14E-08, 6.19E-08, 6.97E-08, 8.18E-08]
+
+        CPIMPPN30_CH4_Diffusivities = [1.00E-08, 1.40E-08, 1.61E-08, 1.84E-08]
+        CPIMPPN30_CH4_D_Pressures = [0.113271481, 0.522281552, 0.739791262, 1.040099094]
+
+        CPIMPPN30TT_CH4_Diffusivities = [5.49E-08, 6.94E-08, 9.04E-08, 1.09E-07]
+        CPIMPPN30TT_CH4_D_Pressures = [0.104457033, 0.317433866, 0.609517268, 0.965470726]
+
+        CPIMS_CO2_D_PRESSURES = [CPIM_CO2_D_Pressures,CPIMTT_CO2_D_Pressures,CPIMPPN30_CO2_D_Pressures,CPIMPPN30TT_CO2_D_Pressures]
+        CPIMS_CO2_DIFFUSIVITIES = [CPIM_CO2_Diffusivities,CPIMTT_CO2_Diffusivities,CPIMPPN30_CO2_Diffusivities,CPIMPPN30TT_CO2_Diffusivities]
         
+        CPIM_CO2_L_ANALYSES = [MobilityFactorAnalysis(
+            CPIMS_CO2_DIFFUSIVITIES[i],
+            CPIMS_CO2_D_PRESSURES[i],
+            polymer_density(CPIMs_CO2_Isotherms[i]),
+            44.009,
+            CPIM_CO2_DMs[i], CO2_activity)
+            for i in eachindex(CPIMs_CO2_Isotherms_Names)]
+        
+        [write_analysis(CPIM_CO2_L_ANALYSES[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names)]
+
+
+        CPIM_CO2_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CO2_Diffusivities, CPIM_CO2_D_Pressures, 1.285, 44.009, CPIM_CO2_DM, penetrant_activity)
+      
         write_analysis(CPIM_CO2_L_ANALYSIS, path, name="CPIM_CO2_L_ANALYSIS")
         
+        [write_analysis(CPIMs_CO2_TFA_CONTINUOUS[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names,CPIMs_CO2_TFA_CONTINUOUS)]
+
+        
+
         CPIM_CO2_T_ANALYSIS = ThermodynamicFactorAnalysis(
             collect(
                 range(
                     0.001, 
-                    maximum(partial_pressures(CPIM_CO2_ISOTHERM, component=1)), 
+                    5, 
                     step=0.02
                 )
             ), 
-            1.285, 44.009, CPIM_CO2_DM, penetrant_activity)
+            1.285, 44.009, CPIM_CO2_DM, CO2_activity)
+
+
         write_analysis(CPIM_CO2_T_ANALYSIS, path, name="CPIM_CO2_T_ANALYSIS")
        
+        CPIM_CO2_T_ANALYSES = [ThermodynamicFactorAnalysis(
+            collect(
+                range(
+                    0.001, 
+                    5, 
+                    step=0.02
+                )
+            ), 
+            polymer_density(CPIMs_CO2_Isotherms[i]), 44.009, CPIM_CO2_DMs[i], CO2_activity) for i in eachindex(CPIM_CO2_DMs)]
 
-        
+        [write_analysis(CPIM_CO2_T_ANALYSES[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names,CPIM_CO2_T_ANALYSES)]
+
         # Partial Immobilization 
         path = joinpath(results_folder, "Partial Immobilization Model.xlsx")
         rm(path; force=true)
