@@ -9,7 +9,7 @@ end
 
 """
     ThermodynamicFactorAnalysis(isotherm::IsothermData)
-Extract the thermodynamic factors of an isotherm's steps.
+Extract the thermodynamic factors of an isotherm using finite differencing approximations (no equations of state are used).
 
 # Arguments
 - `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be used.
@@ -43,14 +43,16 @@ end
 
 """
     ThermodynamicFactorAnalysis(isotherm, sorptionmodel, activity_function)
-Extract the thermodynamic factors of an isotherm's steps.
+Extract the thermodynamic factors of an isotherm using analytical derivatives and exact activities from an equation of state (activity_function).
 
 # Arguments
 - `isotherm::IsothermData`: Should be a single-component isotherm. If multiple components are present, only the first component will be used.
 - `sorptionmodel::SorptionModel`: SorptionModel that supports `predict_pressure`.
 - `activity_function::Function`: Function which takes a pressure in MPa and returns an activity. 
 
-Isotherms in this function will need pressures, concentrations, polymer density, and penetrant molecular weight.
+Isotherms in this function will need pressures, polymer density, and penetrant molecular weight.
+- Concentrations used in this method will be *predicted* concentrations from the `SorptionModel`, not tabulated concentrations. 
+
 """
 function ThermodynamicFactorAnalysis(
     isotherm::IsothermData, 
@@ -72,7 +74,7 @@ end
 
 """
     ThermodynamicFactorAnalysis(pressures, ρ_pol, mw_pen, sorptionmodel, activity_function)
-Extract the thermodynamic factors of an isotherm's steps.
+Extract the thermodynamic factors of an isotherm (see `ThermodynamicFactorAnalysis` method using an `isotherm`, `sorptionmodel`, `activity_function`).
 
 # Arguments
 - `pressures::AbstractVector`: List of pressures (MPa) to evaluate the thermodynamic factor at.
@@ -80,8 +82,6 @@ Extract the thermodynamic factors of an isotherm's steps.
 - `mw_pwn::Number`: Penetrant molecular weight in g/mol. 
 - `sorptionmodel::SorptionModel`: SorptionModel that supports `predict_pressure`.
 - `activity_function::Function`: Function which takes a pressure in MPa and returns an activity. 
-
-Isotherms in this function will need polymer density, penetrant molecular weight.
 """
 function ThermodynamicFactorAnalysis(
         pressures::AbstractVector,
