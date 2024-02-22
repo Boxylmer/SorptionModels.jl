@@ -843,8 +843,8 @@ precision = 5
             pen_mws_g_mol = 16.043)
 
         
-        CPIMs_CO2_Isotherms_Names = ["CPIM_CO2_ISOTHERM", "CPIMTT_CO2_ISOTHERM","CPIMPPN30_CO2_ISOTHERM","CPIMPPN30TT_CO2_ISOTHERM"]
-        CPIMs_CH4_Isotherms_Names = ["CPIM_CH4_ISOTHERM","CPIMTT_CH4_ISOTHERM","CPIMPPN30_CH4_ISOTHERM","CPIMPPN30TT_CH4_ISOTHERM"]
+        CPIMs_CO2_Alpha_Names = ["CPIM_CO2_ALPHA", "CPIMTT_CO2_ALPHA","CPIMPPN30_CO2_ALPHA","CPIMPPN30TT_CO2_ALPHA"]
+        CPIMs_CH4_Alpha_Names = ["CPIM_CH4_ALPHA","CPIMTT_CH4_ALPHA","CPIMPPN30_CH4_ALPHA","CPIMPPN30TT_CH4_ALPHA"]
 
         CPIMs_CO2_Isotherms = [CPIM_CO2_ISOTHERM, CPIMTT_CO2_ISOTHERM,CPIMPPN30_CO2_ISOTHERM,CPIMPPN30TT_CO2_ISOTHERM]
         CPIMs_CH4_Isotherms = [CPIM_CH4_ISOTHERM,CPIMTT_CH4_ISOTHERM,CPIMPPN30_CH4_ISOTHERM,CPIMPPN30TT_CH4_ISOTHERM]
@@ -857,14 +857,14 @@ precision = 5
         CPIM_CO2_DM = fit_model(DualMode(), CPIM_CO2_ISOTHERM; uncertainty_method = :JackKnife)
         
         
-        CPIM_CO2_TFA_CONTINUOUS = ThermodynamicFactorAnalysis(CPIM_CO2_ISOTHERM, CPIM_CO2_DM, x -> CO2_activity(x))
-        CPIMs_CO2_TFA_CONTINUOUS = ThermodynamicFactorAnalysis.(CPIMs_CO2_Isotherms, CPIM_CO2_DMs,x->CO2_activity(x))
-        CPIMs_CH4_TFA_CONTINUOUS = ThermodynamicFactorAnalysis.(CPIMs_CH4_Isotherms, CPIM_CH4_DMs, x->CH4_activity(x))
+        CPIM_CO2_TFA = ThermodynamicFactorAnalysis(CPIM_CO2_ISOTHERM, CPIM_CO2_DM, x -> CO2_activity(x))
+        CPIMs_CO2_TFA = ThermodynamicFactorAnalysis.(CPIMs_CO2_Isotherms, CPIM_CO2_DMs,x->CO2_activity(x))
+        CPIMs_CH4_TFA = ThermodynamicFactorAnalysis.(CPIMs_CH4_Isotherms, CPIM_CH4_DMs, x->CH4_activity(x))
         
         
-        [write_analysis(CPIMs_CO2_TFA_CONTINUOUS[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names,CPIMs_CO2_TFA_CONTINUOUS)]
+        [write_analysis(CPIMs_CO2_TFA[i],path, name = CPIMs_CO2_Alpha_Names[i])  for i in eachindex(CPIMs_CO2_TFA,CPIMs_CO2_Alpha_Names)]
 
-        [write_analysis(CPIMs_CH4_TFA_CONTINUOUS[i],path, name = CPIMs_CH4_Isotherms_Names[i])  for i in eachindex(CPIMs_CH4_Isotherms_Names,CPIMs_CH4_TFA_CONTINUOUS)]
+        [write_analysis(CPIMs_CH4_TFA[i],path, name = CPIMs_CH4_Alpha_Names[i])  for i in eachindex(CPIMs_CH4_TFA,CPIMs_CH4_Alpha_Names)]
 
 
         # begin diffusivities
@@ -895,25 +895,45 @@ precision = 5
         CPIMS_CO2_D_PRESSURES = [CPIM_CO2_D_Pressures,CPIMTT_CO2_D_Pressures,CPIMPPN30_CO2_D_Pressures,CPIMPPN30TT_CO2_D_Pressures]
         CPIMS_CO2_DIFFUSIVITIES = [CPIM_CO2_Diffusivities,CPIMTT_CO2_Diffusivities,CPIMPPN30_CO2_Diffusivities,CPIMPPN30TT_CO2_Diffusivities]
         
+        CPIMS_CH4_D_PRESSURES = [CPIM_CH4_D_Pressures, CPIMTT_CH4_D_Pressures, CPIMPPN30_CH4_D_Pressures, CPIMPPN30TT_CH4_D_Pressures]
+        CPIMS_CH4_DIFFUSIVITIES = [CPIM_CH4_Diffusivities, CPIMTT_CH4_Diffusivities, CPIMPPN30_CH4_Diffusivities, CPIMPPN30TT_CH4_Diffusivities]
+
+        CPIMs_CO2_L_Names = ["CPIM_CO2_L", "CPIMTT_CO2_L","CPIMPPN30_CO2_L","CPIMPPN30TT_CO2_L"]
+        CPIMs_CH4_L_Names = ["CPIM_CH4_L","CPIMTT_CH4_L","CPIMPPN30_CH4_L","CPIMPPN30TT_CH4_L"]
+        
+        #begin discerete mobility factor analysis
         CPIM_CO2_L_ANALYSES = [MobilityFactorAnalysis(
             CPIMS_CO2_DIFFUSIVITIES[i],
             CPIMS_CO2_D_PRESSURES[i],
             polymer_density(CPIMs_CO2_Isotherms[i]),
             44.009,
             CPIM_CO2_DMs[i], CO2_activity)
-            for i in eachindex(CPIMs_CO2_Isotherms_Names)]
+            for i in eachindex(CPIMs_CO2_L_Names)]
         
-        [write_analysis(CPIM_CO2_L_ANALYSES[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names)]
+        CPIM_CH4_L_ANALYSES = [MobilityFactorAnalysis(
+            CPIMS_CH4_DIFFUSIVITIES[i],
+            CPIMS_CH4_D_PRESSURES[i],
+            polymer_density(CPIMs_CH4_Isotherms[i]),
+            16.043,
+            CPIM_CH4_DMs[i], CH4_activity)
+            for i in eachindex(CPIMs_CH4_L_Names)]
 
 
         CPIM_CO2_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CO2_Diffusivities, CPIM_CO2_D_Pressures, 1.285, 44.009, CPIM_CO2_DM, penetrant_activity)
       
         write_analysis(CPIM_CO2_L_ANALYSIS, path, name="CPIM_CO2_L_ANALYSIS")
         
-        [write_analysis(CPIMs_CO2_TFA_CONTINUOUS[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names,CPIMs_CO2_TFA_CONTINUOUS)]
+
+        [write_analysis(CPIM_CO2_L_ANALYSES[i],path, name = CPIMs_CO2_L_Names[i])  for i in eachindex(CPIM_CO2_L_ANALYSES,CPIMs_CO2_L_Names)]
+        [write_analysis(CPIM_CH4_L_ANALYSES[i],path, name = CPIMs_CH4_L_Names[i])  for i in eachindex(CPIM_CH4_L_ANALYSES,CPIMs_CH4_L_Names)]
 
         
+        #begin continuous thermo factor analysis
+        CPIMs_CO2_ALPHACONT_Names = ["CPIM_CO2_ALPHACONT", "CPIMTT_CO2_ALPHACONT","CPIMPPN30_CO2_ALPHACONT","CPIMPPN30TT_CO2_ALPHACONT"]
+        CPIMs_CH4_ALPHACONT_Names = ["CPIM_CH4_ALPHACONT","CPIMTT_CH4_ALPHACONT","CPIMPPN30_CH4_ALPHACONT","CPIMPPN30TT_CH4_ALPHACONT"]
 
+
+        
         CPIM_CO2_T_ANALYSIS = ThermodynamicFactorAnalysis(
             collect(
                 range(
@@ -927,17 +947,40 @@ precision = 5
 
         write_analysis(CPIM_CO2_T_ANALYSIS, path, name="CPIM_CO2_T_ANALYSIS")
        
-        CPIM_CO2_T_ANALYSES = [ThermodynamicFactorAnalysis(
-            collect(
-                range(
-                    0.001, 
-                    5, 
-                    step=0.02
-                )
-            ), 
-            polymer_density(CPIMs_CO2_Isotherms[i]), 44.009, CPIM_CO2_DMs[i], CO2_activity) for i in eachindex(CPIM_CO2_DMs)]
+        CPIM_CO2_T_ANALYSES = [
+            ThermodynamicFactorAnalysis(
+                collect(
+                    range(
+                        0.001, 
+                        5, 
+                        step=0.02
+                    )
+                ), 
+                polymer_density(CPIMs_CO2_Isotherms[i]), 
+                44.009, 
+                CPIM_CO2_DMs[i], 
+                CO2_activity) 
+            for i in eachindex(CPIM_CO2_DMs)
+        ]
 
-        [write_analysis(CPIM_CO2_T_ANALYSES[i],path, name = CPIMs_CO2_Isotherms_Names[i])  for i in eachindex(CPIMs_CO2_Isotherms_Names,CPIM_CO2_T_ANALYSES)]
+        CPIM_CH4_T_ANALYSES = [
+            ThermodynamicFactorAnalysis(
+                collect(
+                    range(
+                        0.001, 
+                        5, 
+                        step=0.02
+                    )
+                ), 
+                polymer_density(CPIMs_CH4_Isotherms[i]), 
+                44.009, 
+                CPIM_CH4_DMs[i], 
+                CH4_activity) 
+            for i in eachindex(CPIM_CH4_DMs)
+        ]
+
+        [write_analysis(CPIM_CO2_T_ANALYSES[i],path, name = CPIMs_CO2_ALPHACONT_Names[i])  for i in eachindex(CPIM_CO2_T_ANALYSES,CPIMs_CO2_ALPHACONT_Names)]
+        [write_analysis(CPIM_CH4_T_ANALYSES[i],path, name = CPIMs_CH4_ALPHACONT_Names[i])  for i in eachindex(CPIM_CH4_T_ANALYSES,CPIMs_CH4_ALPHACONT_Names)]
 
         # Partial Immobilization 
         path = joinpath(results_folder, "Partial Immobilization Model.xlsx")
