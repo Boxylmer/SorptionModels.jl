@@ -47,7 +47,7 @@ end
 times = collect(range(0, 10, 10))
 fs = [0.4, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 struik_sse(times, fs, [0.2, 150, 130])
-struik_sse_adjustable_f0(times, fs, [0.2, 150, 130, 0.21])
+# struik_sse_adjustable_f0(times, fs, [0.2, 150, 130, 0.21])
 
 
 function solve_struik_params(times, fs)
@@ -117,8 +117,56 @@ function generate_τγ_error_map(fe=0.19, lnτ∞_range = 5:10:100, γ_range = 1
             title="Error Heatmap fe=" * string(round(fe, digits=2)),
             color=:viridis)  # Use a color scheme that suits your data; :viridis is a good default
 end  
-generate_τγ_error_map(0.05654218505762033, 8:0.1:32, 10:1:200)  
 
+function generate_feγ_error_map(fe_range=0.1:0.001:0.2, τ∞=5, γ_range=1:0.05:2)
+    error_matrix = zeros(length(γ_range), length(fe_range))
+    
+    for i in eachindex(γ_range)
+        for j in eachindex(fe_range)
+            error_matrix[i, j] = log(
+                struik_sse(
+                    NEAT_PTMSP_TIMES_H, 
+                    NEAT_PTMSP_FS, 
+                    (fe_range[j], τ∞, γ_range[i])
+                )
+            )
+        end
+    end
+    
+    heatmap(γ_range, fe_range, error_matrix',
+            xlabel="γ",
+            ylabel="fe",
+            title="Error Heatmap τ∞=" * string(round(τ∞, digits=2)),
+            color=:viridis)  # Use a color scheme that suits your data; :viridis is a good default
+end  
+
+function generate_feτ_error_map(fe_range=0.1:0.001:0.2, lnτ∞_range=5:10:100, γ=10)
+    error_matrix = zeros(length(fe_range), length(lnτ∞_range))
+    @show length(lnτ∞_range), length(fe_range)
+    for i in eachindex(fe_range)
+        for j in eachindex(lnτ∞_range)
+            error_matrix[i, j] = log(
+                struik_sse(
+                    NEAT_PTMSP_TIMES_H, 
+                    NEAT_PTMSP_FS, 
+                    (fe_range[i], exp(lnτ∞_range[j]), γ)
+                )
+            )
+        end
+    end
+    
+    heatmap(fe_range, lnτ∞_range, error_matrix',
+            xlabel="fe",
+            ylabel="lnτ∞",
+            title="Error Heatmap γ=" * string(round(γ, digits=2)),
+            color=:viridis)  # Use a color scheme that suits your data; :viridis is a good default
+end  
+
+
+τγ_plot = generate_τγ_error_map(NEAT_PTMSP_PARAMS[1], 8:0.1:32, 10:1:200)  
+feγ_plot = generate_feγ_error_map(0.01:0.001:0.20, NEAT_PTMSP_PARAMS[2], 10:1:200)
+feτ_plot = generate_feτ_error_map(0.01:0.001:0.20, 8:0.1:32, NEAT_PTMSP_PARAMS[3])
+cumulative_plot = plot(τγ_plot, feγ_plot, feτ_plot, layout=[2, 2], legend=false)
 
 
 function generate_fτγ_error_animation(fe_range=0.09:0.01:0.22, lnτ∞_range = 5:10:100, γ_range = 5:10:100; name = "fτγ_error_animation.gif")
@@ -141,5 +189,6 @@ NEAT_PTMSP_PARAMS_Σ = MembraneBase.rss_covariance_matrix(
     length(NEAT_PTMSP_FS)
 ) 
 NEAT_PTMSP_PARAMS_σ = sqrt.(abs.(diag(NEAT_PTMSP_PARAMS_Σ)))
+generate_τγ_error_map(NEAT_PTMSP_PARAMS[1], 8:0.1:32, 10:1:200)  
 
 
