@@ -162,6 +162,28 @@ function generate_feτ_error_map(fe_range=0.1:0.001:0.2, lnτ∞_range=5:10:100,
             color=:viridis)  # Use a color scheme that suits your data; :viridis is a good default
 end  
 
+function generate_feτγ_error_map(fe_range, lnτ∞_range, γ_range, given_times, given_fs)
+    
+    error_matrix = zeros(length(γ_range), length(lnτ∞_range), length(fe_range))
+    
+    for i in eachindex(γ_range)
+        for j in eachindex(lnτ∞_range)
+            for k in eachindex(fe_range)
+
+                error_matrix[i, j, k] = log(struik_sse(
+                    given_times, 
+                    given_fs, 
+                    (fe, exp(lnτ∞_range[j]), γ_range[i])))
+            end
+        end
+    end
+    
+    heatmap(γ_range, lnτ∞_range, error_matrix',
+            xlabel="γ",
+            ylabel="lnτ∞",
+            title="Error Heatmap fe=" * string(round(fe, digits=2)),
+            color=:viridis)  # Use a color scheme that suits your data; :viridis is a good default
+end  
 
 τγ_plot = generate_τγ_error_map(NEAT_PTMSP_PARAMS[1], 8:0.1:32, 10:1:200)  
 feγ_plot = generate_feγ_error_map(0.01:0.001:0.20, NEAT_PTMSP_PARAMS[2], 10:1:200)
