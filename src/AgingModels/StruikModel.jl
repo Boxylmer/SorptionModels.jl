@@ -208,50 +208,6 @@ PPN5_PRED = solve_struik(PPN5_PARAMS..., PPN5_FS[1], PPN5_TIMES_H)
 PPN20_PARAMS = solve_struik_params(PPN20_TIMES_H, PPN20_FS)
 PPN20_PRED = solve_struik(PPN20_PARAMS..., PPN20_FS[1], PPN20_TIMES_H)
 
-τγ_plot = generate_τγ_error_map(NEAT_PTMSP_PARAMS[1], 8:0.1:32, 10:1:200)  
-feγ_plot = generate_feγ_error_map(0.01:0.001:0.20, NEAT_PTMSP_PARAMS[2], 10:1:200)
-feτ_plot = generate_feτ_error_map(0.01:0.001:0.20, 8:0.1:32, NEAT_PTMSP_PARAMS[3])
-cumulative_plot = plot(τγ_plot, feγ_plot, feτ_plot, layout=[2, 2], legend=false)
-
-generate_fτγ_error_animation(0.05:0.01:0.21, 8:0.2:32, 0:1:200) 
-
-
-
-
-# make a results plot with ffv with time
-prediction_times = collect(range(
-    0, 
-    max(
-        NEAT_PTMSP_TIMES_H[end],
-        PPN5_TIMES_H[end],
-        PPN20_TIMES_H[end], 
-    ), 250))
-NEAT_PTMSP_PRED = solve_struik(NEAT_PTMSP_PARAMS..., NEAT_PTMSP_FS[1], prediction_times)
-PPN5_PRED = solve_struik(PPN5_PARAMS..., PPN5_FS[1], prediction_times)
-PPN20_PRED = solve_struik(PPN20_PARAMS..., PPN20_FS[1], prediction_times)
-
-plt = scatter(NEAT_PTMSP_TIMES_H, NEAT_PTMSP_FS ./ NEAT_PTMSP_FS[1], color=:blue, label="NEAT exp.",
-    xlabel="Time (h)", ylabel = "ffv/ffv0")
-plt = plot!(prediction_times, NEAT_PTMSP_PRED ./ NEAT_PTMSP_PRED[1], color=:blue, label="NEAT pred.")
-plt = scatter!(PPN5_TIMES_H, PPN5_FS ./ PPN5_FS[1], color=:red, label="5PPN exp.")
-plt = plot!(prediction_times, PPN5_PRED ./ PPN5_PRED[1], color=:red, label="5PPN pred.")
-plt = scatter!(PPN20_TIMES_H, PPN20_FS ./ PPN20_FS[1], color=:green, label="20PPN exp.")
-plt = plot!(prediction_times, PPN20_PRED ./ PPN20_PRED[1], color=:green, label="20PPN pred.")
-savefig(plt, "ffv with time.png")
-
-
-NEAT_PTMSP_PRED_P = p_from_f.(NEAT_PTMSP_PRED)
-PPN5_PRED_P = p_from_f.(PPN5_PRED)
-PPN20_PRED_P = p_from_f.(PPN20_PRED)
-
-plt = scatter(NEAT_PTMSP_TIMES_H, NEAT_PTMSP_PERMS_BARRER ./ NEAT_PTMSP_PERMS_BARRER[1], color=:blue, label="NEAT exp.",
-    xlabel="Time (h)", ylabel = "P/P0")
-plt = plot!(prediction_times, NEAT_PTMSP_PRED_P ./ NEAT_PTMSP_PRED_P[1], color=:blue, label="NEAT pred.")
-plt = scatter!(PPN5_TIMES_H, PPN5_PERMS_BARRER ./ PPN5_PERMS_BARRER[1], color=:red, label="5PPN exp.")
-plt = plot!(prediction_times, PPN5_PRED_P ./ PPN5_PRED_P[1], color=:red, label="5PPN pred.")
-plt = scatter!(PPN20_TIMES_H, PPN20_PERMS_BARRER ./ PPN20_PERMS_BARRER[1], color=:green, label="20PPN exp.")
-plt = plot!(prediction_times, PPN20_PRED_P ./ PPN20_PRED_P[1], color=:green, label="20PPN pred.")
-savefig(plt, "permeability with time.png")
 
 NEAT_PTMSP_PARAMS_Σ = MembraneBase.rss_covariance_matrix(
     params -> struik_sse(NEAT_PTMSP_TIMES_H, NEAT_PTMSP_FS, params), 
@@ -276,9 +232,102 @@ NEAT_PTMSP_PARAMS_UNCERTAIN = NEAT_PTMSP_PARAMS .± NEAT_PTMSP_PARAMS_σ
 PPN5_PARAMS_UNCERTAIN = PPN5_PARAMS .± PPN5_PARAMS_σ
 PPN20_PARAMS_UNCERTAIN = PPN20_PARAMS .± PPN20_PTMSP_PARAMS_σ
 
-scatter([0, 0.05, 0.2], [NEAT_PTMSP_PARAMS_UNCERTAIN[1], PPN5_PARAMS_UNCERTAIN[1], PPN20_PARAMS_UNCERTAIN[1]])
-scatter([0, 0.05, 0.2], [NEAT_PTMSP_PARAMS_UNCERTAIN[2], PPN5_PARAMS_UNCERTAIN[2], PPN20_PARAMS_UNCERTAIN[2]], yaxis=:log)
-scatter([0, 0.05, 0.2], [NEAT_PTMSP_PARAMS_UNCERTAIN[3], PPN5_PARAMS_UNCERTAIN[3], PPN20_PARAMS_UNCERTAIN[3]])
+
+println("NEAT: ", NEAT_PTMSP_PARAMS_UNCERTAIN)
+println("5PPN: ", PPN5_PARAMS_UNCERTAIN)
+println("20PPN:", PPN20_PARAMS_UNCERTAIN)
+
+τγ_plot = generate_τγ_error_map(NEAT_PTMSP_PARAMS[1], 8:0.1:32, 10:1:200)  
+feγ_plot = generate_feγ_error_map(0.01:0.001:0.20, NEAT_PTMSP_PARAMS[2], 10:1:200)
+feτ_plot = generate_feτ_error_map(0.01:0.001:0.20, 8:0.1:32, NEAT_PTMSP_PARAMS[3])
+cumulative_plot = plot(τγ_plot, feγ_plot, feτ_plot, layout=[2, 2], legend=false)
+
+generate_fτγ_error_animation(0.05:0.01:0.21, 8:0.2:32, 0:1:200) 
 
 
+# make a results plot with ffv with time
+prediction_times = collect(range(
+    0, 
+    max(
+        NEAT_PTMSP_TIMES_H[end],
+        PPN5_TIMES_H[end],
+        PPN20_TIMES_H[end], 
+    ), 250))
+NEAT_PTMSP_PRED = solve_struik(NEAT_PTMSP_PARAMS..., NEAT_PTMSP_FS[1], prediction_times)
+PPN5_PRED = solve_struik(PPN5_PARAMS..., PPN5_FS[1], prediction_times)
+PPN20_PRED = solve_struik(PPN20_PARAMS..., PPN20_FS[1], prediction_times)
 
+
+plt = scatter(NEAT_PTMSP_TIMES_H, NEAT_PTMSP_FS ./ NEAT_PTMSP_FS[1], color=:blue, label="NEAT exp.",
+    xlabel="Time (h)", ylabel = "ffv/ffv0")
+plt = plot!(prediction_times, NEAT_PTMSP_PRED ./ NEAT_PTMSP_PRED[1], color=:blue, label="NEAT pred.")
+plt = scatter!(PPN5_TIMES_H, PPN5_FS ./ PPN5_FS[1], color=:red, label="5PPN exp.")
+plt = plot!(prediction_times, PPN5_PRED ./ PPN5_PRED[1], color=:red, label="5PPN pred.")
+plt = scatter!(PPN20_TIMES_H, PPN20_FS ./ PPN20_FS[1], color=:green, label="20PPN exp.")
+plt = plot!(prediction_times, PPN20_PRED ./ PPN20_PRED[1], color=:green, label="20PPN pred.")
+savefig(plt, "ffv with time.png")
+
+
+NEAT_PTMSP_PRED_P = p_from_f.(NEAT_PTMSP_PRED)
+PPN5_PRED_P = p_from_f.(PPN5_PRED)
+PPN20_PRED_P = p_from_f.(PPN20_PRED)
+println(PPN20_PRED_P)
+
+plt = scatter(NEAT_PTMSP_TIMES_H, NEAT_PTMSP_PERMS_BARRER ./ NEAT_PTMSP_PERMS_BARRER[1], color=:blue, label="NEAT exp.",
+    xlabel="Time (h)", ylabel = "P/P0")
+plt = plot!(prediction_times, NEAT_PTMSP_PRED_P ./ NEAT_PTMSP_PRED_P[1], color=:blue, label="NEAT pred.")
+plt = scatter!(PPN5_TIMES_H, PPN5_PERMS_BARRER ./ PPN5_PERMS_BARRER[1], color=:red, label="5PPN exp.")
+plt = plot!(prediction_times, PPN5_PRED_P ./ PPN5_PRED_P[1], color=:red, label="5PPN pred.")
+plt = scatter!(PPN20_TIMES_H, PPN20_PERMS_BARRER ./ PPN20_PERMS_BARRER[1], color=:green, label="20PPN exp.")
+plt = plot!(prediction_times, PPN20_PRED_P ./ PPN20_PRED_P[1], color=:green, label="20PPN pred.")
+savefig(plt, "permeability with time.png")
+
+PPNS = [0, 0.05, 0.2]
+fes, τs, γs = collect(zip(NEAT_PTMSP_PARAMS_UNCERTAIN, PPN5_PARAMS_UNCERTAIN, PPN20_PARAMS_UNCERTAIN))
+fe_with_ppn_plot = scatter(PPNS, ([NEAT_PTMSP_PARAMS_UNCERTAIN[1], PPN5_PARAMS_UNCERTAIN[1], PPN20_PARAMS_UNCERTAIN[1]]), ylabel="Fe", xlabel="PPN", label=nothing, title="Fe with PPN content in N2/PTMSP")
+lnτ_with_ppn_plot = scatter(PPNS, log.([NEAT_PTMSP_PARAMS_UNCERTAIN[2], PPN5_PARAMS_UNCERTAIN[2], PPN20_PARAMS_UNCERTAIN[2]]), ylabel="lnτ", xlabel="PPN", label=nothing, title="lnτ with PPN content in N2/PTMSP")
+γ_with_ppn_plot = scatter(PPNS, [NEAT_PTMSP_PARAMS_UNCERTAIN[3], PPN5_PARAMS_UNCERTAIN[3], PPN20_PARAMS_UNCERTAIN[3]], ylabel="γ", xlabel="PPN", label=nothing, title="γ with PPN content in N2/PTMSP")
+f0_with_ppn_plot = scatter(PPNS, [NEAT_PTMSP_FS[1], PPN5_FS[1], PPN20_FS[1]], ylabel="f0", xlabel="PPN", label=nothing, title="f0 with PPN content in N2/PTMSP")
+
+fe_of_ppn(ppn, c1, c2) = ppn / (ppn * c1 + c2) + fes[1].val
+lnτ_of_ppn(ppn, c1, c2) = ppn / (ppn * c1 + c2) + log(NEAT_PTMSP_PARAMS_UNCERTAIN[2]).val#c1 * sqrt(ppn) + c2
+γ_of_ppn(ppn, cγ, c0) = exp(ppn * cγ) * c0
+
+function fit_f_of_ppn(ppns, cs, f::Function)
+    raw_cs = [strip_measurement_to_value(c) for c in cs]
+    function obj(params)
+        err = 0 
+        for i in eachindex(ppns, raw_cs)
+            err += (f(ppns[i], params...) - raw_cs[i])^2
+        end
+        return log(err)
+    end
+    start = [0.2, 99.]
+    res = Optim.optimize(obj, start, LBFGS()).minimizer
+    return res
+end
+
+ppn_preds = collect(range(start=0., step=0.01, stop=0.2))
+
+cfe, cfe0 = fit_f_of_ppn(PPNS, fes, fe_of_ppn)
+clnτ, clnτ0 = fit_f_of_ppn(PPNS, log.(τs), lnτ_of_ppn)
+cγ, cγ0 = fit_f_of_ppn(PPNS, γs, γ_of_ppn)
+
+pred_fes = fe_of_ppn.(ppn_preds, cfe, cfe0)
+pred_lnτs = lnτ_of_ppn.(ppn_preds, clnτ, clnτ0)
+pred_γs = γ_of_ppn.(ppn_preds, cγ, cγ0)
+plot!(fe_with_ppn_plot, ppn_preds, pred_fes)
+plot!(lnτ_with_ppn_plot, ppn_preds, pred_lnτs)
+plot!(γ_with_ppn_plot, ppn_preds, pred_γs)
+
+max_time_h = 250
+plt = plot( title="Predicted PTMSP / PPN FFV as a function of aging time", xlabel="Time (h)", ylabel="FFV")
+for i in eachindex(ppn_preds, pred_fes, pred_lnτs, pred_γs)
+    fe = pred_fes[i]
+    τ = exp(pred_lnτs[i])
+    γ = pred_γs[i]
+    ppn = ppn_preds[i]
+    
+
+
+end
