@@ -1,6 +1,6 @@
 struct ThermodynamicFactorAnalysis
     # will use this to hold resulting parameters from the deconvolution
-    pressures::AbstractVector
+    pressures::Union{AbstractVector, Nothing}
     concentrations::AbstractVector
     lna::AbstractVector
     lnw::AbstractVector

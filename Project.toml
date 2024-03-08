@@ -1,13 +1,11 @@
 name = "SorptionModels"
 uuid = "44adabc6-386d-4db0-bb6e-0f7b06129544"
 authors = ["Will <sypheren@gmail.com> and contributors"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 MembraneBase = "a9449b16-1c3f-48ab-aa2c-0b9c6d97beee"
 MembraneEOS = "11a4bec2-2c27-4554-8fe6-a2de72ffe064"

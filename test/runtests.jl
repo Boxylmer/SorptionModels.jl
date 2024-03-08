@@ -554,8 +554,8 @@ precision = 5
                 rho_pol_g_cm3=1.393 ± 0.002, 
                 pen_mws_g_mol=18.01528
             )
-            mob_fact_analysis = MobilityFactorAnalysis(dif, iso)
             therm_fact_analysis = ThermodynamicFactorAnalysis(iso)
+            mob_fact_analysis = MobilityFactorAnalysis(dif, iso)
             @test mob_fact_analysis.kinetic_factors[3].val ≈ 8.117024704029978e-7
             @test mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3].val ≈ 1.0216144834304761
             @test therm_fact_analysis.thermodynamic_factors[3] == mob_fact_analysis.thermo_factor_analysis.thermodynamic_factors[3]
@@ -596,7 +596,9 @@ precision = 5
             CPIM_CH4_Diffusivities = [6.00E-08, 7.21E-08, 8.27E-08, 9.68E-08]
             CPIM_CH4_D_Pressures = [0.108381747, 0.352283335, 0.632820204, 0.995498696]
             CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
-            
+            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 180.15))
+
+
             CPIM_CH4_Diffusivities = [6.00E-08 ± 1.93E-08, 7.21E-08 ± 2.07E-08, 8.27E-08 ± 2.18E-08, 9.68E-08 ± 2.37E-08] # now do it with uncertainty!
             CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
 
