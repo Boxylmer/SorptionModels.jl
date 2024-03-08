@@ -596,7 +596,6 @@ precision = 5
             CPIM_CH4_Diffusivities = [6.00E-08, 7.21E-08, 8.27E-08, 9.68E-08]
             CPIM_CH4_D_Pressures = [0.108381747, 0.352283335, 0.632820204, 0.995498696]
             CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
-            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 180.15))
 
 
             CPIM_CH4_Diffusivities = [6.00E-08 ± 1.93E-08, 7.21E-08 ± 2.07E-08, 8.27E-08 ± 2.18E-08, 9.68E-08 ± 2.37E-08] # now do it with uncertainty!
