@@ -1,10 +1,10 @@
 struct ThermodynamicFactorAnalysis
     # will use this to hold resulting parameters from the deconvolution
-    pressures
-    concentrations
-    lna
-    lnw
-    thermodynamic_factors
+    pressures::AbstractVector
+    concentrations::AbstractVector
+    lna::AbstractVector
+    lnw::AbstractVector
+    thermodynamic_factors::AbstractVector
 end
 
 """
@@ -38,7 +38,7 @@ function ThermodynamicFactorAnalysis(isotherm::IsothermData)
     end
 
     concs = concentration(isotherm; component = 1)
-    return ThermodynamicFactorAnalysis(pressures,concs,lna, lnw, thermo_factors)
+    return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, thermo_factors)
 end
 
 """
