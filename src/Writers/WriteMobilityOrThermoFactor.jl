@@ -1,5 +1,5 @@
 
-DEFAULT_MOBILITY_THERMO_FACTOR_ANALYSIS_NAME = "Mobility and Thermo Factor Analysis"
+DEFAULT_MOBILITY_THERMO_FACTOR_ANALYSIS_NAME = "L & α Analysis"
 
 """
     write_analysis(analysis::MobilityFactorAnalysis, workbook::XLSX.XLSXFile; [name])
