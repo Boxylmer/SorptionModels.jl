@@ -52,6 +52,7 @@ Extract the thermodynamic factors of an isotherm using analytical derivatives an
 
 Isotherms in this function will need pressures, polymer density, and penetrant molecular weight.
 - Concentrations used in this method will be *predicted* concentrations from the `SorptionModel`, not tabulated concentrations. 
+- The pressures used here will be found in the isotherm, so if you're using this with `MobilityFactorAnalysis`(@ref), you likely want to specify pressures manually. 
 
 """
 function ThermodynamicFactorAnalysis(
@@ -74,7 +75,8 @@ end
 
 """
     ThermodynamicFactorAnalysis(pressures, ρ_pol, mw_pen, sorptionmodel, activity_function)
-Extract the thermodynamic factors of an isotherm (see `ThermodynamicFactorAnalysis` method using an `isotherm`, `sorptionmodel`, `activity_function`).
+Extract the thermodynamic factors of sorption data (see `ThermodynamicFactorAnalysis` method using an `isotherm`, `sorptionmodel`, `activity_function`).
+This function allows for manual control of `pressures`, which is often necessary when using tabulated diffusivities rather than the isotherm's pressures. 
 
 # Arguments
 - `pressures::AbstractVector`: List of pressures (MPa) to evaluate the thermodynamic factor at.
