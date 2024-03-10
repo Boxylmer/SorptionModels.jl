@@ -198,5 +198,17 @@ function MembraneBase.strip_measurement_to_value(model::DualModeModel)
         strip_measurement_to_value(model.b),
         strip_measurement_to_value(model.kd),
         model.use_fugacity
-        )
+    )
+end
+
+
+function analytical_thermo_factor_analysis(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::Number, pen_mw::Number)
+    ch = model.ch
+    b = model.b 
+    kd = model.kd
+    p = pres_or_fug
+    t1 = kd + ch * b / (1 + b * p)
+    t2 = kd + ch * b / (1 + b * p)^2
+    t3 = 1 + pen_mw / (ρpol_g_cm3 * MembraneBase.CC_PER_MOL_STP) * (t1 * p)
+    return t1 / t2 * t3
 end
