@@ -201,8 +201,7 @@ function MembraneBase.strip_measurement_to_value(model::DualModeModel)
     )
 end
 
-
-function analytical_thermo_factor_analysis(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::Number, pen_mw::Number)
+function thermo_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::Number, pen_mw::Number)
     ch = model.ch
     b = model.b 
     kd = model.kd

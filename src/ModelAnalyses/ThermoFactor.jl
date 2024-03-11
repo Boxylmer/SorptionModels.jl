@@ -114,3 +114,31 @@ function ThermodynamicFactorAnalysis(
 
     return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, α)
 end
+
+"""
+    ThermodynamicFactorAnalysis(pressures, model, ρ_pol, mw_pen)
+Special case analysis that provides thermodynamic factors implemented by specific sorption models that do not require extra information. 
+
+# Arguments
+- `pressures::AbstractVector`: List of pressures (MPa) to evaluate the thermodynamic factor at.
+- `model::SorptionModel`: SorptionModel that supports `thermo_factor`. 
+- `ρ_pol::Number`: Polymer density in g/cm3.
+- `mw_pwn::Number`: Penetrant molecular weight in g/mol. 
+
+# Caveats to supported models
+- `Dual Mode`: Assumes ideal activity change behavior, analytically derived. Activity will be with respect to STP
+
+"""
+function ThermodynamicFactorAnalysis(
+        pressures::AbstractVector,
+        model::SorptionModel,
+        ρ_pol::Number,
+        mw_pen::Number
+    )
+    α = [thermo_factor(model, pressure, ρ_pol, mw_pen) for pressure in pressures]
+    concs = [predict_concentration(model, pressure) for pressure in pressures]
+    lnw = [log(ccpen_per_ccpol_to_mass_fractions(conc, ρ_pol, [mw_pen])[2]) for conc in concs]
+    lna = log.(pressures ./ 1 * MembraneBase.MPA_PER_ATM)
+    
+    return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, α)
+end
