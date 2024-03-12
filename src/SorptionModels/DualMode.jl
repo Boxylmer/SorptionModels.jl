@@ -222,3 +222,35 @@ function thermodynamic_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g
     t3 = 1 + pen_mw / (ρpol_g_cm3 * MembraneBase.CC_PER_MOL_STP) * (t1 * p)
     return t1 / t2 * t3 * z
 end
+
+function thermodynamic_factor(
+    models::AbstractVector{<:DualModeModel}, 
+    pressures_mpa::AbstractVector{<:Number}, 
+    ρpol_g_cm3::Number, 
+    pen_mw::AbstractVector{<:Number}, 
+    zs::AbstractVector{<:Number}=ones(length(pressures_mpa)))
+    
+    ctype = Float32
+    for model in models
+        ctype = promote_type(ctype, typeof.((model.ch, model.b, model.kd))...)
+    end
+    ctype = promote_type(ctype, eltype(pressures_mpa), typeof(ρpol_g_cm3), eltype(pen_mw), eltype(z))
+    αs = Vector{ctype}(undef, length(models))
+
+    concs = predict_concentration(models, pressures_mpa)
+
+    competition = sum((pressures_mpa[i] * dms[i].b for i in eachindex(dms)))
+    sum_mwj_by_cj = sum((pen_mw[i] * concs[i] for i in eachindex(pen_mw, concs)))
+    for i in eachindex(αs)
+        ch, b, kd = dms[i].ch, dms[i].b, dms[i].kd 
+        p = partial_pressures_mpa[i]
+        
+        t1 = kd + ch * b / (1 + competition)
+        t2 = kd + ch * b * (1 - b * p - competition) / (1 + competition)^2
+        t3 = 1 + 1 / (MembraneBase.CC_PER_MOL_STP * ρpol_g_cm3) * sum_mwj_by_cj
+        t4 = 1 - 1 / (MembraneBase.CC_PER_MOL_STP * ρpol_g_cm3) * (pen_mw[i] * concs[i] - sum_mwj_by_cj)
+        
+        αs = zs[i] * (t1 / t2) * t3 / t4
+    end
+    return concs
+end
