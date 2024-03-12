@@ -97,6 +97,24 @@ precision = 5
         @test round(model_low_conc.b; digits=1) ≈ 2582.4
         @test round(model_low_conc.kd; digits=3) ≈ 2.696#24
 
+        # multi component tests
+        pure_iso_1 = IsothermData(
+            partial_pressures_mpa = [0 ± 0.1, 0.03 ± 0.2, 0.15 ± 0.1, 0.6 ± 0.1, 0.9 ± 0.1, 1.2 ± 0.1, 1.5 ± 0.1], 
+            concentrations_cc = [0 ± 0.3, 1 ± 0.3, 3 ± 0.3, 8 ± 0.3, 10 ± 0.3, 12.2 ± 0.3, 14 ± 0.3]
+        )
+        pure_iso_2 = IsothermData(
+            partial_pressures_mpa = [1.1, 2.2, 3.3, 4.4], 
+            concentrations_cc = [10, 40, 50, 60]
+        )
+        fit_models = [fit_model(DualMode(), pure_iso_1), fit_model(DualMode(), pure_iso_2)]
+
+        pred_1 = predict_concentration(fit_models[1], 1) 
+        pred_2 = predict_concentration(fit_models[2], 1)
+        pred_mix_12 = predict_concentration(fit_models, [1, 1])
+        @test pred_mix_12[1] < pred_1
+        @test pred_mix_12[2] < pred_2
+        @test round(pred_mix_12[1]; digits=3) ≈ 10.746
+        @test round(pred_mix_12[2]; digits=3) ≈ 3.915
 
     # GAB
         acts =  [0, 0.023, 0.083, 0.161, 0.202,  0.263, 0.327 ]  # this is real 1-propanol sorption in TPBO-0.25 at 25C
@@ -601,7 +619,23 @@ precision = 5
             CPIM_CH4_Diffusivities = [6.00E-08 ± 1.93E-08, 7.21E-08 ± 2.07E-08, 8.27E-08 ± 2.18E-08, 9.68E-08 ± 2.37E-08] # now do it with uncertainty!
             CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
 
-            
+            # thermo factor of specific sorption models
+            testps = [1, 2, 3]
+            dm_tfa_ideal_factors = ThermodynamicFactorAnalysis(
+                [1, 2, 3],
+                CPIM_CH4_DM,
+                1.285,
+                16.043,
+            ).thermodynamic_factors
+            zs = [Clapeyron.compressibility_factor(Clapeyron.PR(["Methane"]), testp * 1e6, 308.15) for testp in testps]
+            dm_tfa_real_factors = ThermodynamicFactorAnalysis(
+                [1, 2, 3],
+                CPIM_CH4_DM,
+                1.285,
+                16.043,
+                zs
+            ).thermodynamic_factors
+            @test all(dm_tfa_ideal_factors .> dm_tfa_real_factors)
         end
         
         # Partial Immobilization Model

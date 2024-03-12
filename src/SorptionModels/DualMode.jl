@@ -73,16 +73,27 @@ end
 
 """
     predict_concentration(::AbstractVector{<:DualModeModel}, partial_pressures_mpa::AbstractVector{<:Number})
-#todo 
+
 Predict mixed gas concentrations using the dual mode mixing rule (langmuir-type competitive sorption) given a set of fit models and corresponding partial pressures.
 e.g., 
     `predict_concentration([gas_1_model, gas_2_model, ...], [gas_1_pressure, gas_2_pressure, ...])`
 !!! note
     `partial_pressures_mpa` is a bit of a misnomer. If the model was fit to fugacities, then fugacities should, of course, be specified (in MPa).
 """
-function predict_concentration(dm::AbstractVector{<:DualModeModel}, partial_pressures_mpa::AbstractVector{<:Number})
-    # todo
-    throw(ErrorException("Not implemented yet, you should definitely complain to the devs about this."))
+function predict_concentration(dms::AbstractVector{<:DualModeModel}, partial_pressures_mpa::AbstractVector{<:Number})
+    ctype = Float32
+    for model in dms
+        ctype = promote_type(ctype, typeof.((model.ch, model.b, model.kd))...)
+    end
+    ctype = promote_type(ctype, eltype(partial_pressures_mpa))
+    concs = Vector{ctype}(undef, length(dms))
+    competition = sum((partial_pressures_mpa[i] * dms[i].b for i in eachindex(dms)))
+    for i in eachindex(concs)
+        ch, b, kd = dms[i].ch, dms[i].b, dms[i].kd 
+        p = partial_pressures_mpa[i]
+        concs[i] = kd * p + ch * b * p / (1 + competition)
+    end
+    return concs
 end
 
 
@@ -201,7 +212,7 @@ function MembraneBase.strip_measurement_to_value(model::DualModeModel)
     )
 end
 
-function thermo_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::Number, pen_mw::Number)
+function thermodynamic_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::Number, pen_mw::Number, z::Number=1.0)
     ch = model.ch
     b = model.b 
     kd = model.kd
@@ -209,5 +220,5 @@ function thermo_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::N
     t1 = kd + ch * b / (1 + b * p)
     t2 = kd + ch * b / (1 + b * p)^2
     t3 = 1 + pen_mw / (ρpol_g_cm3 * MembraneBase.CC_PER_MOL_STP) * (t1 * p)
-    return t1 / t2 * t3
+    return t1 / t2 * t3 * z
 end
