@@ -223,6 +223,7 @@ function thermodynamic_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g
     return t1 / t2 * t3 * z
 end
 
+# mixed gas conditions
 function thermodynamic_factor(
     models::AbstractVector{<:DualModeModel}, 
     pressures_mpa::AbstractVector{<:Number}, 
