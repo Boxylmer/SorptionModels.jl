@@ -172,34 +172,34 @@ function __molar_fractions(model,x,input)
     end
 end
 
-#TODO: definitely port this to Clapeyron
-function Clapeyron.get_k(model::Clapeyron.SanchezLacombe)
-    return __SL_get_k(model,model.mixing)
-end
+# #TODO: definitely port this to Clapeyron
+# function Clapeyron.get_k(model::Clapeyron.SanchezLacombe)
+#     return __SL_get_k(model,model.mixing)
+# end
 
-function __SL_get_k(model::Clapeyron.SanchezLacombe,mixing::Clapeyron.SLk0k1lMixingRule)
-    return copy(mixing.k0.values),copy(mixing.k1.values)
-end
+# function __SL_get_k(model::Clapeyron.SanchezLacombe,mixing::Clapeyron.SLk0k1lMixingRule)
+#     return copy(mixing.k0.values),copy(mixing.k1.values)
+# end
 
-function __SL_get_k(model::Clapeyron.SanchezLacombe,mixing::Clapeyron.SLKRule)
-    return copy(mixing.k.values)
-end
+# function __SL_get_k(model::Clapeyron.SanchezLacombe,mixing::Clapeyron.SLKRule)
+#     return copy(mixing.k.values)
+# end
 
-function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLk0k1lMixingRule},k0,k1)
-    Clapeyron.check_arraysize(model,k0)
-    Clapeyron.check_arraysize(model,k1)
-    model.mixing.k0.values = k0
-    model.mixing.k1.values = k1
-end
+# function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLk0k1lMixingRule},k0,k1)
+#     Clapeyron.check_arraysize(model,k0)
+#     Clapeyron.check_arraysize(model,k1)
+#     model.mixing.k0.values = k0
+#     model.mixing.k1.values = k1
+# end
 
-function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLk0k1lMixingRule},k0)
-    Clapeyron.check_arraysize(model,k0)
-    model.mixing.k0.values .= k0
-    n = length(model)
-    model.mixing.k1.values .= Clapeyron.FillArrays.Zeros(n,n)
-end
+# function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLk0k1lMixingRule},k0)
+#     Clapeyron.check_arraysize(model,k0)
+#     model.mixing.k0.values .= k0
+#     n = length(model)
+#     model.mixing.k1.values .= Clapeyron.FillArrays.Zeros(n,n)
+# end
 
-function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLKRule},k)
-    Clapeyron.check_arraysize(model,k)
-    model.mixing.k.values = k
-end
+# function Clapeyron.set_k!(model::Clapeyron.SanchezLacombe{Clapeyron.SLKRule},k)
+#     Clapeyron.check_arraysize(model,k)
+#     model.mixing.k.values = k
+# end
