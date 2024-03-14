@@ -626,20 +626,27 @@ precision = 5
             testps = [1, 2, 3]
             
                 # does the analytical version line up with the automatic one, ideally?
-            dm_tfa_ideal_factors = [SorptionModels.analytical_thermodynamic_factor(CPIM_CH4_DM, p, CPIM_ρ, CH4_MW,) for p in testps]
-            norm_tfa_ideal_factors = ThermodynamicFactorAnalysis(testps, CPIM_ρ, CH4_MW, CPIM_CH4_DM, x -> x / 3).thermodynamic_factors
-            @test all(dm_tfa_ideal_factors .≈ norm_tfa_ideal_factors)
+                dm_tfa_ideal_factors = [SorptionModels.analytical_thermodynamic_factor(CPIM_CH4_DM, p, CPIM_ρ, CH4_MW,) for p in testps]
+                norm_tfa_ideal_factors = ThermodynamicFactorAnalysis(testps, CPIM_ρ, CH4_MW, CPIM_CH4_DM, x -> x / 3).thermodynamic_factors
+                @test all(dm_tfa_ideal_factors .≈ norm_tfa_ideal_factors)
 
                 # does the real case result in lower α values? 
-            zs = [Clapeyron.compressibility_factor(Clapeyron.PR(["Methane"]), testp * 1e6, 308.15) for testp in testps]
-            dm_tfa_real_factors = [SorptionModels.analytical_thermodynamic_factor(CPIM_CH4_DM, testps[i], CPIM_ρ, CH4_MW, zs[i]) for i in eachindex(testps, zs)]
-            @test all(dm_tfa_ideal_factors .> dm_tfa_real_factors)
+                zs = [Clapeyron.compressibility_factor(Clapeyron.PR(["Methane"]), testp * 1e6, 308.15) for testp in testps]
+                dm_tfa_real_factors = [SorptionModels.analytical_thermodynamic_factor(CPIM_CH4_DM, testps[i], CPIM_ρ, CH4_MW, zs[i]) for i in eachindex(testps, zs)]
+                @test all(dm_tfa_ideal_factors .> dm_tfa_real_factors)
 
-            # does the generic sorption model thermo factor calculator line up with analytical derivations? 
-            dm_tfa_ideal_factors_automatic = [thermodynamic_factor(CPIM_CH4_DM, p, CPIM_ρ, CH4_MW) for p in testps]
-            @test all(dm_tfa_ideal_factors == dm_tfa_ideal_factors_automatic)
+                # does the generic sorption model thermo factor calculator line up with analytical derivations? 
+                dm_tfa_ideal_factors_automatic = [thermodynamic_factor(CPIM_CH4_DM, p, CPIM_ρ, CH4_MW) for p in testps]
+                @test all(dm_tfa_ideal_factors .≈ dm_tfa_ideal_factors_automatic)
+                
+                # how about without ideal behavior? 
+                dm_tfa_real_factors_automatic = [thermodynamic_factor(CPIM_CH4_DM, testps[i], CPIM_ρ, CH4_MW, zs[i]) for i in eachindex(testps, zs)]
+                @test all(dm_tfa_real_factors .≈ dm_tfa_real_factors_automatic)
 
-            dm_tfa_ideal_factors_automatic .- dm_tfa_ideal_factors
+                # what about "redundant" mixed conditions?
+                dm_tfa_ideal_factors_selfmixed = [thermodynamic_factor([CPIM_CH4_DM, CPIM_CH4_DM], [testps[i]/2, testps[i]/2], CPIM_ρ, [CH4_MW, CH4_MW]) for i in eachindex(testps)]
+                @test typeof(dm_tfa_ideal_factors_selfmixed) <: Vector{<:Vector{<:Measurement}} # only verifies typing optimization since the vector starts as {Any}
+                @test dm_tfa_ideal_factors_selfmixed[1][1] == dm_tfa_ideal_factors_selfmixed[1][2] # only verifies self consistent behavior
         end
         
         # Partial Immobilization Model

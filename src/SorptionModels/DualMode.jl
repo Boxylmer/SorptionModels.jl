@@ -212,6 +212,8 @@ function MembraneBase.strip_measurement_to_value(model::DualModeModel)
     )
 end
 
+
+# pure gas, primarily used to verify the automatic method
 function analytical_thermodynamic_factor(model::DualModeModel, pres_mpa::Number, ρpol_g_cm3::Number, pen_mw::Number, z::Number=1.0)
     ch = model.ch
     b = model.b 
@@ -223,7 +225,7 @@ function analytical_thermodynamic_factor(model::DualModeModel, pres_mpa::Number,
     return t1 / t2 * t3 * z
 end
 
-# mixed gas conditions
+# mixed gas conditions, primarily used to verify the automatic method
 function analytical_thermodynamic_factor(
     models::AbstractVector{<:DualModeModel}, 
     pressures_mpa::AbstractVector{<:Number}, 

@@ -109,15 +109,6 @@ function ThermodynamicFactorAnalysis(
     lna = ln_a.(pressures)
     lnw = ln_w.(pressures)
 
-    # diagnostic
-    # ln_c(pressure_mpa) = log(predict_concentration(sorptionmodel, pressure_mpa))
-    # c = [predict_concentration(sorptionmodel, pressure) for pressure in pressures]
-    # dlnc_dp = [ForwardDiff.derivative(ln_c, pressure) for pressure in pressures]
-    # dc_dp = [ForwardDiff.derivative(p -> predict_concentration(sorptionmodel, p), pressure) for pressure in pressures]
-
-    # @show dlnw_dp ./ dlnc_dp # verified
-    # @show dlnw_dp ./ dlnc_dp .* (c ./ pressures) .* (1 ./ dc_dp) #only ideal
-
     concs = predict_concentration(sorptionmodel, pressures)
 
     return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, α)
@@ -125,28 +116,25 @@ end
 
 """
     ThermodynamicFactorAnalysis(pressures, model, ρ_pol, mw_pen)
-Special case analysis that provides thermodynamic factors implemented by specific sorption models that do not require extra information. 
+Special case analysis that provides thermodynamic factors implemented by specific sorption models that do not require extra information.
 
-
-# Todo once generic thermo factor is made, this is no longer a special case. 
-
+- TODO citation: We are preparing this type of analysis for publication. 
 
 # Arguments
 - `pressures::AbstractVector`: List of pressures (MPa) to evaluate the thermodynamic factor at.
 - `model::SorptionModel`: SorptionModel that supports `thermodynamic_factor`. 
 - `ρ_pol::Number`: Polymer density in g/cm3.
 - `mw_pwn::Number`: Penetrant molecular weight in g/mol. 
+- `z::AbstractVector`: Vector of compressibility factors at the given pressures. 
 
-# Caveats to supported models
-- `Dual Mode`: Assumes ideal activity change behavior unless z is specified, analytically derived. Activity will be with respect to STP
-
+- if z is not specified, then ideal behavior will be assumed. 
 """
 function ThermodynamicFactorAnalysis(
         pressures::AbstractVector,
         model::SorptionModel,
         ρ_pol::Number,
         mw_pen::Number,
-        z=ones(length(pressures))
+        z::AbstractVector=ones(length(pressures))
     )
     α = [thermodynamic_factor(model, pressures[i], ρ_pol, mw_pen, z[i]) for i in eachindex(pressures)]
     concs = [predict_concentration(model, pressure) for pressure in pressures]
