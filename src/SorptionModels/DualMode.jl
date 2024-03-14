@@ -212,11 +212,11 @@ function MembraneBase.strip_measurement_to_value(model::DualModeModel)
     )
 end
 
-function thermodynamic_factor(model::DualModeModel, pres_or_fug::Number, ρpol_g_cm3::Number, pen_mw::Number, z::Number=1.0)
+function thermodynamic_factor(model::DualModeModel, pres_mpa::Number, ρpol_g_cm3::Number, pen_mw::Number, z::Number=1.0)
     ch = model.ch
     b = model.b 
     kd = model.kd
-    p = pres_or_fug
+    p = pres_mpa
     t1 = kd + ch * b / (1 + b * p)
     t2 = kd + ch * b / (1 + b * p)^2
     t3 = 1 + pen_mw / (ρpol_g_cm3 * MembraneBase.CC_PER_MOL_STP) * (t1 * p)
