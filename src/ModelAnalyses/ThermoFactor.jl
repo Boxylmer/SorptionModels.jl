@@ -109,8 +109,16 @@ function ThermodynamicFactorAnalysis(
     lna = ln_a.(pressures)
     lnw = ln_w.(pressures)
 
-    
-    concs =  predict_concentration(sorptionmodel, pressures)
+    # diagnostic
+    # ln_c(pressure_mpa) = log(predict_concentration(sorptionmodel, pressure_mpa))
+    # c = [predict_concentration(sorptionmodel, pressure) for pressure in pressures]
+    # dlnc_dp = [ForwardDiff.derivative(ln_c, pressure) for pressure in pressures]
+    # dc_dp = [ForwardDiff.derivative(p -> predict_concentration(sorptionmodel, p), pressure) for pressure in pressures]
+
+    # @show dlnw_dp ./ dlnc_dp # verified
+    # @show dlnw_dp ./ dlnc_dp .* (c ./ pressures) .* (1 ./ dc_dp) #only ideal
+
+    concs = predict_concentration(sorptionmodel, pressures)
 
     return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, α)
 end
@@ -118,6 +126,10 @@ end
 """
     ThermodynamicFactorAnalysis(pressures, model, ρ_pol, mw_pen)
 Special case analysis that provides thermodynamic factors implemented by specific sorption models that do not require extra information. 
+
+
+# Todo once generic thermo factor is made, this is no longer a special case. 
+
 
 # Arguments
 - `pressures::AbstractVector`: List of pressures (MPa) to evaluate the thermodynamic factor at.
@@ -140,6 +152,5 @@ function ThermodynamicFactorAnalysis(
     concs = [predict_concentration(model, pressure) for pressure in pressures]
     lnw = [log(ccpen_per_ccpol_to_mass_fractions(conc, ρ_pol, [mw_pen])[2]) for conc in concs]
     lna = log.(pressures ./ 1 * MembraneBase.MPA_PER_ATM)
-    
     return ThermodynamicFactorAnalysis(pressures, concs, lna, lnw, α)
 end

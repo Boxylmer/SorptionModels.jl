@@ -25,6 +25,7 @@ module SorptionModels
     export a_predict_concentration
     export predict_pressure, predict_activity
     export infinite_dilution_solubility
+    export thermodynamic_factor
 
     include(joinpath("SorptionModels", "DualMode.jl"))
     export fit_dualmode_model

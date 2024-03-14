@@ -212,7 +212,7 @@ function MembraneBase.strip_measurement_to_value(model::DualModeModel)
     )
 end
 
-function thermodynamic_factor(model::DualModeModel, pres_mpa::Number, ρpol_g_cm3::Number, pen_mw::Number, z::Number=1.0)
+function analytical_thermodynamic_factor(model::DualModeModel, pres_mpa::Number, ρpol_g_cm3::Number, pen_mw::Number, z::Number=1.0)
     ch = model.ch
     b = model.b 
     kd = model.kd
@@ -224,7 +224,7 @@ function thermodynamic_factor(model::DualModeModel, pres_mpa::Number, ρpol_g_cm
 end
 
 # mixed gas conditions
-function thermodynamic_factor(
+function analytical_thermodynamic_factor(
     models::AbstractVector{<:DualModeModel}, 
     pressures_mpa::AbstractVector{<:Number}, 
     ρpol_g_cm3::Number, 

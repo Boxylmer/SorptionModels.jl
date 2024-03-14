@@ -594,12 +594,15 @@ precision = 5
                 return a
             end
 
+
+            CPIM_ρ = 1.285
+            CH4_MW = 16.043
             CPIM_CH4_ISOTHERM = IsothermData(
                 partial_pressures_mpa=[0.309802563, 0.710304653, 1.222477562, 1.832018444, 2.840712537],
                 concentrations_cc = [8.147067101, 14.38986172, 20.52870123, 25.0722395, 32.85525989],
-                rho_pol_g_cm3 = 1.285,
-                pen_mws_g_mol = 16.043)
-
+                rho_pol_g_cm3 = CPIM_ρ,
+                pen_mws_g_mol = CH4_MW)
+            
         
             CPIM_CH4_DM = fit_model(DualMode(),CPIM_CH4_ISOTHERM; uncertainty_method = :JackKnife)
             CPIM_CH4_TFA_1 = ThermodynamicFactorAnalysis(CPIM_CH4_ISOTHERM, CPIM_CH4_DM, x -> penetrant_activity(x, T_ref = 160.15))
@@ -613,29 +616,30 @@ precision = 5
             # mobility factor analysis (direct method) 
             CPIM_CH4_Diffusivities = [6.00E-08, 7.21E-08, 8.27E-08, 9.68E-08]
             CPIM_CH4_D_Pressures = [0.108381747, 0.352283335, 0.632820204, 0.995498696]
-            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
+            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, CPIM_ρ, CH4_MW, CPIM_CH4_DM, penetrant_activity)
 
 
             CPIM_CH4_Diffusivities = [6.00E-08 ± 1.93E-08, 7.21E-08 ± 2.07E-08, 8.27E-08 ± 2.18E-08, 9.68E-08 ± 2.37E-08] # now do it with uncertainty!
-            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, 1.285, 16.043, CPIM_CH4_DM, penetrant_activity)
+            CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, CPIM_ρ, CH4_MW, CPIM_CH4_DM, penetrant_activity)
 
-            # thermo factor of specific sorption models
+            # thermo factor of specific sorption models (dual mode)
             testps = [1, 2, 3]
-            dm_tfa_ideal_factors = ThermodynamicFactorAnalysis(
-                [1, 2, 3],
-                CPIM_CH4_DM,
-                1.285,
-                16.043,
-            ).thermodynamic_factors
+            
+                # does the analytical version line up with the automatic one, ideally?
+            dm_tfa_ideal_factors = [SorptionModels.analytical_thermodynamic_factor(CPIM_CH4_DM, p, CPIM_ρ, CH4_MW,) for p in testps]
+            norm_tfa_ideal_factors = ThermodynamicFactorAnalysis(testps, CPIM_ρ, CH4_MW, CPIM_CH4_DM, x -> x / 3).thermodynamic_factors
+            @test all(dm_tfa_ideal_factors .≈ norm_tfa_ideal_factors)
+
+                # does the real case result in lower α values? 
             zs = [Clapeyron.compressibility_factor(Clapeyron.PR(["Methane"]), testp * 1e6, 308.15) for testp in testps]
-            dm_tfa_real_factors = ThermodynamicFactorAnalysis(
-                [1, 2, 3],
-                CPIM_CH4_DM,
-                1.285,
-                16.043,
-                zs
-            ).thermodynamic_factors
+            dm_tfa_real_factors = [SorptionModels.analytical_thermodynamic_factor(CPIM_CH4_DM, testps[i], CPIM_ρ, CH4_MW, zs[i]) for i in eachindex(testps, zs)]
             @test all(dm_tfa_ideal_factors .> dm_tfa_real_factors)
+
+            # does the generic sorption model thermo factor calculator line up with analytical derivations? 
+            dm_tfa_ideal_factors_automatic = [thermodynamic_factor(CPIM_CH4_DM, p, CPIM_ρ, CH4_MW) for p in testps]
+            @test all(dm_tfa_ideal_factors == dm_tfa_ideal_factors_automatic)
+
+            dm_tfa_ideal_factors_automatic .- dm_tfa_ideal_factors
         end
         
         # Partial Immobilization Model
