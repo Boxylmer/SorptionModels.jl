@@ -93,7 +93,6 @@ function MembraneBase.rss(gm::GABModel, activities::AbstractVector, concentratio
     throw(ErrorException("The isotherm given has more than one component, this function only works for pure isotherms")) 
 end
 
-
 function fit_gab_model(activities::AbstractVector, concentrations::AbstractVector; 
     uncertainty_method=nothing, 
     apply_weights=false, 
@@ -153,14 +152,17 @@ function fit_gab_model(isotherm::IsothermData; kwargs...)
     acts = activities(isotherm; component=1)
     concs = concentration(isotherm; component=1)
     if isnothing(acts)
-        throw(MissingException("Isotherm has no activities."))
+        if haskey(kwargs, :pressure_conversion_function)
+            acts = kwargs[:pressure_conversion_function].(partial_pressures(isotherm; component=1))
+        else
+            throw(MissingException("Isotherm has no activities."))
+        end
     elseif isnothing(concs)
         throw(MissingException("Isotherm has no concentrations.")) 
     end
 
     return fit_gab_model(acts, concs; kwargs...)
 end
-
 
 """
     fit_model(GAB(), isotherm::IsothermData, 

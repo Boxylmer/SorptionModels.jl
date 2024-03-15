@@ -647,6 +647,12 @@ precision = 5
                 dm_tfa_ideal_factors_selfmixed = [thermodynamic_factor([CPIM_CH4_DM, CPIM_CH4_DM], [testps[i]/2, testps[i]/2], CPIM_ρ, [CH4_MW, CH4_MW]) for i in eachindex(testps)]
                 @test typeof(dm_tfa_ideal_factors_selfmixed) <: Vector{<:Vector{<:Measurement}} # only verifies typing optimization since the vector starts as {Any}
                 @test dm_tfa_ideal_factors_selfmixed[1][1] == dm_tfa_ideal_factors_selfmixed[1][2] # only verifies self consistent behavior
+
+                # what about automatically doing stuff with GAB? 
+                # fails, we need to rework what is done with the activity conversion here. 
+                CPIM_CH4_GAB = fit_model(GAB(), CPIM_CH4_ISOTHERM; pressure_conversion_function = penetrant_activity)
+                gab_tfa_real_factors_automatic = [thermodynamic_factor(CPIM_CH4_GAB, testps[i], CPIM_ρ, CH4_MW, zs[i]) for i in eachindex(testps, zs)]
+                @test all(gab_tfa_real_factors_automatic .!= dm_tfa_real_factors_automatic)
         end
         
         # Partial Immobilization Model
