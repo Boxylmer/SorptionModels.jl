@@ -1,4 +1,6 @@
-struct EmpiricalDilation end
+struct EmpiricalDilation{N} end
+EmpiricalDilation(n=3) = EmpiricalDilation{n}()
+n_adjustable_params(ed::EmpiricalDilation) = typeof(ed).parameters[1]
 
 struct EmpiricalDilationModel{T} <: DilationModel
     a::T
@@ -26,13 +28,13 @@ Fit the dilation data to an empirical dilation model with no physical meaning. T
 The user may specify up to 4 empirical paramteres. Loosely, the use of each parameter is as follows:
 - n_params = 1: Linear dilation
 - n_params = 2: Naive dual mode like dilation
-- n_params = 3: Dual mode like dilation
-- n_params = 4: Dual mode like dilation with concave down or tapering behavior permitted
+- n_params = 3: Dual mode like dilation (default)
+- n_params = 4: Dual mode like dilation with concave up or tapering behavior permitted
 
 If using `uncertainty_method` (`:JackKnife` or `:Hessian` implemented), each extra parameter will *greatly* increase the resulting uncertainty, as this model is completely empirical.
 """
-function fit_model(::EmpiricalDilation, pressures_mpa, frac_dilations, uncertainty_method=nothing; n_params=3, kwargs...)
-    start = ones(n_params)
-    params = find_dilation_function_params(pressures_mpa, frac_dilations, dilation_empirical_function, uncertainty_method; start, kwargs...)
+function fit_model(ed::EmpiricalDilation, pressures_mpa, frac_dilations; kwargs...)
+    start = ones(n_adjustable_params(ed))
+    params = find_dilation_function_params(pressures_mpa, frac_dilations, dilation_empirical_function, start; kwargs...)
     return EmpiricalDilationModel(params...)
 end

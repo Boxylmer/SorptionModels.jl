@@ -39,9 +39,10 @@ Generally, you can hand an isotherm (from MembraneBase) and the right supplement
 ```@docs
 SorptionModels.fit_model(model::SorptionModels.SorptionModel, ::SorptionModels.IsothermData)
 ```
-...then immediately get the fitted isotherm back through...
+...then immediately get the fitted isotherm back through one of two methods...
 ```@docs
 SorptionModels.predict_concentration
+SorptionModels.a_predict_concentration
 ```
 
 ---

@@ -36,7 +36,7 @@ module SorptionModels
     export GAB, GABModel
 
     include(joinpath("SorptionModels", "FloryHuggins.jl"))
-    export FloryHugginsDualMode, FloryHugginsModel
+    export FloryHuggins, FloryHugginsModel
 
     include(joinpath("SorptionModels", "FloryHugginsDualMode.jl"))
     export FloryHugginsDualMode, FloryHugginsDualModeModel

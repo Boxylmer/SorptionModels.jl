@@ -1,4 +1,5 @@
 struct DualModeDilation end
+n_adjustable_params(::DualModeDilation) = 2
 
 struct DualModeDilationModel{T} <: DilationModel
     vd::T  # cm3(pol) / cm3(stp)
@@ -32,13 +33,13 @@ Dilation is described by two additional parameters, ``V_D`` and ``f`` using the 
 
 `J.D. Moon, M. Galizia, H. Borjigin, R. Liu, J.S. Riffle, B.D. Freeman, D.R. Paul, Water Vapor Sorption, Diffusion, and Dilation in Polybenzimidazoles, Macromolecules. 51 (2018) 7197–7208. https://doi.org/10.1021/acs.macromol.8b01659.`
 """
-function fit_model(::DualModeDilation, pressures_mpa, frac_dilations, model::DualModeModel, uncertainty_method=nothing; kwargs...)
+function fit_model(::DualModeDilation, pressures_mpa, frac_dilations, model::DualModeModel; kwargs...)
     if model.use_fugacity
         throw(ArgumentError("Dual mode model must be fit to pressure, not fugacity, activity, or other potentials."))
     end
-    start = ones(2)
+    start = ones(n_adjustable_params(DualModeDilation()))
     pure_model = strip_measurement_to_value(model)
     func(p, vd, f) = dualmode_dilation_function(p, vd, f, pure_model)
-    params = find_dilation_function_params(pressures_mpa, frac_dilations, func, uncertainty_method; start, kwargs...)
+    params = find_dilation_function_params(pressures_mpa, frac_dilations, func, start; kwargs...)
     return DualModeDilationModel(params..., model)
 end

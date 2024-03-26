@@ -6,6 +6,8 @@ struct FloryHugginsModel{KDT, PMVT} <: SorptionModel
     activity_function::Union{Function, Missing}
 end
 
+FloryHugginsModel(χ, pen_mv) = FloryHugginsModel(χ, pen_mv, missing)
+
 function Base.show(io::IO, obj::FloryHugginsModel)
     kd = obj.chi
     capability = " with " * ((ismissing(obj.activity_function)) ? "no " : "" * "automatic activity conversion ability.")
@@ -28,6 +30,19 @@ flory_huggins_activity(fh::SorptionModel, φ::Number) = φ * exp((1-φ) + fh.chi
 flory_huggins_φ(fh::SorptionModel, activity::Number) = Roots.find_zero((φ) -> activity - flory_huggins_activity(fh, φ), (0, 1))
 
 
+function a_predict_concentration(fh::FloryHugginsModel, activity::Number)
+    φ = flory_huggins_φ(fh, activity)
+    flory_huggins_mode = flory_huggins_concentration_from_volume_fraction(fh, φ) 
+    return flory_huggins_mode
+end
+
+function predict_concentration(fh::FloryHugginsModel, p_mpa::Number)
+    activity = fh.activity_function(p_mpa)
+    φ = flory_huggins_φ(fh, activity)
+    flory_huggins_mode = flory_huggins_concentration_from_volume_fraction(fh, φ)
+    return flory_huggins_mode
+end
+
 function MembraneBase.rss(fh::FloryHugginsModel, activities::AbstractVector, concentrations::AbstractVector)
     predictions = [a_predict_concentration(fh, a) for a in activities]
     return MembraneBase.rss(concentrations, predictions)
@@ -36,11 +51,21 @@ function MembraneBase.rss(fh::FloryHugginsModel, activities::AbstractVector, con
     # return (sum(errs))
 end
 
+# closed form expression needs explicit derivatives
+function dc_dp(model::FloryHugginsModel, p_mpa::Number)
+    activity = model.activity_function(p_mpa)
+    φ = flory_huggins_φ(model, activity)
+    χ = model.chi
+
+    da_dp = ForwardDiff.derivative(p -> model.activity_function(p), p_mpa)
+    da_dφ = (φ - 1) * exp(χ * (1 - φ)^2 - φ + 1) * (2*χ*φ - 1)
+    dc_dφ = 1 / ((1 - φ)^2 * model.penetrant_molar_volume / MembraneBase.CC_PER_MOL_STP)
+    return da_dp / da_dφ * dc_dφ
+end
 
 
-"""
-"""
-function fit_model(::FloryHuggins, activities::AbstractVector, penetrant_molar_volume::Number, concentrations::Base.AbstractVecOrTuple; activity_function::Function=missing, kwargs...) 
+"Fit a Flory Huggins model given an activity vector, concentration vector, penetrant molar volume, and an optional activity conversion function which will allow it to `predict_concentration` with pressure."
+function fit_model(::FloryHuggins, activities::AbstractVector, concentrations::Base.AbstractVecOrTuple, penetrant_molar_volume::Number; activity_function::Function=missing, kwargs...) 
     target = function(chi)
         fh = FloryHugginsModel(chi..., penetrant_molar_volume)
         err = rss(fh, activities, concentrations) 
@@ -74,14 +99,14 @@ function fit_model(::FloryHuggins, activities::AbstractVector, penetrant_molar_v
     return optimized_model
 end
 
-"""
-"""
-function fit_model(::FloryHuggins, pressures_mpa::Base.AbstractVecOrTuple, activity_function::Function, penetrant_molar_volume::Number, concentrations::Base.AbstractVecOrTuple; kwargs...) 
+
+"Fit a Flory Huggins model given a pressure vector, concentration vector, penetrant molar volume, and a (*required*) activity conversion function which will allow it to `predict_concentration` with pressure."
+function fit_model(::FloryHuggins, pressures_mpa::Base.AbstractVecOrTuple, concentrations::Base.AbstractVecOrTuple, penetrant_molar_volume::Number, activity_function::Function; kwargs...) 
     return fit_model(
         FloryHuggins(), 
         activity_function.(pressures_mpa),
-        penetrant_molar_volume,
-        concentrations; 
+        concentrations,
+        penetrant_molar_volume; 
         activity_function,
         kwargs...
     )
@@ -109,9 +134,9 @@ function fit_model(::FloryHuggins, isotherm::IsothermData, penetrant_molar_volum
     end
 
     if !isnothing(activities(isotherm))
-        return fit_model(::FloryHuggins, activities(isotherm, component=1), penetrant_molar_volume, concentration(a, component=1); activity_function, kwargs...)
+        return fit_model(FloryHuggins(), activities(isotherm, component=1), penetrant_molar_volume, concentration(a, component=1); activity_function, kwargs...)
     else
-        return fit_model(::FloryHuggins, partial_pressures(a, component=1), penetrant_molar_volume, concentration(a, component=1), activity_function; kwargs...)
+        return fit_model(FloryHuggins(), partial_pressures(a, component=1), penetrant_molar_volume, concentration(a, component=1), activity_function; kwargs...)
     end
 end
 

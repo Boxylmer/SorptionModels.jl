@@ -7,6 +7,16 @@ using Plots
 using BenchmarkTools
 using Clapeyron
 
+function penetrant_activity_function_maker(model::EoSModel, t, T_ref = 298.15)
+    saturation_p_ref = saturation_pressure(model, T_ref)[1]
+    mu_ref = Clapeyron.chemical_potential(model, saturation_p_ref, T_ref)[1]
+    function act_func(p_mpa)
+        mu2 = Clapeyron.chemical_potential(model, p_mpa*1e6, t)[1]
+        a = exp((mu2-mu_ref)/(8.314*t))
+        return a
+    end
+    return act_func
+end
 
 precision = 5
 
@@ -195,12 +205,28 @@ precision = 5
 
     
         # Flory Huggins - Dual Mode
-    #   TPBO-1.00 with propanol at 25C
-    acts_3 = [0.01061664, 0.034878645, 0.06508188, 0.091689136, 0.126116896, 0.163921419]
-    concs_3 = [1.188187617 ± 0.013431227, 2.455888283 ± 0.027591385, 3.80430418 ± 0.042799107, 5.824894435 ± 0.06532282, 9.604100032 ± 0.107154714, 14.70392798 ± 0.163320976]
-    iso_3 = IsothermData(; activities=acts_3, concentrations_cc = concs_3)
-    fhdm = fit_model(FloryHugginsDualMode(), iso_3, 74.7453)
-    pred = [a_predict_concentration(fhdm, a) for a in acts_3]
+    
+    
+    
+        #   TPBO-1.00 with propanol at 25C
+    
+    # Flory Huggins
+        activity_function = penetrant_activity_function_maker(Clapeyron.PR("Carbon Dioxide"), 308.15)
+        pen_mv = 46 # cm3/mol, assumed by Koros in 10.1021/ma00162a030
+        co2_pdms_p = MembraneBase.MPA_PER_PSI .* [36.0414880895691, 81.78831074002358, 130.50017460871783, 165.57800776744244, 209.4081029027377, 255.21841963236943, 323.4361937416004, 389.7584050287312, 451.31525339428754, 535.2160650602666, 594.8244388710752, 648.6297184037588, 699.5599066637037, 756.4783802660402, 821.2648285130747, 862.5584674645756, 873.4443950601606, 898.0437209646868]
+        co2_pdms_c = [3.504833486777642, 7.19245055398585, 11.928712022603861, 15.434378869170445, 19.505897012603555, 24.340217149750742, 31.353217562462277, 39.13235340804468, 48.34903488999649, 58.59769357757391, 67.62492460078096, 76.8482729610464, 86.64747293564875, 99.59510619384743, 114.63836153528685, 125.40148099939682, 129.50133337566274, 136.26515921140356]
+        co2_pdms_fh = fit_model(FloryHuggins(), co2_pdms_p, co2_pdms_c, pen_mv, activity_function)
+        p = 0.1
+        @test a_predict_concentration(co2_pdms_fh, activity_function(p)) == predict_concentration(co2_pdms_fh, p)
+        co2_pdms_fh_pred = [predict_concentration(co2_pdms_fh, p) for p in co2_pdms_p]
+        
+    
+    # Flory Huggins - Dual Mode
+        acts_3 = [0.01061664, 0.034878645, 0.06508188, 0.091689136, 0.126116896, 0.163921419]
+        concs_3 = [1.188187617 ± 0.013431227, 2.455888283 ± 0.027591385, 3.80430418 ± 0.042799107, 5.824894435 ± 0.06532282, 9.604100032 ± 0.107154714, 14.70392798 ± 0.163320976]
+        iso_3 = IsothermData(; activities=acts_3, concentrations_cc = concs_3)
+        fhdm = fit_model(FloryHugginsDualMode(), iso_3, 74.7453)
+        pred = [a_predict_concentration(fhdm, a) for a in acts_3]
 
     end
 
@@ -422,13 +448,13 @@ precision = 5
         
         # empirical dilation model
         edm = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations)
-        edm_jk = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, :JackKnife)
-        edm_h = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, :Hessian)
+        edm_jk = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, uncertainty_method=:JackKnife)
+        edm_h = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, uncertainty_method=:Hessian)
         
-        edm_n1 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 1)
-        edm_n2 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 2)
-        edm_n3 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 3)
-        edm_n4 = fit_model(EmpiricalDilation(), pressures_mpa, frac_dilations, n_params = 4)
+        edm_n1 = fit_model(EmpiricalDilation(1), pressures_mpa, frac_dilations)
+        edm_n2 = fit_model(EmpiricalDilation(2), pressures_mpa, frac_dilations)
+        edm_n3 = fit_model(EmpiricalDilation(3), pressures_mpa, frac_dilations)
+        edm_n4 = fit_model(EmpiricalDilation(4), pressures_mpa, frac_dilations)
 
         pred_edm = predict_dilation(edm, pressures_mpa)
         pred_edm_jk = predict_dilation(edm_jk, pressures_mpa)
@@ -446,9 +472,9 @@ precision = 5
         dmmodel_throws = DualModeModel(0.01, 0.01, 7.8037/(16.698 * 0.101325) ± 0.05; use_fugacity=true) # cc/mpa
         @test_throws ArgumentError fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel_throws)
         dmd = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel)
-        dmd_jk = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :JackKnife)
-        dmd_h = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :Hessian)
-        @test_throws ArgumentError fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, :InvalidErrorProp)
+        dmd_jk = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, uncertainty_method=:JackKnife)
+        dmd_h = fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, uncertainty_method=:Hessian)
+        @test_throws ArgumentError fit_model(DualModeDilation(), pressures_mpa, frac_dilations, dmmodel, uncertainty_method=:InvalidErrorProp)
         pred_dmd = predict_dilation(dmd, pressures_mpa)
         pred_dmd_jk = predict_dilation(dmd_jk, pressures_mpa)
         pred_dmd_h  = predict_dilation(dmd_h, pressures_mpa)
@@ -622,7 +648,7 @@ precision = 5
             CPIM_CH4_Diffusivities = [6.00E-08 ± 1.93E-08, 7.21E-08 ± 2.07E-08, 8.27E-08 ± 2.18E-08, 9.68E-08 ± 2.37E-08] # now do it with uncertainty!
             CPIM_CH4_L_ANALYSIS = MobilityFactorAnalysis(CPIM_CH4_Diffusivities, CPIM_CH4_D_Pressures, CPIM_ρ, CH4_MW, CPIM_CH4_DM, penetrant_activity)
 
-            # thermo factor of specific sorption models (dual mode)
+            # thermo factor of specific sorption models (dual mode, flory huggins)
             testps = [1, 2, 3]
             
                 # does the analytical version line up with the automatic one, ideally?
@@ -649,10 +675,10 @@ precision = 5
                 @test dm_tfa_ideal_factors_selfmixed[1][1] == dm_tfa_ideal_factors_selfmixed[1][2] # only verifies self consistent behavior
 
                 # what about automatically doing stuff with GAB? 
-                # fails, we need to rework what is done with the activity conversion here. 
                 CPIM_CH4_GAB = fit_model(GAB(), CPIM_CH4_ISOTHERM; pressure_conversion_function = penetrant_activity)
                 gab_tfa_real_factors_automatic = [thermodynamic_factor(CPIM_CH4_GAB, testps[i], CPIM_ρ, CH4_MW, zs[i]) for i in eachindex(testps, zs)]
                 @test all(gab_tfa_real_factors_automatic .!= dm_tfa_real_factors_automatic)
+
         end
         
         # Partial Immobilization Model
@@ -778,7 +804,8 @@ precision = 5
             frac_dilations = [0.0, 0.4778, 1.01, 1.458, 1.93, 2.44, 2.93] ./ 100
             molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations; modeltype=DualModeDilation())
             res_no_uncertain = molar_vol_analysis.partial_molar_volumes_cm3_mol[3]
-    
+            @test res_no_uncertain ≈ 55.191169352673
+
             # with uncertainty, dualmode
             model = DualModeModel(0, 0, 7.8037/(16.698 * 0.101325) ± 0.05) # cc/mpa
             pressures_mpa = ([0.0, 4.34, 9.04, 12.8, 17.0, 21.16, 25.15] .± 0.01) .* 0.101325 
@@ -786,6 +813,21 @@ precision = 5
             molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations; uncertainty_method = :JackKnife, modeltype=DualModeDilation())
             res_uncertain = molar_vol_analysis.partial_molar_volumes_cm3_mol[3].val
             @test res_no_uncertain == res_uncertain
+
+            # what about non-closed form sorption models like flory huggins?
+            activity_function = penetrant_activity_function_maker(Clapeyron.PR("Carbon Dioxide"), 308.15)
+            pen_mv = 46 # cm3/mol, assumed by Koros in 10.1021/ma00162a030
+            co2_pdms_p = MembraneBase.MPA_PER_PSI .* [36.0414880895691, 81.78831074002358, 130.50017460871783, 165.57800776744244, 209.4081029027377, 255.21841963236943, 323.4361937416004, 389.7584050287312, 451.31525339428754, 535.2160650602666, 594.8244388710752, 648.6297184037588, 699.5599066637037, 756.4783802660402, 821.2648285130747, 862.5584674645756, 873.4443950601606, 898.0437209646868]
+            co2_pdms_c = [3.504833486777642, 7.19245055398585, 11.928712022603861, 15.434378869170445, 19.505897012603555, 24.340217149750742, 31.353217562462277, 39.13235340804468, 48.34903488999649, 58.59769357757391, 67.62492460078096, 76.8482729610464, 86.64747293564875, 99.59510619384743, 114.63836153528685, 125.40148099939682, 129.50133337566274, 136.26515921140356]
+            co2_pdms_fh = fit_model(FloryHuggins(), co2_pdms_p, co2_pdms_c, pen_mv, activity_function)
+            co2_pdms_dil_p = MembraneBase.MPA_PER_PSI .* [51.58170853464705, 107.45621768998686, 157.28249911529397, 205.3831476565322, 250.9464226864176, 302.50684963158574, 354.0332260335863, 406.4011372881415, 451.033494789659, 504.22591562518573, 584.8113903931257, 648.2001247709187, 677.3528621305671, 739.7383215757619, 777.3234327325442, 833.6691770834982, 898.3834504631484, 905.1710614162355]
+            co2_pdms_frac_dil = [0.009291237943979513, 0.0196388331851729, 0.03041054010241917, 0.04118261184691363, 0.04941822214817576, 0.05976672945748973, 0.07180657588954004, 0.08490332685967653, 0.09652179782003564, 0.11152112288962635, 0.13729689763069036, 0.16011647717944763, 0.16920122290093603, 0.19899775874460515, 0.21780588028558678, 0.24760369302462465, 0.29029614243828644, 0.29600295266852894]
+            co2_pdms_dil_p = MembraneBase.MPA_PER_PSI .* [51.58170853464705, 107.45621768998686, 157.28249911529397, 205.3831476565322, 250.9464226864176, 302.50684963158574, 354.0332260335863, 406.4011372881415, 451.033494789659, 504.22591562518573, 584.8113903931257, 648.2001247709187, 677.3528621305671, 739.7383215757619, 777.3234327325442, 833.6691770834982, 898.3834504631484, 905.1710614162355]
+            co2_pdms_frac_dil = [0.009291237943979513, 0.0196388331851729, 0.03041054010241917, 0.04118261184691363, 0.04941822214817576, 0.05976672945748973, 0.07180657588954004, 0.08490332685967653, 0.09652179782003564, 0.11152112288962635, 0.13729689763069036, 0.16011647717944763, 0.16920122290093603, 0.19899775874460515, 0.21780588028558678, 0.24760369302462465, 0.29029614243828644, 0.29600295266852894]
+            molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; modeltype=EmpiricalDilation(4))
+            molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; uncertainty_method = :JackKnife, modeltype=EmpiricalDilation(4))
+
+
 
         end
     end
@@ -1095,14 +1137,24 @@ precision = 5
         co2_000_frac_dil = [0 ± 0, 0.012127622 ± 0.00044235, 0.026889891 ± 0.000985522, 0.036407288 ± 0.001338418, 0.048826916 ± 0.001802068, 0.06476425 ± 0.00240217, 0.071486539 ± 0.002656993, 0.078237062 ± 0.00291389, 0.08335314 ± 0.003109253]
         iso = IsothermData(partial_pressures_mpa = co2_000_p, concentrations_cc = co2_000_c)
         dmmodel = fit_model(DualMode(), iso; uncertainty_method = :JackKnife)
-        co2_000_mva_many_param = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, n_params=4)
-        co2_000_mva_few_params = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, n_params=3)
+        co2_000_mva_many_param = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, modeltype=EmpiricalDilation(4))
+        co2_000_mva_few_params = MolarVolumeAnalysis(dmmodel, co2_000_dil_p, co2_000_frac_dil, 0; uncertainty_method=:JackKnife, modeltype=EmpiricalDilation(3))
         @test Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) != Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) 
         @test Measurements.uncertainty.(co2_000_mva_many_param.continuous_dilations) != Measurements.uncertainty.(co2_000_mva_few_params.continuous_dilations) 
 
         molar_vol_analysis = MolarVolumeAnalysis(model, pressures_mpa, frac_dilations, uncertainty_method=:JackKnife, modeltype=DualModeDilation())
         write_analysis(molar_vol_analysis, path; name="dualmode dilation & jackknife")
         
+        activity_function = penetrant_activity_function_maker(Clapeyron.PR("Carbon Dioxide"), 308.15)
+        pen_mv = 46 # cm3/mol, assumed by Koros in 10.1021/ma00162a030
+        co2_pdms_p = MembraneBase.MPA_PER_PSI .* [36.0414880895691, 81.78831074002358, 130.50017460871783, 165.57800776744244, 209.4081029027377, 255.21841963236943, 323.4361937416004, 389.7584050287312, 451.31525339428754, 535.2160650602666, 594.8244388710752, 648.6297184037588, 699.5599066637037, 756.4783802660402, 821.2648285130747, 862.5584674645756, 873.4443950601606, 898.0437209646868]
+        co2_pdms_c = [3.504833486777642, 7.19245055398585, 11.928712022603861, 15.434378869170445, 19.505897012603555, 24.340217149750742, 31.353217562462277, 39.13235340804468, 48.34903488999649, 58.59769357757391, 67.62492460078096, 76.8482729610464, 86.64747293564875, 99.59510619384743, 114.63836153528685, 125.40148099939682, 129.50133337566274, 136.26515921140356]
+        co2_pdms_fh = fit_model(FloryHuggins(), co2_pdms_p, co2_pdms_c, pen_mv, activity_function)
+        co2_pdms_dil_p = MembraneBase.MPA_PER_PSI .* [51.58170853464705, 107.45621768998686, 157.28249911529397, 205.3831476565322, 250.9464226864176, 302.50684963158574, 354.0332260335863, 406.4011372881415, 451.033494789659, 504.22591562518573, 584.8113903931257, 648.2001247709187, 677.3528621305671, 739.7383215757619, 777.3234327325442, 833.6691770834982, 898.3834504631484, 905.1710614162355]
+        co2_pdms_frac_dil = [0.009291237943979513, 0.0196388331851729, 0.03041054010241917, 0.04118261184691363, 0.04941822214817576, 0.05976672945748973, 0.07180657588954004, 0.08490332685967653, 0.09652179782003564, 0.11152112288962635, 0.13729689763069036, 0.16011647717944763, 0.16920122290093603, 0.19899775874460515, 0.21780588028558678, 0.24760369302462465, 0.29029614243828644, 0.29600295266852894]
+        molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; uncertainty_method=:JackKnife, modeltype=EmpiricalDilation(4))
+        nothing
+        write_analysis(molar_vol_analysis, path; name="Rubbery PDMS, no err")
 
     end
 
