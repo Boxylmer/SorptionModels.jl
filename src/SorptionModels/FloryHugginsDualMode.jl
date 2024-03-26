@@ -25,25 +25,14 @@ Predict the concentration of a penetrant given a flory huggins dual mode model a
 """
 function a_predict_concentration(fhdm::FloryHugginsDualModeModel, activity::Number)
     φ = flory_huggins_φ(fhdm, activity)
-    flory_huggins_mode = concentration_from_estimated_volume_fraction(fhdm, φ) 
+    flory_huggins_mode = flory_huggins_concentration_from_volume_fraction(fhdm, φ) 
     langmuir_mode = fhdm.ch * fhdm.b * activity / (1 + fhdm.b * activity)
     return flory_huggins_mode + langmuir_mode
 end
 
-function estimate_volume_fraction(fhdm::FloryHugginsDualModeModel, concentration::Number)
-    pen_volume = concentration * fhdm.penetrant_molar_volume / MembraneBase.CC_PER_MOL_STP  # ccstp/ccpol * cm3/mol / (ccstp/mol) = (cm3/mol * mol)/ccpol = cm3/ccpol = unitless
-    vol_frac = pen_volume / (1 + pen_volume)  # unitless
-    return vol_frac
-end
+estimate_volume_fraction(fhdm::FloryHugginsDualModeModel, concentration::Number) = flory_huggins_volume_fraction(fhdm.penetrant_molar_volume, concentration)
 
-function concentration_from_estimated_volume_fraction(fhdm::FloryHugginsDualModeModel, φ::Number)
-    φ / ((1-φ) * fhdm.penetrant_molar_volume / MembraneBase.CC_PER_MOL_STP)
-end
-
-flory_huggins_activity(fhdm::FloryHugginsDualModeModel, φ::Number) = φ * exp((1-φ) + fhdm.chi * (1-φ)^2)
-flory_huggins_φ(fhdm::FloryHugginsDualModeModel, activity::Number) = Roots.find_zero((φ) -> activity - flory_huggins_activity(fhdm, φ), (0, 1))
-
-
+# TODO this needs to be generalized
 function MembraneBase.rss(fhdm::FloryHugginsDualModeModel, isotherm::IsothermData)
     predictions = [a_predict_concentration(fhdm, a) for a in activities(isotherm, component=1)]
     return MembraneBase.rss(concentration(isotherm, component=1), predictions)
@@ -53,7 +42,7 @@ function MembraneBase.rss(fhdm::FloryHugginsDualModeModel, isotherm::IsothermDat
 end
 
 """
-    fit_model(FloryHugginsDualMode(), isotherm::IsothermData, [uncertainty_method=nothing], [apply_weights=false], [use_fugacity=false])
+    fit_model(FloryHugginsDualMode(), isotherm::IsothermData, [uncertainty_method=nothing], [apply_weights=false])
 Fit the dual mode model to the pressures and concentrations present in the isotherm. 
 
 Options

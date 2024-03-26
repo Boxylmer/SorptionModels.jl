@@ -35,6 +35,9 @@ module SorptionModels
     export fit_gab_model
     export GAB, GABModel
 
+    include(joinpath("SorptionModels", "FloryHuggins.jl"))
+    export FloryHugginsDualMode, FloryHugginsModel
+
     include(joinpath("SorptionModels", "FloryHugginsDualMode.jl"))
     export FloryHugginsDualMode, FloryHugginsDualModeModel
     
