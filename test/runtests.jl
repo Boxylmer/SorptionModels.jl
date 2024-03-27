@@ -455,6 +455,7 @@ precision = 5
         edm_n2 = fit_model(EmpiricalDilation(2), pressures_mpa, frac_dilations)
         edm_n3 = fit_model(EmpiricalDilation(3), pressures_mpa, frac_dilations)
         edm_n4 = fit_model(EmpiricalDilation(4), pressures_mpa, frac_dilations)
+        edm_n5 = fit_model(EmpiricalDilation(5), pressures_mpa, frac_dilations)
 
         pred_edm = predict_dilation(edm, pressures_mpa)
         pred_edm_jk = predict_dilation(edm_jk, pressures_mpa)
@@ -463,7 +464,7 @@ precision = 5
         @test edm == edm_n3
 
         @test strip_measurement_to_value(pred_edm) == strip_measurement_to_value(pred_edm_jk) == strip_measurement_to_value(pred_edm_h)
-        @test edm_n1 != edm_n2 != edm_n3 != edm_n4
+        @test edm_n1 != edm_n2 != edm_n3 != edm_n4 != edm_n5
        
         @test size(predict_dilation_derivative(edm, pressures_mpa))[1] == 7
         
@@ -825,7 +826,7 @@ precision = 5
             co2_pdms_dil_p = MembraneBase.MPA_PER_PSI .* [51.58170853464705, 107.45621768998686, 157.28249911529397, 205.3831476565322, 250.9464226864176, 302.50684963158574, 354.0332260335863, 406.4011372881415, 451.033494789659, 504.22591562518573, 584.8113903931257, 648.2001247709187, 677.3528621305671, 739.7383215757619, 777.3234327325442, 833.6691770834982, 898.3834504631484, 905.1710614162355]
             co2_pdms_frac_dil = [0.009291237943979513, 0.0196388331851729, 0.03041054010241917, 0.04118261184691363, 0.04941822214817576, 0.05976672945748973, 0.07180657588954004, 0.08490332685967653, 0.09652179782003564, 0.11152112288962635, 0.13729689763069036, 0.16011647717944763, 0.16920122290093603, 0.19899775874460515, 0.21780588028558678, 0.24760369302462465, 0.29029614243828644, 0.29600295266852894]
             molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; modeltype=EmpiricalDilation(4))
-            molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; uncertainty_method = :JackKnife, modeltype=EmpiricalDilation(4))
+            molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; uncertainty_method = :JackKnife, modeltype=EmpiricalDilation(5))
 
 
 
@@ -1152,8 +1153,7 @@ precision = 5
         co2_pdms_fh = fit_model(FloryHuggins(), co2_pdms_p, co2_pdms_c, pen_mv, activity_function)
         co2_pdms_dil_p = MembraneBase.MPA_PER_PSI .* [51.58170853464705, 107.45621768998686, 157.28249911529397, 205.3831476565322, 250.9464226864176, 302.50684963158574, 354.0332260335863, 406.4011372881415, 451.033494789659, 504.22591562518573, 584.8113903931257, 648.2001247709187, 677.3528621305671, 739.7383215757619, 777.3234327325442, 833.6691770834982, 898.3834504631484, 905.1710614162355]
         co2_pdms_frac_dil = [0.009291237943979513, 0.0196388331851729, 0.03041054010241917, 0.04118261184691363, 0.04941822214817576, 0.05976672945748973, 0.07180657588954004, 0.08490332685967653, 0.09652179782003564, 0.11152112288962635, 0.13729689763069036, 0.16011647717944763, 0.16920122290093603, 0.19899775874460515, 0.21780588028558678, 0.24760369302462465, 0.29029614243828644, 0.29600295266852894]
-        molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; uncertainty_method=:JackKnife, modeltype=EmpiricalDilation(4))
-        nothing
+        molar_vol_analysis = MolarVolumeAnalysis(co2_pdms_fh, co2_pdms_dil_p, co2_pdms_frac_dil; uncertainty_method=:JackKnife, modeltype=EmpiricalDilation(5))
         write_analysis(molar_vol_analysis, path; name="Rubbery PDMS, no err")
 
     end
