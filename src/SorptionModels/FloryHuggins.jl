@@ -64,7 +64,10 @@ function dc_dp(model::FloryHugginsModel, p_mpa::Number)
 end
 
 
-"Fit a Flory Huggins model given an activity vector, concentration vector, penetrant molar volume, and an optional activity conversion function which will allow it to `predict_concentration` with pressure."
+"""
+    fit_model(::FloryHuggins, activities, concentrations, penetrant_molar_volume; [activity_function]) 
+Fit a Flory Huggins model given an activity vector, concentration vector, penetrant molar volume, and an optional activity conversion function which will allow it to `predict_concentration` with pressure.
+"""
 function fit_model(::FloryHuggins, activities::AbstractVector, concentrations::Base.AbstractVecOrTuple, penetrant_molar_volume::Number; activity_function::Function=missing, kwargs...) 
     target = function(chi)
         fh = FloryHugginsModel(chi..., penetrant_molar_volume)
@@ -100,7 +103,10 @@ function fit_model(::FloryHuggins, activities::AbstractVector, concentrations::B
 end
 
 
-"Fit a Flory Huggins model given a pressure vector, concentration vector, penetrant molar volume, and a (*required*) activity conversion function which will allow it to `predict_concentration` with pressure."
+"""
+    fit_model(::FloryHuggins, pressures_mpa, concentrations, penetrant_molar_volume, activity_function)
+Fit a Flory Huggins model given a pressure vector, concentration vector, penetrant molar volume, and a (*required*) activity conversion function which will allow it to `predict_concentration` with pressure.
+"""
 function fit_model(::FloryHuggins, pressures_mpa::Base.AbstractVecOrTuple, concentrations::Base.AbstractVecOrTuple, penetrant_molar_volume::Number, activity_function::Function; kwargs...) 
     return fit_model(
         FloryHuggins(), 
