@@ -1,5 +1,7 @@
 struct Henry end
 
+nparams(::Henry) = 1
+
 struct HenryModel{KDT} <: SorptionModel
     kd::KDT  # units: CC/CC / MPa
     use_fugacity::Bool

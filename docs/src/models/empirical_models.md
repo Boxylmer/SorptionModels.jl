@@ -11,6 +11,19 @@ Modules = [SorptionModels]
 Pages   = ["SorptionModels/DualMode.jl"]
 ```
 
+## Henry's Law
+
+``C = k_D \cdot p``
+
+Henry's law is a simple model that describes rubbery polymers without swelling and simple sorption some materials. This is used essentially when the sorption relationship is linear.
+
+```@autodocs
+Modules = [SorptionModels]
+Pages   = ["SorptionModels/Henry.jl"]
+```
+
+
+
 ## Flory-Huggins 
 
 ``C = φ / ((1-φ) \cdot V_{pen}``

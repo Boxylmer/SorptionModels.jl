@@ -1,5 +1,7 @@
 struct FloryHuggins end
 
+nparams(::FloryHuggins) = 1
+
 struct FloryHugginsModel{KDT, PMVT} <: SorptionModel
     chi::KDT  # units: None
     penetrant_molar_volume::PMVT # units: cm3/mol

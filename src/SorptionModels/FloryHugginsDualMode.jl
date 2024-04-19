@@ -1,5 +1,7 @@
 struct FloryHugginsDualMode end
 
+nparams(::FloryHugginsDualMode) = 3
+
 struct FloryHugginsDualModeModel{CHIT, BT, KDT, PMVT} <: SorptionModel
     ch::CHIT  # units: CC/CC
     b::BT    # units: None

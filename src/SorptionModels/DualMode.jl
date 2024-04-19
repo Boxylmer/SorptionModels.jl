@@ -1,5 +1,7 @@
 struct DualMode end
 
+nparams(::DualMode) = 3
+
 struct DualModeModel{CHT, BT, KDT} <: SorptionModel
     ch::CHT  # units: CC/CC
     b::BT    # units: 1 / MPa

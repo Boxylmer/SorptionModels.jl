@@ -1,5 +1,7 @@
 struct GAB end
 
+nparams(::GAB) = 3
+
 struct GABModel{CPT, KT, AT, PCFT, ACFT} <: SorptionModel
     cp::CPT  # units: CC/CC
     k::KT    # units: None

@@ -1,5 +1,8 @@
 abstract type SorptionModel end
 
+"Get the number of adjustable parameters in the model. This will not include non-adjustable (but required) arguments that some models may have."
+function nparams(_) end
+
 Base.broadcastable(x::SorptionModel) = Ref(x) # sorption models cannot be broadcasted
 
 """
