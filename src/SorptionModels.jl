@@ -38,9 +38,12 @@ module SorptionModels
     include(joinpath("SorptionModels", "FloryHuggins.jl"))
     export FloryHuggins, FloryHugginsModel
 
+    include(joinpath("SorptionModels", "Henry.jl"))
+    export Henry, HenryModel
+    
     include(joinpath("SorptionModels", "FloryHugginsDualMode.jl"))
     export FloryHugginsDualMode, FloryHugginsDualModeModel
-    
+
     include(joinpath("SorptionModels", "NELF.jl"))
     export NELF, NELFModel
     export infinite_dilution_solubility_entropic, infinite_dilution_solubility_enthalpic

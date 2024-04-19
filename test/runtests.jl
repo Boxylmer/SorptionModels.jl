@@ -227,7 +227,16 @@ precision = 5
         iso_3 = IsothermData(; activities=acts_3, concentrations_cc = concs_3)
         fhdm = fit_model(FloryHugginsDualMode(), iso_3, 74.7453)
         pred = [a_predict_concentration(fhdm, a) for a in acts_3]
-
+    
+    # Henry's Law
+        isofit = IsothermData(; partial_pressures_mpa = [0, 0.03, 0.15, 0.6, 0.9, 1.2, 1.5], concentrations_cc = [0, 1, 3, 8, 10, 12.2, 14], fugacities_mpa = [0, 0.01, 0.1, 0.6, 0.5, 1.1, 1.3])
+        hfittings = fit_model(Henry(), isofit)
+        fug_hfittings = fit_model(Henry(), isofit; use_fugacity=true)
+        @test hfittings.kd != fug_hfittings.kd
+        pred = predict_concentration(hfittings, 5)
+        fpred = predict_concentration(fug_hfittings, 5)
+        @test pred != fpred
+        
     end
 
     @testset "Fundamental Sorption Models" begin
