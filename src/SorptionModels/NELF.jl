@@ -39,10 +39,10 @@ function predict_concentration(model::NELFModel, temperature::Number, pressure::
         error_target, 
         lower, upper,
         penetrant_mass_fraction_initial_guesses, 
-        Fminbox(NelderMead()),
+        Fminbox(LBFGS()),
         Optim.Options(
         allow_f_increases = false,
-        ); autodiff=:forward
+        ); #autodiff=:forward
     )
 
     penetrant_mass_fractions = Optim.minimizer(res)
@@ -100,6 +100,7 @@ function _make_nelf_model_mass_fraction_target(model::NELFModel, temperature::Nu
             polymer_phase_mole_fractions,
             :molar)
         residual_squared = log1p((rss(target_potentials, polymer_phase_residual_potential[2:end])))
+        # println(residual_squared)
         # println(residual_squared)
         return residual_squared #* upper_bound_penalty
     end
