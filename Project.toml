@@ -12,6 +12,7 @@ MembraneEOS = "11a4bec2-2c27-4554-8fe6-a2de72ffe064"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+SorptionApparatus = "c53a909a-c477-4ff1-81c4-bc1440289f4f"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 

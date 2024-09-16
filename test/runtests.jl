@@ -6,6 +6,7 @@ using MembraneEOS
 using Plots
 using BenchmarkTools
 using Clapeyron
+using SorptionApparatus
 
 function penetrant_activity_function_maker(model::EoSModel, t, T_ref = 298.15)
     saturation_p_ref = saturation_pressure(model, T_ref)[1]

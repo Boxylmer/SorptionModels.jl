@@ -18,23 +18,53 @@ To empirically determine whether clustering occurs in the polymer at given activ
 - The penetrant molar volume (`pen_molar_volume`) must be in units of cm^3/mol.
 
 """
-function ZimmLundbergAnalysis(sorption_model::GABModel, activities, pen_molar_volume::Number)
-    # assumptions
-    function get_volfrac(activity)
-        conc = a_predict_concentration(sorption_model, activity)  # cc/cc
-        pen_volume = conc * pen_molar_volume / MembraneBase.CC_PER_MOL_STP  # ccstp/ccpol * cm3/mol / (ccstp/mol) = (cm3/mol * mol)/ccpol = cm3/ccpol = unitless
-        vol_frac = pen_volume / (1 + pen_volume)  # unitless
-        return vol_frac
+function ZimmLundbergAnalysis(sorption_model::SorptionModel, pressures, pen_vapor_pressure, pen_molar_volume::Number)
+  
+    function pressure_to_act(pressure)
+        act = pressure/pen_vapor_pressure
+        return act
     end
-    
-    function act_per_volfrac(activity)
-        vol_frac = get_volfrac(activity)
-        return activity/vol_frac
-    end
-    
-    vol_fracs = get_volfrac.(activities)
-    aoverφ_vals = act_per_volfrac.(activities)
 
+    function act_to_pressure(act)
+        pressure = act*pen_vapor_pressure
+        return pressure
+    end
+
+    activities = pressure_to_act.(pressures)
+
+    @show typeof(sorption_model)
+
+    if typeof(sorption_model) <: GABModel
+        function get_volfrac(activity)
+            conc = a_predict_concentration(sorption_model, activity)  # cc/cc
+            pen_volume = conc * pen_molar_volume / MembraneBase.CC_PER_MOL_STP  # ccstp/ccpol * cm3/mol / (ccstp/mol) = (cm3/mol * mol)/ccpol = cm3/ccpol = unitless
+            vol_frac = pen_volume / (1 + pen_volume)  # unitless
+            return vol_frac
+        end
+        
+        function act_per_volfrac(activity)
+            vol_frac = get_volfrac(activity)
+            return activity/vol_frac
+        end
+        
+        vol_fracs = get_volfrac.(activities)
+        aoverφ_vals = act_per_volfrac.(activities)
+    elseif typeof(sorption_model) <: DualModeModel
+        function get_volfrac(pressure)
+            conc = predict_concentration(sorption_model, pressure)  # cc/cc
+            pen_volume = conc * pen_molar_volume / MembraneBase.CC_PER_MOL_STP  # ccstp/ccpol * cm3/mol / (ccstp/mol) = (cm3/mol * mol)/ccpol = cm3/ccpol = unitless
+            vol_frac = pen_volume / (1 + pen_volume)  # unitless
+            return vol_frac
+        end
+        
+        function act_per_volfrac(activity)
+            vol_frac = get_volfrac(act_to_pressure(activity))
+            return activity/vol_frac
+        end
+        
+        vol_fracs = get_volfrac.(pressures)
+        aoverφ_vals = act_per_volfrac.(activities)
+    end
     d_aoverφ_d_a_vals = ForwardDiff.derivative.(act_per_volfrac, activities)
     # function uncertain_func(a)
     #     return ForwardDiff.derivative(act_per_volfrac, a)
